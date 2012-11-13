@@ -10,7 +10,7 @@ API specifications for livedesk blog posts.
 '''
 
 from .blog import Blog
-from ally.api.config import service, call, INSERT, query, UPDATE
+from ally.api.config import service, call, INSERT, query, UPDATE, extension
 from livedesk.api.domain_livedesk import modelLiveDesk
 from superdesk.post.api.post import Post, QPostUnpublished, \
     QPost, IPostService
@@ -21,6 +21,7 @@ from ally.api.criteria import AsRangeOrdered, AsBoolean
 from ally.api.authentication import auth
 from superdesk.person.api.person import Person
 from superdesk.post.api.type import PostType
+from ally.api.extension import IterPart
 
 # --------------------------------------------------------------------
 
@@ -63,6 +64,15 @@ class QBlogPost(QPost, QWithCId):
     Provides the blog post message query.
     '''
     isPublished = AsBoolean
+
+# --------------------------------------------------------------------
+
+@extension
+class IterPost(IterPart):
+    '''
+    The post iterable that provides extended information on the posts collection.
+    '''
+    offsetMore = int
 
 # --------------------------------------------------------------------
 

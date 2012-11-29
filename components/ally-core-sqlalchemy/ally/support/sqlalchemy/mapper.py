@@ -295,6 +295,20 @@ def mappingsOf(metadata):
 
     return {typeFor(mapped).base.clazz:mapped for mapped in mappings}
 
+
+def tableFor(mapped):
+    '''
+    Provides the table of the provided mapped class.
+    
+    @param mapped: class
+        The mapped class.
+    @return: Rable
+        The associated table.
+    '''
+    assert isinstance(mapped, DeclarativeMetaModel), 'Invalid mapped class %s' % mapped
+
+    return mapped.__table__
+
 # --------------------------------------------------------------------
 
 def onPropertyUnique(mapped, prop, obj, errors):

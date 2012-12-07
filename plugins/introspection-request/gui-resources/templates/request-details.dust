@@ -1,0 +1,46 @@
+<div class="modal hide fade" id="use-request-modal">
+    <div class="modal-header">
+	    <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+    	<h3>_('Request details')</h3>
+    </div>
+    <div class="modal-body">
+    	<p class="page-header">{Pattern|s}</p>
+    {#Methods}
+		<dl class="dl-horizontal">
+		<dt>Name</dt>
+		<dd>{Name}</dd>
+		<dt>Type</dt>
+		<dd>{Type}</dd>
+		{?APIClass}
+    		<dt>API Class</dt>
+    		<dd>{APIClass}</dd>
+    	{/APIClass}
+    	{?APIClassDefiner}
+    		<dt>API Class Definer</dt>
+    		<dd>{APIClassDefiner}</dd>
+    	{/APIClassDefiner}
+    	{?APIDoc}
+    		<dt>API Doc.</dt>
+    		<dd>{APIDoc}</dd>
+    	{/APIDoc}
+    	{?IMPL}
+    		<dt>Implementation</dt>
+    		<dd>{IMPL}</dd>
+    	{/IMPL}
+    	{?IMPLDefiner}
+    		<dt>Impl. definer</dt>
+    		<dd>{IMPLDefiner}</dd>
+    	{/IMPLDefiner}
+    	{?IMPLDoc}
+    		<dt>Impl. Doc</dt>
+    		<dd>{IMPLDoc}</dd>
+    	{/IMPLDoc}
+    	</dl>
+    {/Methods}
+    </div>
+    <div class="modal-footer">
+    	<p class="alert alert-error hide pull-left" style="margin-bottom:0"></p>
+    	<button class="btn" data-action="close" data-dismiss="modal">_('Close')</button>
+    	<button class="btn btn-primary" data-action="use">_('Use')</button>
+    </div>
+</div>

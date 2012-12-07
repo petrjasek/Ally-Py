@@ -1,0 +1,20 @@
+<div class="modal hide fade" id="use-request-modal">
+    <div class="modal-header">
+	    <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+    	<h3>_('Use request')</h3>
+    </div>
+    <div class="modal-body">
+    	<p class="page-header"><span class="muted">{ServerUrl}</span>{Pattern|s}</p>
+    	<form class="form-inline">
+    	{#Params}
+			<input type="text" id="req-param-{idx}" placeholder="_('Param.') {idx}" class="input-small" data-is="param" />{~s}
+		{/Params}
+		<input type="submit" class="hide" />
+		</form>
+    </div>
+    <div class="modal-footer">
+    	<p class="alert alert-error hide pull-left" style="margin-bottom:0"></p>
+    	<button class="btn" data-action="close" data-dismiss="modal">_('Close')</button>
+    	<button class="btn btn-primary" data-action="use">_('Use')</button>
+    </div>
+</div>

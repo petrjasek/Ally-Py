@@ -1,0 +1,18 @@
+{#Request}
+	<td>
+		<a name="{href}" />
+		{Id}
+	</td>
+	<td><a href="{ServerUrl}{origPattern}" class="request"><span class="muted">{ServerUrl}</span>{Pattern|s}</a></td>
+	<td>
+		{?Get}<span class="label label-success">Get</span>{~s}{/Get}
+		{?Insert}<span class="label label-info">Insert</span>{~s}{/Insert}
+		{?Update}<span class="label label-warning">Update</span>{~s}{/Update}
+		{?Delete}<span class="label label-important">Delete</span>{/Delete}
+	</td>
+	<td>    
+		<div class="btn-group">
+    		<button class="btn view" href=""><i class="icon-info-sign"></i> _('Details')</button>
+    	</div>
+    </td>
+{/Request}

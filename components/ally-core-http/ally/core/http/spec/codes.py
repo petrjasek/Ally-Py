@@ -22,3 +22,4 @@ UNKNOWN_CONTENT_TYPE = Code(406, False) # HTTP code 406 Not acceptable
 UNKNOWN_CHARSET = Code(406, False) # HTTP code 406 Not acceptable
 UNKNOWN_PROPERTY = Code(400, False) # HTTP code 400 Bad Request
 UNAUTHORIZED = Code(401 , False) # HTTP code 401 Unauthorized
+FORBIDDEN = Code(403 , False) # HTTP code 403 Forbidden

@@ -11,19 +11,17 @@ Provides the configurations for the authentication assemblers.
 
 from ..ally_core.assembler import assemblers
 from ally.container import ioc
-from ally.core.authentication.impl.assembler import AssembleAuthenticated
+from ally.core.authentication.impl.assembler import AssembleAuthenticationExplode
 from ally.core.spec.resources import IAssembler
 
 # --------------------------------------------------------------------
 # Creating the assemblers
 
 @ioc.entity
-def assembleAuthenticated() -> IAssembler: return AssembleAuthenticated()
+def assembleAuthenticationExplode() -> IAssembler: return AssembleAuthenticationExplode()
 
 # ---------------------------------
 
-@ioc.entity
-def assemblersAuthentication():
-    b = [assembleAuthenticated()]
-    b.extend(assemblers())
-    return b
+@ioc.before(assemblers)
+def updateAssemblersAuthentication():
+    assemblers().insert(0, assembleAuthenticationExplode())

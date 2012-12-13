@@ -9,15 +9,11 @@ Created on Nov 24, 2011
 Provides the configurations for the authentication processors.
 '''
 
-from ..ally_authentication_core.resources import resourcesLocatorAuthentication
-from ..ally_core.processor import assemblyResources, argumentsBuild
-from ..ally_core_http.processor import converterPath, uri, redirect, \
-    assemblyRedirect, pathAssemblies, parameter
+from ..ally_core.processor import assemblyResources, methodInvoker
+from ..ally_core_http.processor import pathAssemblies
 from ally.container import ioc
 from ally.core.authentication.impl.processor.authentication import \
     AuthenticationHandler
-from ally.core.http.impl.processor.redirect import RedirectHandler
-from ally.core.http.impl.processor.uri import URIHandler
 from ally.design.processor import Handler, Assembly
 
 # --------------------------------------------------------------------
@@ -38,19 +34,6 @@ def always_authenticate():
 # --------------------------------------------------------------------
 
 @ioc.entity
-def uriAuthentication() -> Handler:
-    b = URIHandler()
-    b.resourcesLocator = resourcesLocatorAuthentication()
-    b.converterPath = converterPath()
-    return b
-
-@ioc.entity
-def redirectAuthentication() -> Handler:
-    b = RedirectHandler()
-    b.redirectAssembly = assemblyRedirectAuthentication()
-    return b
-
-@ioc.entity
 def authentication() -> Handler:
     b = AuthenticationHandler()
     b.alwaysAuthenticate = always_authenticate()
@@ -67,13 +50,6 @@ def assemblyResourcesAuthentication() -> Assembly:
     return Assembly()
 
 @ioc.entity
-def assemblyRedirectAuthentication() -> Assembly:
-    '''
-    The assembly containing the handlers that will be used in processing a redirect.
-    '''
-    return Assembly()
-
-@ioc.entity
 def authenticators(): return []
 
 # --------------------------------------------------------------------
@@ -81,14 +57,7 @@ def authenticators(): return []
 @ioc.before(assemblyResourcesAuthentication)
 def updateAssemblyResourcesAuthentication():
     assemblyResourcesAuthentication().add(assemblyResources())
-    assemblyResourcesAuthentication().replace(uri(), uriAuthentication())
-    assemblyResourcesAuthentication().replace(redirect(), redirectAuthentication())
-    assemblyResourcesAuthentication().add(authentication(), before=parameter())
-
-@ioc.before(assemblyRedirectAuthentication)
-def updateAssemblyRedirectAuthentication():
-    assemblyRedirectAuthentication().add(assemblyRedirect())
-    assemblyRedirectAuthentication().add(authentication(), before=argumentsBuild())
+    assemblyResourcesAuthentication().add(authentication(), after=methodInvoker())
 
 @ioc.before(pathAssemblies)
 def updatePathAssemblies():

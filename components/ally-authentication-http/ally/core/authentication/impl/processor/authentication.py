@@ -10,16 +10,16 @@ Provides the authentication header handling.
 '''
 
 from ally.api.operator.authentication.service import IAuthenticationSupport
-from ally.api.operator.authentication.type import TypeAuthentication
 from ally.api.type import Input
 from ally.container.ioc import injected
-from ally.core.http.spec.codes import UNAUTHORIZED
+from ally.core.http.spec.codes import UNAUTHORIZED, FORBIDDEN
 from ally.core.http.spec.server import IDecoderHeader
 from ally.core.spec.codes import Code
-from ally.core.spec.resources import Invoker
+from ally.core.spec.resources import Invoker, Path
 from ally.design.context import Context, requires, defines
 from ally.design.processor import HandlerProcessorProceed
 import logging
+from ally.api.operator.authentication.type import IAuthenticated
 
 # --------------------------------------------------------------------
 
@@ -33,8 +33,8 @@ class Request(Context):
     '''
     # ---------------------------------------------------------------- Required
     decoderHeader = requires(IDecoderHeader)
+    path = requires(Path)
     invoker = requires(Invoker)
-    arguments = requires(dict)
 
 class Response(Context):
     '''
@@ -77,31 +77,33 @@ class AuthenticationHandler(HandlerProcessorProceed):
         assert isinstance(request, Request), 'Invalid request %s' % request
         assert isinstance(response, Response), 'Invalid response %s' % response
 
-        if Response.code in response and not response.code.isSuccess: return # Skip in case the response is in error
+        if Response.code in response and not response.code.isSuccess: return  # Skip in case the response is in error
         
         assert isinstance(request.decoderHeader, IDecoderHeader), 'Invalid decoder header %s' % request.decoderHeader
         assert isinstance(request.invoker, Invoker), 'Invalid invoker %s' % request.invoker
 
-        arguments, typesNames = {}, {}
+        typesNames = {}
         for inp in request.invoker.inputs:
             assert isinstance(inp, Input), 'Invalid input %s' % inp
-            if isinstance(inp.type, TypeAuthentication):
-                assert isinstance(inp.type, TypeAuthentication)
-                authType = typesNames[inp.name] = inp.type.type
-                if inp.hasDefault: arguments[authType] = inp.default
-                elif authType not in arguments: arguments[authType] = None
+            if isinstance(inp.type, IAuthenticated):
+                authType = typesNames[inp.name] = inp.type
 
-        if arguments or self.alwaysAuthenticate:
+        if typesNames or self.alwaysAuthenticate:
             authentication = request.decoderHeader.decode(self.nameAuthorization)
             if not authentication:
                 response.code, response.text = UNAUTHORIZED, 'Unauthorized access'
                 return
 
+            authenticated = dict.fromkeys(typesNames.values(), None)
             for identifier, attributes in authentication:
                 for authenticator in self.authenticators:
                     assert isinstance(authenticator, IAuthenticationSupport), 'Invalid authenticator %s' % authenticator
-                    if authenticator.authenticate(identifier, attributes, arguments):
-                        for name, authType in typesNames.items(): request.arguments[name] = arguments[authType]
+                    if authenticator.authenticate(identifier, attributes, authenticated):
+                        arguments = request.path.toArguments(request.invoker)
+                        for name, authType in typesNames.items():
+                            if arguments[name] != authenticated[authType]:
+                                response.code, response.text = FORBIDDEN, 'Illegal authorized data'
+                                break
                         return
 
             response.code, response.text = UNAUTHORIZED, 'Invalid authorization'

@@ -9,8 +9,7 @@ Created on Jan 9, 2012
 Contains the services for the development support.
 '''
 
-from ..ally_authentication_core.resources import resourcesRootAuthentication
-from ..ally_core.resources import services
+from ..ally_core.resources import services, resourcesRoot
 from ..ally_core_http.processor import converterPath
 from ally.container import ioc
 from development.request.api.request import IRequestService
@@ -28,8 +27,7 @@ def publish_development():
 @ioc.entity
 def requestService() -> IRequestService:
     b = RequestService(); yield b
-    # TODO: repair b.root = resourcesRoot()
-    b.root = resourcesRootAuthentication()
+    b.root = resourcesRoot()
     b.converterPath = converterPath()
 
 # --------------------------------------------------------------------

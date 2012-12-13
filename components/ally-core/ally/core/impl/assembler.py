@@ -596,5 +596,8 @@ class AssembleUpdateModel(AssembleUpdate):
                 inputs.extend(invoker.inputs[invoker.mandatory:])
                 indexes.extend(range(invoker.mandatory + 1, len(inputs)))
 
-                return super().assembleInvoker(root, InvokerRestructuring(invoker, inputs, indexes, indexesSetValue))
+                invokerRestr = InvokerRestructuring(invoker, inputs, indexes, indexesSetValue)
+                if super().assembleInvoker(root, invokerRestr): return True
+                log.warn('Cannot assemble the exploded update invoker %s created based on invoker %s' 
+                         % (invokerRestr, invoker))
         return False

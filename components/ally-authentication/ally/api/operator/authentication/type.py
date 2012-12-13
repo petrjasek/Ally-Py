@@ -10,7 +10,6 @@ Provides the types that are authenticated.
 '''
 
 from ally.api.operator.type import TypeModel, TypeModelProperty
-from ally.api.type import Type
 
 # --------------------------------------------------------------------
 
@@ -92,56 +91,3 @@ class TypeModelPropertyAuth(TypeModelProperty, IAuthenticated):
         if isinstance(other, TypeModelProperty):
             return self.parent == other.parent and self.property == other.property
         return False
-
-# --------------------------------------------------------------------
-
-class TypeAuthentication(Type):
-    '''
-    Used in marking the authentication object value in the invokers inputs.
-    '''
-
-    def __init__(self, type):
-        '''
-        Constructs the authentication type.
-        @see: Type.__init__
-        
-        @param type: TypeModel|TypeModelProperty
-            The type of the authentication.
-        '''
-        assert isinstance(type, (TypeModel, TypeModelProperty)), 'Invalid type %s' % type
-        Type.__init__(self, False, False)
-
-        self.type = type
-
-    def isOf(self, type):
-        '''
-        @see: Type.isOf
-        '''
-        return self == type or self.type.isOf(type)
-
-    def isValid(self, obj):
-        '''
-        @see: Type.isValid
-        '''
-        return self.type.isValid(obj)
-
-    def __hash__(self):
-        '''
-        @see: Type.__hash__
-        '''
-        return hash(self.type)
-
-    def __eq__(self, other):
-        '''
-        @see: Type.__eq__
-        '''
-        if isinstance(other, self.__class__):
-            return self.type == other.type
-        return False
-
-    def __str__(self):
-        '''
-        @see: Type.__str__
-        '''
-        return 'auth<%s>' % self.type
-

@@ -17,7 +17,7 @@ from ally.core.spec.resources import ConverterPath, Path, IResourcesLocator, \
     Converter, Normalizer
 from ally.design.context import Context, requires, defines, optional
 from ally.design.processor import HandlerProcessorProceed
-from urllib.parse import urlencode, urlunsplit, urlsplit
+from urllib.parse import urlencode, urlunsplit, urlsplit, quote, unquote
 import logging
 from collections import deque
 from ally.core.http.spec.codes import MISSING_HEADER
@@ -131,7 +131,7 @@ class URIHandler(HandlerProcessorProceed):
         else:
             extension = paths[-1][i + 1:].lower()
             paths[-1] = paths[-1][0:i]
-        paths = [p for p in paths if p]
+        paths = [unquote(p) for p in paths if p]
 
         request.path = self.resourcesLocator.findPath(self.converterPath, paths)
         assert isinstance(request.path, Path), 'Invalid path %s' % request.path
@@ -214,13 +214,13 @@ class EncoderPathURI(IEncoderPath):
                 url.append('/')
 
             query = urlencode(parameters) if parameters else ''
-            return urlunsplit((self.scheme, self.host, ''.join(url), query, ''))
+            return urlunsplit((self.scheme, self.host, quote(''.join(url)), query, ''))
         else:
             assert isinstance(path, str), 'Invalid path %s' % path
             if not path.strip().startswith('/'):
                 # TODO: improve the relative path detection
                 # This is an absolute path so we will return it as it is.
-                return path
+                return quote(path)
             # The path is relative to this server so we will convert it in an absolute path
             url = urlsplit(path)
-            return urlunsplit((self.scheme, self.host, url.path, url.query, url.fragment))
+            return urlunsplit((self.scheme, self.host, quote(url.path), url.query, url.fragment))

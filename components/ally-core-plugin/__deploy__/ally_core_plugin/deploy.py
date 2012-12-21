@@ -9,6 +9,7 @@ Created on Nov 7, 2012
 Special module that is used in deploying the application.
 '''
  
+from ..ally_core.deploy import dumpAssembly
 from ..ally_core.prepare import OptionsCore
 from __setup__.ally_core_plugin.deploy_plugin import configurations_file_path, \
     loadPlugins
@@ -34,24 +35,24 @@ def dump():
         print('Cannot dump configuration file if python is run with "-O" or "-OO" option', file=sys.stderr)
         sys.exit(1)
     try:
-        ioc.activate(application.assembly)
+        ioc.activate(dumpAssembly())
         try: 
             loadPlugins()
             configFile = configurations_file_path()
-        finally: ioc.deactivate()
         
-        if os.path.isfile(configFile):
-            with open(configFile, 'r') as f: config = load(f)
-        else: config = {}
-        
-        assembly = ioc.open(aop.modulesIn('__plugin__.**'), config=config)
-        assert isinstance(assembly, Assembly), 'Invalid assembly %s' % assembly
-        try:
-            if os.path.isfile(configFile): os.rename(configFile, configFile + '.bak')
-            for config in assembly.configurations: assembly.processForName(config)
-            # Forcing the processing of all configurations
-            with open(configFile, 'w') as f: save(assembly.trimmedConfigurations(), f)
-            print('Created "%s" configuration file' % configFile)
+            if os.path.isfile(configFile):
+                with open(configFile, 'r') as f: config = load(f)
+            else: config = {}
+            
+            assembly = ioc.open(aop.modulesIn('__plugin__.**'), config=config, included=True)
+            assert isinstance(assembly, Assembly), 'Invalid assembly %s' % assembly
+            try:
+                if os.path.isfile(configFile): os.rename(configFile, configFile + '.bak')
+                for config in assembly.configurations: assembly.processForName(config)
+                # Forcing the processing of all configurations
+                with open(configFile, 'w') as f: save(assembly.trimmedConfigurations(), f)
+                print('Created "%s" configuration file' % configFile)
+            finally: ioc.deactivate()
         finally: ioc.deactivate()
     
     except SystemExit: raise

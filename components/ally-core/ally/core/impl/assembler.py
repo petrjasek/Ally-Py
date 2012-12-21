@@ -316,7 +316,7 @@ class AssembleOneByOne(AssembleBase):
 
     def assemble(self, root, invokers):
         '''
-        @see: Assembler.resolve
+        @see: Assembler.assemble
         '''
         assert isinstance(invokers, list), 'Invalid invokers %s' % invokers
         k = 0
@@ -415,7 +415,8 @@ class AssembleGet(AssembleOneByOne):
         assert isinstance(model, Model), 'Invalid model %s' % model
         assert isinstance(mandatory, list), 'Invalid mandatory list %s' % mandatory
         assert isinstance(optional, list), 'Invalid optional list %s' % optional
-
+        #TODO: refactor the assembler in order to do the combinations by creating a series of invokers that will be
+        # assembled separattelly
         nodes = []
         for extra in chain(*(combinations(optional, k) for k in range(0, len(optional) + 1))):
             types = list(mandatory)

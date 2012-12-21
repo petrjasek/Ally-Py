@@ -10,6 +10,8 @@ Provides the configurations for the assemblers.
 '''
 
 from ally.container import ioc
+from ally.core.authentication.impl.assembler import \
+    AssembleAuthenticationExplode
 from ally.core.impl.assembler import AssembleGet, AssembleInsert, AssembleUpdate, \
     AssembleDelete, AssembleUpdateModel
 from ally.core.spec.resources import IAssembler
@@ -32,8 +34,12 @@ def assembleUpdate() -> IAssembler: return AssembleUpdate()
 @ioc.entity
 def assembleUpdateModel() -> IAssembler: return AssembleUpdateModel()
 
+@ioc.entity
+def assembleAuthenticationExplode() -> IAssembler: return AssembleAuthenticationExplode()
+
 # ---------------------------------
 
 @ioc.entity
 def assemblers():
-    return [assembleGet(), assembleInsert(), assembleUpdateModel(), assembleUpdate(), assembleDelete()]
+    return [assembleAuthenticationExplode(), assembleGet(), assembleInsert(), assembleUpdateModel(),
+            assembleUpdate(), assembleDelete()]

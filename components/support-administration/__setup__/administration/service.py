@@ -10,10 +10,12 @@ Contains the services for the administration support.
 '''
 
 from ..ally_core.resources import services
+from ..ally_gateway.security import scheme
 from admin.introspection.api.component import IComponentService
 from admin.introspection.api.plugin import IPluginService
 from admin.introspection.impl.component import ComponentService
 from admin.introspection.impl.plugin import PluginService
+from ally.api.security import SchemeRepository
 from ally.container import ioc
 
 # --------------------------------------------------------------------
@@ -24,7 +26,7 @@ def publish_introspection():
     If true the introspection services will be published and available, otherwise they will only be accessible inside
     the application.
     '''
-    return False
+    return True
 
 @ioc.entity
 def componentService() -> IComponentService: return ComponentService()
@@ -42,3 +44,13 @@ def publishServices():
     if publish_introspection():
         services().append(componentService())
         services().append(pluginService())
+
+@ioc.before(scheme)
+def updateSchemeForIntrospection():
+    if publish_introspection():
+        s = scheme(); assert isinstance(s, SchemeRepository), 'Invalid scheme %s' % s
+        
+        s['Introspection access'].doc('''
+        Allows for the introspection of the application distribution meaning that the components and plugins that 
+        compose the distribution are visible
+        ''').addAll(IComponentService, IPluginService)

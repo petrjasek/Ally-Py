@@ -27,6 +27,7 @@ from os import path
 from zipfile import ZipFile
 import logging
 import os
+from ally.container.support import setup
 
 # --------------------------------------------------------------------
 
@@ -58,6 +59,7 @@ COMMENT_TAGS = ('NOTE')
 # --------------------------------------------------------------------
 
 @injected
+@setup(name='scanner')
 class Scanner:
     '''
     The class that provides the scanner.

@@ -178,8 +178,10 @@ class InvokingHandler(HandlerProcessorProceed):
         @return: boolean
             False if the invoking has failed, True for success.
         '''
+        assert isinstance(invoker, Invoker), 'Invalid invoker %s' % invoker
         assert isinstance(response, Response), 'Invalid response %s' % response
-
+        assert invoker.output.isValid(value), 'Invalid return value \'%s\' for invoker %s' % (value, invoker)
+        
         response.obj = value
 
     def afterInsert(self, invoker, value, response):
@@ -197,6 +199,7 @@ class InvokingHandler(HandlerProcessorProceed):
         '''
         assert isinstance(invoker, Invoker), 'Invalid invoker %s' % invoker
         assert isinstance(response, Response), 'Invalid response %s' % response
+        assert invoker.output.isValid(value), 'Invalid return value \'%s\' for invoker %s' % (value, invoker)
 
         if isinstance(invoker.output, TypeModelProperty) and \
         invoker.output.container.propertyId == invoker.output.property:
@@ -225,6 +228,7 @@ class InvokingHandler(HandlerProcessorProceed):
         '''
         assert isinstance(invoker, Invoker), 'Invalid invoker %s' % invoker
         assert isinstance(response, Response), 'Invalid response %s' % response
+        assert invoker.output.isValid(value), 'Invalid return value \'%s\' for invoker %s' % (value, invoker)
 
         if invoker.output.isOf(None):
             response.code, response.text = UPDATE_SUCCESS, 'Successfully updated'
@@ -256,6 +260,7 @@ class InvokingHandler(HandlerProcessorProceed):
         '''
         assert isinstance(invoker, Invoker), 'Invalid invoker %s' % invoker
         assert isinstance(response, Response), 'Invalid response %s' % response
+        assert invoker.output.isValid(value), 'Invalid return value \'%s\' for invoker %s' % (value, invoker)
 
         if invoker.output.isOf(bool):
             if value == True:

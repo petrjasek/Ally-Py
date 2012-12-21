@@ -15,7 +15,7 @@ from ally.api.operator.type import TypeModelProperty
 from ally.container.ioc import injected
 from ally.core.impl.node import MatchProperty, NodeProperty
 from ally.core.spec.resources import Node, Match, ConverterPath, Invoker, \
-    InvokerInfo
+    InvokerInfo, INodeChildListener, INodeInvokerListener
 from ally.exception import InputError, Ref, DevelError
 from ally.internationalization import _
 from ally.support.api.util_service import trimIter
@@ -29,7 +29,7 @@ from ally.api.extension import IterPart
 # --------------------------------------------------------------------
 
 @injected
-class RequestService(IRequestService):
+class RequestService(IRequestService, INodeChildListener, INodeInvokerListener):
     '''
     Provides the implementation for @see: IRequestIntrospectService.
     '''
@@ -59,6 +59,9 @@ class RequestService(IRequestService):
         self._inputs = OrderedDict()
         self._requestMethods = {}
         self._methods = OrderedDict()
+        self._reset = True
+        
+        self.root.addStructureListener(self)
 
     def getRequest(self, id):
         '''
@@ -94,12 +97,28 @@ class RequestService(IRequestService):
                         offset, limit)
 
     # ----------------------------------------------------------------
+    
+    def onChildAdded(self, node, child):
+        '''
+        @see: INodeChildListener.onChildAdded
+        '''
+        self._reset = True
+    
+    def onInvokerChange(self, node, old, new):
+        '''
+        @see: INodeInvokerListener.onInvokerChange
+        '''
+        self._reset = True
+    
+    # ----------------------------------------------------------------
 
     def _refresh(self):
         '''
         Refreshes the requests.
         '''
-        self._process(self.root)
+        if self._reset:
+            self._process(self.root)
+            self._reset = False
 
     def _process(self, node):
         '''

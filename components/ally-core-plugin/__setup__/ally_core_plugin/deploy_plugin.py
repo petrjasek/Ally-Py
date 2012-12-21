@@ -12,8 +12,6 @@ Special module that is targeted by the application loader in order to deploy the
 from ally.container import aop, ioc
 from ally.container.config import load
 from ally.container.ioc import SetupError
-from ally.container.support import entityFor
-from ally.core.spec.resources import IResourcesRegister
 from ally.support.util_sys import isPackage
 from package_extender import PACKAGE_EXTENDER
 import logging
@@ -62,11 +60,11 @@ def loadPlugins():
 
 # --------------------------------------------------------------------
 
-@ioc.start
+@ioc.start(priority=1)
 def deploy():
     loadPlugins()
     if not os.path.isfile(configurations_file_path()):
-        print('The configuration file "%s" doesn\'t exist, create one by running the the application '
+        print('The configuration file "%s" does not exist, create one by running the the application '
               'with "-dump" option' % configurations_file_path())
         sys.exit(1)
     with open(configurations_file_path(), 'r') as f: config = load(f)
@@ -78,18 +76,6 @@ def deploy():
             raise SetupError('The plugin setup module %r is not allowed directly in the __plugin__ package it needs '
                              'to be in a sub package' % module.__name__)
 
-    assembly = ioc.open(pluginModules, config=config)
-    try:
-        assembly.processStart()
-        from __plugin__.plugin.registry import services
-        services = services()
+    assembly = ioc.open(pluginModules, config=config, included=True)
+    try: assembly.processStart()
     finally: ioc.deactivate()
-
-    try: import application
-    except ImportError: raise SetupError('Cannot access the application module')
-    resourcesRegister = entityFor(IResourcesRegister, application.assembly)
-    assert isinstance(resourcesRegister, IResourcesRegister), 'There is no resource register for the services'
-
-    assert log.debug('Registered REST services:\n\t%s', '\n\t'.join(str(srv) for srv in services)) or True
-    for service in services:
-        resourcesRegister.register(service)

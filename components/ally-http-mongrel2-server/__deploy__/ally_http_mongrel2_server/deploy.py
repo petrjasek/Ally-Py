@@ -53,7 +53,7 @@ def config():
         sys.exit(1)
         
     try:
-        assembly = application.assembly = ioc.open(aop.modulesIn('__setup__.**'), config=config)
+        assembly = ioc.open(aop.modulesIn('__setup__.**'), config=config)
         assert isinstance(assembly, Assembly), 'Invalid assembly %s' % assembly
     
         updateConfig = False

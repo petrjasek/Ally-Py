@@ -26,6 +26,19 @@ except ImportError: raise
 
 # --------------------------------------------------------------------
 
+@ioc.entity
+def dumpAssembly():
+    assert isinstance(application.options, OptionsCore), 'Invalid application options %s' % application.options
+    configFile = application.options.configurationPath
+
+    if os.path.isfile(configFile):
+        with open(configFile, 'r') as f: config = load(f)
+    else: config = {}
+    
+    return ioc.open(aop.modulesIn('__setup__.**'), config=config, active=False)
+
+# --------------------------------------------------------------------
+
 @ioc.start
 def deploy():
     assert isinstance(application.options, OptionsCore), 'Invalid application options %s' % application.options
@@ -37,7 +50,7 @@ def deploy():
             sys.exit(1)
         with open(application.options.configurationPath, 'r') as f: config = load(f)
 
-        assembly = application.assembly = ioc.open(aop.modulesIn('__setup__.**'), config=config)
+        assembly = ioc.open(aop.modulesIn('__setup__.**'), config=config)
         assert isinstance(assembly, Assembly), 'Invalid assembly %s' % assembly
         
         import logging
@@ -68,13 +81,9 @@ def dump():
     if not __debug__:
         print('Cannot dump configuration file if python is run with "-O" or "-OO" option', file=sys.stderr)
         sys.exit(1)
-    configFile = application.options.configurationPath
+    assembly, configFile = dumpAssembly(), application.options.configurationPath
     try:
-        if os.path.isfile(configFile):
-            with open(configFile, 'r') as f: config = load(f)
-        else: config = {}
-        
-        assembly = application.assembly = ioc.open(aop.modulesIn('__setup__.**'), config=config)
+        ioc.activate(assembly)
         assert isinstance(assembly, Assembly), 'Invalid assembly %s' % assembly
         try:
             if os.path.isfile(configFile): os.rename(configFile, configFile + '.bak')

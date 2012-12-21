@@ -268,16 +268,16 @@ class SetupEntityCreate(SetupSource):
 
     priority_index = 2
 
-    def __init__(self, function, type, **keyargs):
+    def __init__(self, function, types, **keyargs):
         '''
         Create a setup for entity creation.
         
-        @param type: class
-            The api class of the entity to create.
+        @param types: tuple(class)|None
+            The api classes of the entity to create.
         @see: SetupSource.__init__
         '''
         assert isclass(type), 'Invalid api class %s' % type
-        SetupSource.__init__(self, function, type, **keyargs)
+        SetupSource.__init__(self, function, types, **keyargs)
 
     def index(self, assembly):
         '''
@@ -285,7 +285,7 @@ class SetupEntityCreate(SetupSource):
         '''
         assert isinstance(assembly, Assembly), 'Invalid assembly %s' % assembly
         if self.name in assembly.calls: raise SetupError('There is already a setup call for name %r' % self.name)
-        assembly.calls[self.name] = CallEntity(assembly, self.name, self._function, self.type)
+        assembly.calls[self.name] = CallEntity(assembly, self.name, self._function, self._types)
 
 # --------------------------------------------------------------------
 

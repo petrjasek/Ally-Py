@@ -9,19 +9,24 @@ Created on Jan 9, 2012
 Contains the services setup for internationalization.
 '''
 
-from sys import modules
 from ..cdm.local_cdm import contentDeliveryManager
 from ..plugin.registry import addService
 from .db_internationalization import bindInternationalizationSession, \
     bindInternationalizationValidations, createTables
+from __setup__.ally_gateway.security import scheme
+from ally.api.security import SchemeRepository
 from ally.container import support, ioc
 from cdm.spec import ICDM
 from cdm.support import ExtendPathCDM
+from internationalization.api.file import IFileService
+from internationalization.api.json_locale import IJSONLocaleFileService
+from internationalization.api.message import IMessageService
 from internationalization.api.po_file import IPOFileService
+from internationalization.api.source import ISourceService
+from internationalization.impl.json_locale import JSONFileService
 from internationalization.impl.po_file import POFileService
 from internationalization.scanner import Scanner
-from internationalization.api.json_locale import IJSONLocaleFileService
-from internationalization.impl.json_locale import JSONFileService
+from sys import modules
 
 # --------------------------------------------------------------------
 
@@ -32,6 +37,7 @@ support.createEntitySetup('internationalization.*.impl.**.*')
 support.bindToEntities('internationalization.impl.**.*Alchemy', binders=bindInternationalizationSession)
 support.listenToEntities(SERVICES, listeners=addService(bindInternationalizationValidations), beforeBinding=False)
 support.loadAllEntities(SERVICES)
+support.wireEntities(Scanner)
 
 # --------------------------------------------------------------------
 
@@ -65,6 +71,22 @@ def jsonFileService() -> IJSONLocaleFileService:
     return srv
 
 # --------------------------------------------------------------------
+
+@ioc.before(scheme)
+def updateSchemeForInternationalization():
+    s = scheme(); assert isinstance(s, SchemeRepository), 'Invalid scheme %s' % s
+    
+    s['Translations access'].doc('''
+    Allows read only access to the translation files
+    ''').addGet(IPOFileService, IJSONLocaleFileService)
+    
+    s['Translations modify'].doc('''
+    Allows for the modification of translation files by the upload of updated PO files
+    ''').addAll(IPOFileService)
+    
+    s['Translations messages modify'].doc('''
+    Allows for the modification of translatable messages that the application uses
+    ''').addAll(IFileService, ISourceService, IMessageService)
 
 @ioc.after(createTables)
 def scan():

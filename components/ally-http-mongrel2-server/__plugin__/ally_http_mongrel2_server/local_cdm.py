@@ -10,7 +10,6 @@ Provides the Mongrel2 web server plugins settings.
 '''
 
 from ally.container import ioc, support
-from ally.container.ioc import SetupError
 from __setup__.ally_core_http import server_type
 
 # --------------------------------------------------------------------
@@ -24,11 +23,6 @@ else:
     
     @ioc.before(use_linked_cdm, auto=False)
     def use_linked_cdm_force():
-        try: import application
-        except ImportError: raise SetupError('Cannot access the application module')
-        ioc.activate(application.assembly)
-        force = server_type() == 'mongrel2'
-        ioc.deactivate()
-        if force: support.force(use_linked_cdm, False)
+        if server_type() == 'mongrel2': support.force(use_linked_cdm, False)
 
 # --------------------------------------------------------------------

@@ -414,6 +414,7 @@ class EncodePrimitive:
 
         if self.getter: value = self.getter(value)
         if value is None: return
+        assert self.typeValue.isValid(value), 'Invalid value \'%s\' for type %s' % (value, self.typeValue) 
         render.value(normalizer.normalize(name), converter.asString(value, self.typeValue))
 
 class EncodePrimitiveCollection(EncodePrimitive):

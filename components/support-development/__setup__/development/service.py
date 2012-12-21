@@ -11,6 +11,8 @@ Contains the services for the development support.
 
 from ..ally_core.resources import services, resourcesRoot
 from ..ally_core_http.processor import converterPath
+from ..ally_gateway.security import scheme
+from ally.api.security import SchemeRepository
 from ally.container import ioc
 from development.request.api.request import IRequestService
 from development.request.impl.request import RequestService
@@ -35,3 +37,12 @@ def requestService() -> IRequestService:
 @ioc.before(services)
 def publishServices():
     if publish_development(): services().append(requestService())
+
+@ioc.before(scheme)
+def updateSchemeForIntrospection():
+    if publish_development():
+        s = scheme(); assert isinstance(s, SchemeRepository), 'Invalid scheme %s' % s
+        
+        s['Introspection access'].doc('''
+        Allows for the introspection of the application requests.
+        ''').addAll(IRequestService)

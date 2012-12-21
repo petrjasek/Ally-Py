@@ -27,20 +27,22 @@ from inspect import isclass, ismodule, getsource
 # --------------------------------------------------------------------
 # Functions available in setup modules.
 
-def setup(type, name=None):
+def setup(*types, name=None):
     '''
     Decorate a IMPL class with the info about required API class and optional a name
     
-    @param type: class
-        The type of the correspondent API.
+    @param types: arguments[class]
+        The type(s) of the correspondent API.
     @param name: string
         The name associated to created IOC object
     '''
-    assert isclass(type), 'Expected a class instead of %s ' % type
-    if name: assert isinstance(name, str), 'Expected a string name instead of %s ' % name
+    assert name is None or isinstance(name, str), 'Expected a string name instead of %s ' % name
+    if __debug__:
+        assert types or name, 'If no types are provided a name is mandatory for setup'
+        for clazz in types: assert isclass(clazz), 'Invalid api class %s' % clazz
 
     def decorator(clazz):
-        setattr(clazz, '__ally_setup__', (type, name))
+        setattr(clazz, '__ally_setup__', (types, name))
         return clazz
 
     return decorator
@@ -76,10 +78,14 @@ def createEntitySetup(*classes, formatter=lambda group, clazz, name: group + '.'
         if not hasattr(clazz, '__ally_setup__'): continue
         setupTuple = clazz.__ally_setup__
         if not setupTuple: continue
-        apiClass, name = setupTuple
-        assert issubclass(clazz, apiClass), 'The impl class % do not extend the declared API class %s' % (clazz, apiClass)
+        types, name = setupTuple
+        if __debug__:
+            assert types or name, 'If no types are provided a name is mandatory for setup'
+            for typ in types:
+                assert issubclass(clazz, typ), \
+                'The impl class % does not extend the declared API class %s' % (clazz, typ)
         wireClasses.append(clazz)
-        register(SetupEntityCreate(clazz, apiClass, name=formatter(group, apiClass, name), group=group), registry)
+        register(SetupEntityCreate(clazz, types, name=formatter(group, types[0] if types else None, name), group=group), registry)
 
     wireEntities(*wireClasses, module=module)
 
@@ -125,7 +131,9 @@ def wireEntities(*classes, module=None):
                 else:
                     configCall = partial(processConfig, clazz, wconfig)
                     configCall.__doc__ = wconfig.description
-                    register(SetupConfig(configCall, type=wconfig.type, name=name, group=group), registry)
+                    if wconfig.type is not None: types = (wconfig.type,)
+                    else: types = ()
+                    register(SetupConfig(configCall, types=types, name=name, group=group), registry)
     if wirings:
         wire = setupFirstOf(registry, SetupEntityWire)
         if wire:
@@ -219,8 +227,7 @@ def loadAllEntities(*classes, module=None):
     def loadAll(prefix, classes):
         for clazz in classes:
             for name, call in Assembly.current().calls.items():
-                if name.startswith(prefix) and isinstance(call, CallEntity) and call.type and \
-                (call.type == clazz or issubclass(call.type, clazz)): Assembly.process(name)
+                if name.startswith(prefix) and isinstance(call, CallEntity) and call.isOf(clazz): Assembly.process(name)
 
     if module:
         assert ismodule(module), 'Invalid setup module %s' % module
@@ -298,8 +305,7 @@ def entitiesFor(clazz, assembly=None):
     assembly = assembly or Assembly.current()
     assert isinstance(assembly, Assembly), 'Invalid assembly %s' % assembly
 
-    entities = (name for name, call in assembly.calls.items()
-                if isinstance(call, CallEntity) and call.type and (call.type == clazz or issubclass(call.type, clazz)))
+    entities = (name for name, call in assembly.calls.items() if isinstance(call, CallEntity) and call.isOf(clazz))
 
     Assembly.stack.append(assembly)
     try: return [assembly.processForName(name) for name in entities]
@@ -323,8 +329,7 @@ def entityFor(clazz, assembly=None):
     assembly = assembly or Assembly.current()
     assert isinstance(assembly, Assembly), 'Invalid assembly %s' % assembly
 
-    entities = [name for name, call in assembly.calls.items()
-                if isinstance(call, CallEntity) and call.type and (call.type == clazz or issubclass(call.type, clazz))]
+    entities = [name for name, call in assembly.calls.items() if isinstance(call, CallEntity) and call.isOf(clazz)]
     if not entities:
         raise SetupError('There is no entity setup function having a return type of class or subclass %s' % clazz)
     if len(entities) > 1:

@@ -54,9 +54,12 @@ def entity(*args):
     assert len(args) == 1, 'Expected only one argument that is the decorator function, got %s arguments' % len(args)
     function = args[0]
     hasType, type = _process(function)
-    if hasType and not isclass(type):
-        raise SetupError('Expected a class as the return annotation for function %s' % function)
-    return update_wrapper(register(SetupEntity(function, type=type), callerLocals()), function)
+    if hasType:
+        if not isclass(type):
+            raise SetupError('Expected a class as the return annotation for function %s' % function)
+        else: types = (type,)
+    else: types = ()
+    return update_wrapper(register(SetupEntity(function, types=types), callerLocals()), function)
 
 def config(*args):
     '''
@@ -65,15 +68,18 @@ def config(*args):
     if no annotation is present than this setup function is not known by return type. This creates problems whenever
     the configuration will be set externally because no validation or transformation is not possible.
     '''
-    if not args: return partial(config)
+    if not args: return config
     assert len(args) == 1, 'Expected only one argument that is the decorator function, got %s arguments' % len(args)
     function = args[0]
     hasType, type = _process(function)
-    if hasType and not isclass(type):
-        raise SetupError('Expected a class as the return annotation for function %s' % function)
+    if hasType:
+        if not isclass(type):
+            raise SetupError('Expected a class as the return annotation for function %s' % function)
+        else: types = (type,)
+    else: types = ()
     if not function.__name__.islower():
         raise SetupError('Invalid name %r for configuration, needs to be lower case only' % function.__name__)
-    return update_wrapper(register(SetupConfig(function, type=type), callerLocals()), function)
+    return update_wrapper(register(SetupConfig(function, types=types), callerLocals()), function)
 
 def doc(setup, doc):
     '''
@@ -149,20 +155,24 @@ def replace(setup):
 
     return decorator
 
-def start(*args):
+def start(*args, priority=0):
     '''
     Decorator for setup functions that need to be called at IoC start.
+    
+    @param priority: integer
+        Provides the priority, a higher value means the start function will be called earlier.
     '''
-    if not args: return start
+    if not args: return partial(start, priority=priority)
     assert len(args) == 1, 'Expected only one argument that is the decorator function, got %s arguments' % len(args)
+    assert isinstance(priority, int), 'Invalid priority %s' % priority
     function = args[0]
     hasType, _type = _process(function)
     if hasType: raise SetupError('No return type expected for function %s' % function)
-    return update_wrapper(register(SetupStart(function), callerLocals()), function)
+    return update_wrapper(register(SetupStart(function, priority), callerLocals()), function)
 
 # --------------------------------------------------------------------
 
-def open(*modules, config=None):
+def open(*modules, config=None, included=False, active=True):
     '''
     Load and assemble the setup modules and keeps them opened for retrieving and processing values. Call the close
     function after finalization. Automatically activates the assembly.
@@ -172,9 +182,16 @@ def open(*modules, config=None):
     @param config: dictionary|None
         The configurations dictionary. This is the top level configurations the values provided here will override any
         other configuration.
-    @return: object
+    @param included: boolean
+        Flag indicating that the newly opened assembly should include the currently active assembly, if this flag is
+        True then the opened assembly will have access to the current assembly.
+    @param active: boolean
+        If true the assembly will be automatically activate, if false then the assembly is only assembled.
+    @return: Assembly
         The assembly object.
     '''
+    assert isinstance(included, bool), 'Invalid included flag %s' % included
+    assert isinstance(active, bool), 'Invalid active flag %s' % active
     context = Context()
     for module in modules:
         if isinstance(module, str): module = importlib.import_module(module)
@@ -184,8 +201,12 @@ def open(*modules, config=None):
             assert isinstance(module, AOPModules)
             for m in module.load().asList(): context.addSetupModule(m)
         else: raise SetupError('Cannot use module %s' % module)
-
-    return activate(context.assemble(config))
+    
+    assembly = Assembly(config or {})
+    if included: assembly.calls.update(Assembly.current().calls)
+    assembly = context.assemble(assembly)
+    if active: assembly = activate(assembly)
+    return assembly
 
 def activate(assembly):
     '''
@@ -200,12 +221,18 @@ def activate(assembly):
     Assembly.stack.append(assembly)
     return assembly
 
-def deactivate():
+def deactivate(count=1):
     '''
     Deactivate the ongoing assembly.
+    
+    @param count: integer
+        How many times to deactivate.
     '''
+    assert isinstance(count, int), 'Invalid count %s' % count
     assert Assembly.stack, 'No assembly available for deactivation'
-    Assembly.stack.pop()
+    while count:
+        Assembly.stack.pop()
+        count -= 1
 
 def initialize(entity):
     '''
@@ -252,7 +279,7 @@ def getEntity(identifier, module=None):
         
         for setup in setups:
             assert isinstance(setup, SetupSource)
-            if setup.type == identifier or (setup.type and issubclass(setup.type, identifier)): found.append(setup)
+            if setup.isOf(identifier): found.append(setup)
             
     if not found: raise SetupError('No setup entity as found for "%s"' % identifier)
     if len(found) > 1: raise SetupError('To many setup entities found (%s) for "%s"' % 

@@ -104,9 +104,7 @@ if __name__ == '__main__':
         # do a preclean
         chdir(dirname(script))
         sys.argv = cleanArgv
-        sys.stdout, sys.stderr = StringIO(), StringIO()
         module = imp.load_source('setup', script)
-        sys.stdout, sys.stderr = stdout, stderr
 
         eggs = glob(join(distDir, packageName + '*'))
         packageDirMTime = dirMTime(packageDir)

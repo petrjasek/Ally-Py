@@ -7,8 +7,9 @@ define(['gizmo', 'jquery', 'jquery/superdesk'], function(giz, $, superdesk)
         AuthApp = a;
         $(AuthApp).on('logout', function()
         {
-            localStorage.removeItem('superdesk.login.session')
+            localStorage.removeItem('superdesk.login.session');
             delete authSync.options.headers.Authorization;
+            window.tokenService.removeToken();
         });
     });
     // error display

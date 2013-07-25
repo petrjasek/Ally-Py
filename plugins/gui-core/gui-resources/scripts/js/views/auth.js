@@ -43,6 +43,7 @@ function($, superdesk, gizmo, Action, jsSHA, AuthToken, AuthLogin)
             localStorage.setItem('superdesk.login.name', user.Name);
             localStorage.setItem('superdesk.login.email', user.EMail);
             $.restAuth.prototype.requestOptions.headers.Authorization = localStorage.getItem('superdesk.login.session');
+            window.tokenService.setToken(data.Session);
             
             superdesk.login = {Id: localStorage.getItem('superdesk.login.id'), Name: localStorage.getItem('superdesk.login.name'), EMail: localStorage.getItem('superdesk.login.email')}
             
@@ -72,6 +73,7 @@ function($, superdesk, gizmo, Action, jsSHA, AuthToken, AuthLogin)
                     localStorage.setItem('superdesk.login.id', user.Id);
                     localStorage.setItem('superdesk.login.name', user.Name);
                     localStorage.setItem('superdesk.login.email', user.EMail);
+                    tokenService.setToken(data.Session);
                     
                     $.restAuth.prototype.requestOptions.headers.Authorization = localStorage.getItem('superdesk.login.session');
                     

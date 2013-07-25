@@ -29,6 +29,7 @@ requirejs.config
         'moment': config.cjs('moment'),
         'router': config.cjs('router'),
         'vendor': config.cjs('vendor'),
+        'superdesk': config.cjs('superdesk'),
         'angular': 'http://ajax.googleapis.com/ajax/libs/angularjs/1.0.7/angular',
         'angular-resource': 'http://code.angularjs.org/1.0.7/angular-resource'
 	},
@@ -48,29 +49,35 @@ requirejs.config
 
 // backbone must be loaded asap because it requires underscore
 // but '_' is taken later for localization
-require(['concat', 'backbone'], function(){
-	require
-	([
-	  config.cjs('views/menu.js'), 
-	  config.cjs('views/auth.js'), 
-	  'jquery', 'jquery/superdesk', 'gizmo/superdesk/action',
-      'router',
-      'jquery/i18n', 'jqueryui/ext'
-	], 
-	function(MenuView, authView, $, superdesk, Action, router)
-	{
-	    $(authView).on('logout login', function(){ Action.clearCache(); });
+require(['concat', 'backbone'], function() {
+	require([
+        'angular',
+        config.cjs('views/menu.js'), 
+        config.cjs('views/auth.js'), 
+        'jquery', 'jquery/superdesk', 'gizmo/superdesk/action',
+        'router',
+        'jquery/i18n',
+        'jqueryui/ext',
+        'superdesk/auth'
+        ],
+        function(angular, MenuView, authView, $, superdesk, Action, router) {
 
-        // initialize menu before auth because we have some events bound to auth there
-        var menu = new MenuView({ el: $('#navbar-top') });
+            angular.module('superdesk', ['superdesk.auth']);
+            angular.bootstrap(document, ['superdesk']);
 
-	    // render auth view
-        $(superdesk.layoutPlaceholder).html(authView.render().el);
+	        $(authView).on('logout login', function() { Action.clearCache(); });
 
-        router.route('', 'home', function() {
-	        $.superdesk.applyLayout('layouts/dashboard', {}, function() {
-                Action.initApps('modules.dashboard.*', $($.superdesk.layoutPlaceholder));
+            // initialize menu before auth because we have some events bound to auth there
+            var menu = new MenuView({ el: $('#navbar-top') });
+
+	        // render auth view
+            $(superdesk.layoutPlaceholder).html(authView.render().el);
+
+            router.route('', 'home', function() {
+	            $.superdesk.applyLayout('layouts/dashboard', {}, function() {
+                    Action.initApps('modules.dashboard.*', $($.superdesk.layoutPlaceholder));
+                });
             });
-        });
-	});
+	    }
+    );
 });

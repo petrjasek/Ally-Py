@@ -229,8 +229,7 @@ function($, superdesk, gizmo, Action, jsSHA, AuthToken, AuthLogin)
                     resizable: false,
                     modal: true,
                     width: "40.1709%",
-                    buttons: 
-                    [
+                    buttons: [
                          { text: "Login", click: function(){ $(this).find('form:eq(0)').trigger('submit'); }, class: "btn btn-primary"},
                          { text: "Close", click: function(){ $(this).dialog('close'); }, class: "btn"}
                     ]

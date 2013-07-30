@@ -33,6 +33,12 @@ define([
 
             this.auth = function(username, password) {
                 var delay = $q.defer();
+
+                if (!username || !password) {
+                    delay.reject();
+                    return delay.promise;
+                }
+
                 Session.save({userName: username}, function(session) {
                     Login.save({
                         UserName: username,
@@ -48,6 +54,7 @@ define([
                         delay.reject(response);
                     });
                 });
+
                 return delay.promise;
             };
 

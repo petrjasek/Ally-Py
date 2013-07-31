@@ -17,16 +17,19 @@ define([
                     template: '<div ng-include="templateUrl">Loading..</div>',
                     controller: function($scope, $route, $routeParams) {
                         console.log('in', $route, $routeParams);
-                        $scope.templateUrl = '/content/lib/core/templates/login.html';
                     }
                 });
         }).
-        run(function($rootScope, authService) {
+        run(function($rootScope, $route, authService) {
             $rootScope.$on('$locationChangeStart', function(event) {
-                if (!authService.hasToken()) {
+                if (!authService.hasIdentity()) {
                     event.preventDefault();
                     $rootScope.$broadcast('auth.doLogin');
                 }
+            });
+
+            $rootScope.$on('auth.login', function() {
+                $route.reload();
             });
         });
 });

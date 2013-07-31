@@ -22,7 +22,7 @@ define([
                                 class: 'btn btn-primary',
                                 click: function() {
                                     scope.$apply(function() {
-                                        authService.auth(scope.username, scope.password, scope.rememberMe).
+                                        authService.login(scope.username, scope.password, scope.rememberMe).
                                             then(function() {
                                                 scope.loginError = false;
                                                 $(element).dialog('close');
@@ -39,7 +39,7 @@ define([
                         $(element).dialog('open');
                     });
 
-                    if (authService.hasToken()) {
+                    if (authService.hasIdentity()) {
                         $(element).dialog('close');
                     }
                 }

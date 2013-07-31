@@ -1,8 +1,9 @@
-define(['angular', 'angular-resource'], function(angular) {
-    angular.module('superdesk.menu', ['ngResource']).
-        controller('NavController', ['$scope', function($scope) {
-            $scope.$on('auth.login', function(event, args) {
-                // TODO render menu for given user
-            });
+define(['angular', 'superdesk/auth/services'], function(angular) {
+    angular.module('superdesk.menu', ['superdesk.auth.services']).
+        controller('NavController', ['$scope', 'authService', function($scope, authService) {
+            $scope.templateUrl = '/content/lib/core/templates/navbar.html';
+            $scope.logout = function() {
+                authService.logout();
+            };
         }]);
 });

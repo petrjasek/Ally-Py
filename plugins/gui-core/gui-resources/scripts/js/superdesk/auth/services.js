@@ -5,7 +5,15 @@ define([
 ], function(jsSHA, angular) {
     'use strict';
 
-    var TOKEN_KEY = 'superdesk.login.session';
+    var AUTH_NS = 'superdesk.auth';
+
+    var SessionData = function(data) {
+        this.token = data ? data.Token: null;
+        this.user = data ? data.User : {
+            Id: null,
+            Name: 'Anonymous'
+        };
+    };
 
     angular.module('superdesk.auth.services', ['ngResource']).
         factory('Session', function($resource) {
@@ -14,11 +22,23 @@ define([
             });
         }).
         factory('Login', function($resource) {
-            return $resource('/resources/Security/Authentication/Login');
+            return $resource('/resources/Security/Authentication/Login', {}, {
+                'save': {method: 'POST', params: {'X-Filter': 'User.*'}}
+            });
         }).
-        service('authService', function($rootScope, $http, $route, $q, Session, Login) {
+        service('authService', function($rootScope, $http, $q, Session, Login) {
             window.authService = this; // publish service
-            var self = this;
+
+            // remember me func - if we have auth data in localStorage copy it to sessionStorage
+            if (localStorage.getItem(AUTH_NS)) {
+                sessionStorage.setItem(AUTH_NS, localStorage.getItem(AUTH_NS));
+            }
+
+            // init session
+            this.sessionData = sessionStorage.getItem(AUTH_NS)
+                ? angular.fromJson(sessionStorage.getItem(AUTH_NS))
+                : new SessionData();
+            $rootScope.currentUser = this.sessionData.user;
 
             var getHashedToken = function(username, password, loginToken) {
                 var shaPassword = new jsSHA(password, "ASCII");
@@ -28,7 +48,14 @@ define([
                 return shaStep2.getHMAC(HashedToken, "ASCII", "SHA-512", "HEX");
             };
 
-            this.auth = function(username, password, rememberMe) {
+            /**
+             * Login
+             *
+             * @param {string} username
+             * @param {string} password
+             * @param {boolean} rememberMe
+             */
+            this.login = function(username, password, rememberMe) {
                 var delay = $q.defer();
 
                 if (!username || !password) {
@@ -36,16 +63,15 @@ define([
                     return delay.promise;
                 }
 
+                var self = this;
                 Session.save({userName: username}, function(session) {
                     Login.save({
                         UserName: username,
                         Token: session.Token,
                         HashedToken: getHashedToken(username, password, session.Token)
                     }, function(login) {
-                        self.setToken(login.Session, rememberMe);
-                        $http.defaults.headers.common['Authorization'] = login.Session;
+                        self.setSessionData(login, rememberMe);
                         $rootScope.$broadcast('auth.login', login);
-                        $route.reload();
                         delay.resolve(login.Session);
                     }, function(response) {
                         delay.reject(response);
@@ -55,27 +81,35 @@ define([
                 return delay.promise;
             };
 
-            this.setToken = function(token, useLocalStorage) {
-                sessionStorage.setItem(TOKEN_KEY, token);
+            /**
+             * Logout
+             */
+            this.logout = function() {
+                this.setSessionData();
+                sessionStorage.removeItem(AUTH_NS);
+                localStorage.removeItem(AUTH_NS);
+            };
+
+            this.setSessionData = function(data, useLocalStorage) {
+                this.sessionData = new SessionData(data);
+                $rootScope.currentUser = this.sessionData.user;
+                $http.defaults.headers.common['Authorization'] = this.sessionData.token;
+
+                sessionStorage.setItem(AUTH_NS, angular.toJson(this.sessionData));
                 if (useLocalStorage) {
-                    localStorage.setItem(TOKEN_KEY, token);
+                    localStorage.setItem(AUTH_NS, sessionStorage.getItem(AUTH_NS));
                 } else {
-                    localStorage.setItem(TOKEN_KEY, '');
+                    localStorage.removeItem(AUTH_NS);
                 }
             };
 
-            this.getToken = function() {
-                return sessionStorage.getItem(TOKEN_KEY)
-                    ? sessionStorage.getItem(TOKEN_KEY)
-                    : localStorage.getItem(TOKEN_KEY);
-            };
-
-            this.hasToken = function() {
-                return !!this.getToken();
-            };
-
-            this.removeToken = function() {
-                this.setToken('');
+            /**
+             * Test if user is authenticated
+             *
+             * @return {boolean}
+             */
+            this.hasIdentity = function() {
+                return !!this.sessionData.user.Id;
             };
         });
 });

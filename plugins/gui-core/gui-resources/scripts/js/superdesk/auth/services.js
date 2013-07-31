@@ -1,15 +1,13 @@
 define([
-    'angular',
-    'jquery',
     'utils/sha512',
-    'bootstrap',
+    'angular',
     'angular-resource'
-], function(angular, $, jsSHA) {
+], function(jsSHA, angular) {
     'use strict';
 
     var TOKEN_KEY = 'superdesk.login.session';
 
-    angular.module('superdesk.auth', ['ngResource']).
+    angular.module('superdesk.auth.services', ['ngResource']).
         factory('Session', function($resource) {
             return $resource('/resources/Security/Authentication', {}, {
                 save: {method: 'POST'}
@@ -18,8 +16,8 @@ define([
         factory('Login', function($resource) {
             return $resource('/resources/Security/Authentication/Login');
         }).
-        service('tokenService', function($rootScope, $http, $route, $q, Session, Login) {
-            window.tokenService = this; // publish service
+        service('authService', function($rootScope, $http, $route, $q, Session, Login) {
+            window.authService = this; // publish service
             var self = this;
 
             var getHashedToken = function(username, password, loginToken) {
@@ -79,62 +77,5 @@ define([
             this.removeToken = function() {
                 this.setToken('');
             };
-        }).
-        directive('sdLoginModal', function($rootScope, tokenService) {
-            return {
-                restrict: 'A',
-                templateUrl: '/content/lib/core/templates/login.html',
-                link: function(scope, element, attrs) {
-                    $(element).dialog({
-                        draggable: false,
-                        resizable: false,
-                        modal: true,
-                        width: "40.1709%",
-                        buttons: [
-                            {
-                                text: 'Login',
-                                class: 'btn btn-primary',
-                                click: function() {
-                                    scope.$apply(function() {
-                                        tokenService.auth(scope.username, scope.password, scope.rememberMe).
-                                            then(function() {
-                                                scope.loginError = false;
-                                                $(element).dialog('close');
-                                            }, function() {
-                                                scope.loginError = true;
-                                            });
-                                    });
-                                }
-                            }
-                        ]
-                    });
-
-                    $rootScope.$on('auth.doLogin', function(event) {
-                        $(element).dialog('open');
-                    });
-
-                    if (tokenService.hasToken()) {
-                        $(element).dialog('close');
-                    }
-                }
-            };
-        }).
-        config(function($routeProvider) {
-            $routeProvider.
-                when('/auth', {
-                    template: '<h1>hello {{name}}</h1>',
-                    controller: function($scope) {
-                        $scope.name = 'world';
-                    }
-                });
-        }).
-        run(function($rootScope, tokenService) {
-            $rootScope.$on('$locationChangeStart', function(event) {
-                window.scope = $rootScope;
-                if (!tokenService.hasToken()) {
-                    event.preventDefault();
-                    $rootScope.$broadcast('auth.doLogin');
-                }
-            });
         });
 });

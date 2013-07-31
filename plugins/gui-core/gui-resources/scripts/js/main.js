@@ -55,7 +55,7 @@ require(['concat', 'backbone'], function() {
         'jquery', 'jquery/superdesk', 'gizmo/superdesk/action',
         'jquery/i18n',
         'jqueryui/ext',
-        'superdesk/auth',
+        'superdesk/auth/module',
         'superdesk/menu',
         'superdesk/dashboard'
         ],

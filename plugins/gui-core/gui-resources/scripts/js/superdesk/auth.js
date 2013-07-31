@@ -20,7 +20,6 @@ define([
         }).
         service('tokenService', function($rootScope, $http, $route, $q, Session, Login) {
             window.tokenService = this; // publish service
-            this.storage = localStorage;
             var self = this;
 
             var getHashedToken = function(username, password, loginToken) {
@@ -31,7 +30,7 @@ define([
                 return shaStep2.getHMAC(HashedToken, "ASCII", "SHA-512", "HEX");
             };
 
-            this.auth = function(username, password) {
+            this.auth = function(username, password, rememberMe) {
                 var delay = $q.defer();
 
                 if (!username || !password) {
@@ -45,7 +44,7 @@ define([
                         Token: session.Token,
                         HashedToken: getHashedToken(username, password, session.Token)
                     }, function(login) {
-                        self.setToken(login.Session);
+                        self.setToken(login.Session, rememberMe);
                         $http.defaults.headers.common['Authorization'] = login.Session;
                         $rootScope.$broadcast('auth.login', login);
                         $route.reload();
@@ -58,16 +57,27 @@ define([
                 return delay.promise;
             };
 
-            this.setToken = function(token) {
-                this.storage.setItem(TOKEN_KEY, token);
+            this.setToken = function(token, useLocalStorage) {
+                sessionStorage.setItem(TOKEN_KEY, token);
+                if (useLocalStorage) {
+                    localStorage.setItem(TOKEN_KEY, token);
+                } else {
+                    localStorage.setItem(TOKEN_KEY, '');
+                }
             };
 
-            this.removeToken = function() {
-                this.setToken(null);
+            this.getToken = function() {
+                return sessionStorage.getItem(TOKEN_KEY)
+                    ? sessionStorage.getItem(TOKEN_KEY)
+                    : localStorage.getItem(TOKEN_KEY);
             };
 
             this.hasToken = function() {
-                return !!this.storage.getItem(TOKEN_KEY);
+                return !!this.getToken();
+            };
+
+            this.removeToken = function() {
+                this.setToken('');
             };
         }).
         directive('sdLoginModal', function($rootScope, tokenService) {
@@ -86,7 +96,7 @@ define([
                                 class: 'btn btn-primary',
                                 click: function() {
                                     scope.$apply(function() {
-                                        tokenService.auth(scope.username, scope.password).
+                                        tokenService.auth(scope.username, scope.password, scope.rememberMe).
                                             then(function() {
                                                 scope.loginError = false;
                                                 $(element).dialog('close');
@@ -120,6 +130,7 @@ define([
         }).
         run(function($rootScope, tokenService) {
             $rootScope.$on('$locationChangeStart', function(event) {
+                window.scope = $rootScope;
                 if (!tokenService.hasToken()) {
                     event.preventDefault();
                     $rootScope.$broadcast('auth.doLogin');

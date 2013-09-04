@@ -53,7 +53,7 @@ class ParserHandler(HandlerProcessor):
         
         self._inError = False
 
-    def process(self, chain, solicit:Solicit, Repository:Context, **keyargs):
+    def process(self, chain, solicit:Solicit, ConfigRepository:Context, **keyargs):
         '''
         @see: HandlerProcessor.process
         
@@ -63,7 +63,7 @@ class ParserHandler(HandlerProcessor):
         assert isinstance(solicit, Solicit), 'Invalid solicit %s' % solicit
         
         digester = DigesterArg(chain.arg, self.rootNode, acceptUnknownTags=False)
-        digester.stack.append(Repository())
+        digester.stack.append(ConfigRepository())
         try:
             with open(solicit.file, 'rb') as source: digester.parse('utf8', source)
             if self._inError: log.warning('XML parsing OK')

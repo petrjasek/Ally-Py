@@ -18,7 +18,7 @@ from ally.design.processor.handler import Handler
 from ally.xml.digester import Node, RuleRoot
 from gui.core.config.impl.processor.xml.parser import ParserHandler
 from gui.core.config.impl.rules import AccessRule, MethodRule, URLRule, \
-    ActionRule
+    ActionRule, DescriptionRule, GroupRule
 from sched import scheduler
 from threading import Thread
 import time
@@ -37,7 +37,9 @@ def names_for_group_access():
     Contains the names of the access groups that are expected in the configuration file. Expected properties are name and
     optionally a flag indicating if actions are allowed.
     '''
-    return [dict(name='Anonymous', hasActions=True)]
+    return [dict(name='Anonymous', hasActions=True, hasDescription=False), \
+            dict(name='Captcha', hasActions=False, hasDescription=False), \
+            dict(name='Right', hasActions=True, hasDescription=True)]
 
 # --------------------------------------------------------------------
 
@@ -61,13 +63,15 @@ def updateRootNodeXMLForGroups():
     for spec in names_for_group_access():
         assert isinstance(spec, dict), 'Invalid specifications %s' % spec
         assert 'name' in spec, 'A group name is required in %s' % (spec,)
-        node = nodeRootXML().obtainNode('Config/%s' % spec['name'])
+        node = nodeRootXML().addRule(GroupRule(), 'Config/%s' % spec['name'])
         addNodeAccess(node)
         if spec.get('hasActions', False): addNodeAction(node)
+        if spec.get('hasDescription', False): addNodeDescription(node)
 
 @ioc.before(assemblyConfiguration)
 def updateAssemblyConfiguration():
-    assemblyConfiguration().add(parserXML(), synchronizeAction())
+    #assemblyConfiguration().add(parserXML(), synchronizeAction())
+    assemblyConfiguration().add(parserXML())
 
 @app.deploy
 def cleanup():
@@ -94,15 +98,21 @@ def cleanup():
         arg = proc.execute(FILL_ALL, solicit=solicit)
         assert isinstance(arg.solicit, TestSolicit)
         
-#         print('Actions: ')
-#         if arg.solicit.repository.actions:
-#             for action in arg.solicit.repository.actions:
-#                 print(action)
-#               
-#         print("Filters-Methods-URLs: ")
-#         if arg.solicit.repository.accesses:
-#             for access in arg.solicit.repository.accesses:
-#                 print(access.filters, access.methods, access.urls)
+        if arg.solicit.repository.groups:
+            for group in arg.solicit.repository.groups:
+                print('Group: %s' % group.name)
+                if group.description: print('Description: %s' % group.description)
+                
+                print('Actions: ')
+                if group.actions:
+                    for action in group.actions:
+                        print('Action at line %s: ' % action.lineNumber, action.path, action.label, action.script, action.navBar)
+                     
+                print("Accesses: ")
+                if group.accesses:
+                    for access in group.accesses:
+                        print('Access at line %s: ' % access.lineNumber, access.filters, access.methods, access.urls)        
+                print()
     
         schedule.enter(3, 1, executeCleanup, ())
 
@@ -112,6 +122,10 @@ def cleanup():
     scheduleRunner.start()
     
 # --------------------------------------------------------------------
+
+def addNodeDescription(node):
+    assert isinstance(node, Node), 'Invalid node %s' % node
+    node.addRule(DescriptionRule(), 'Description')
 
 def addNodeAccess(node):
     assert isinstance(node, Node), 'Invalid node %s' % node

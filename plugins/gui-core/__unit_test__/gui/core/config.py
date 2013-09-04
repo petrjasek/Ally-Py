@@ -27,7 +27,8 @@ from os.path import join, dirname
 import logging
 import unittest
 
-from gui.core.config.impl.rules import URLRule, ActionRule, MethodRule, AccessRule
+from gui.core.config.impl.rules import URLRule, ActionRule, MethodRule, AccessRule,\
+    GroupRule, DescriptionRule
 
 # --------------------------------------------------------------------
 
@@ -57,8 +58,14 @@ class TestConfigurationParsing(unittest.TestCase):
         parser = ParserHandler()
         parser.rootNode = RuleRoot()
         
-        anonymous = parser.rootNode.obtainNode('Config/Anonymous')
-        allows = anonymous.addRule(AccessRule(), 'Access')
+        anonymous = parser.rootNode.addRule(GroupRule(), 'Config/Anonymous')
+        captcha = parser.rootNode.addRule(GroupRule(), 'Config/Captcha')
+        right = parser.rootNode.addRule(GroupRule(), 'Config/Right')
+        right.addRule(DescriptionRule(), 'Description')
+        
+        #allows = anonymous.addRule(AccessRule(), 'Allows')
+        allows = Node('Allows')
+        allows.addRule(AccessRule())
         #allows.addRule(MethodRule(fromAttributes=True))
         allows.addRule(URLRule(), 'URL')
         allows.addRule(MethodRule(), 'Method')
@@ -72,6 +79,14 @@ class TestConfigurationParsing(unittest.TestCase):
         
         anonymous.childrens['Actions'] = actions
         anonymous.childrens['Action'] = action
+        anonymous.childrens['Allows'] = allows
+        
+        #no actions for captcha
+        captcha.childrens['Allows'] = allows
+        
+        right.childrens['Actions'] = actions
+        right.childrens['Action'] = action
+        right.childrens['Allows'] = allows
         
         assemblyParsing = Assembly('Parsing XML')
         assemblyParsing.add(initialize(parser))
@@ -85,16 +100,23 @@ class TestConfigurationParsing(unittest.TestCase):
         arg = proc.execute(FILL_ALL, solicit=solicit)
         assert isinstance(arg.solicit, TestSolicit)
         
-        print('Actions: ')
-        if arg.solicit.repository.actions:
-            for action in arg.solicit.repository.actions:
-                print('Action at line %s: ' % action.lineNumber, action.path, action.label, action.script, action.navBar)
-            
-        print("Accesses: ")
-        if arg.solicit.repository.accesses:
-            for access in arg.solicit.repository.accesses:
-                print('Access at line %s: ' % access.lineNumber, access.filters, access.methods, access.urls)
         
+        if arg.solicit.repository.groups:
+            for group in arg.solicit.repository.groups:
+                print('Group: %s' % group.name)
+                if group.description: print('Description: %s' % group.description)
+                
+                print('Actions: ')
+                if group.actions:
+                    for action in group.actions:
+                        print('Action at line %s: ' % action.lineNumber, action.path, action.label, action.script, action.navBar)
+                     
+                print("Accesses: ")
+                if group.accesses:
+                    for access in group.accesses:
+                        print('Access at line %s: ' % access.lineNumber, access.filters, access.methods, access.urls)
+                
+                print()
 
 # --------------------------------------------------------------------
 

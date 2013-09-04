@@ -35,6 +35,13 @@ class Solicit(Context):
     # ---------------------------------------------------------------- Required
     repository = requires(Context)
 
+class RootRepository(Context):
+    '''
+    The group repository context.
+    '''
+    # ---------------------------------------------------------------- Required
+    groups = requires(list)
+
 class Repository(Context):
     '''
     The repository context.
@@ -91,26 +98,29 @@ class SynchronizeActionHandler(HandlerProcessor):
         '''
         assert isinstance(chain, Chain), 'Invalid chain %s' % chain
         assert isinstance(solicit, Solicit), 'Invalid solicit %s' % solicit
-        if solicit.repository is None or solicit.repository.actions is None: return
-        assert isinstance(solicit.repository, Repository), 'Invalid repository %s' % solicit.repository
+        if solicit.repository is None or solicit.repository.groups is None: return
+        assert isinstance(solicit.repository, RootRepository), 'Invalid repository %s' % solicit.repository
         
         actionsFromConfig = {}
         # check for actions with the same path -> display warning message
         isWarning = False
-        for action in solicit.repository.actions:
-            if action.path in actionsFromConfig:
-                action1, action2 = action, actionsFromConfig[action.path]
-                diffs = self.compareActions(action1, action2)
-                if diffs:
-                    isWarning = True
-                    warningId = '%s_%s_%s' % (action.path, action1.lineNumber, action2.lineNumber)
-                    if warningId in self._warnings: continue
-                    
-                    log.warning('Attributes: "%s" are different for Action with path="%s" at Line %s and Line %s',
-                                ', '.join(diffs), action1.path, action1.lineNumber, action2.lineNumber)
-                    self._warnings.add(warningId)
-                    
-            else: actionsFromConfig[action.path] = action
+        for group in solicit.repository.groups:
+            assert isinstance(group, Repository)
+            if not group.actions: continue
+            for action in group.actions:
+                if action.path in actionsFromConfig:
+                    action1, action2 = action, actionsFromConfig[action.path]
+                    diffs = self.compareActions(action1, action2)
+                    if diffs:
+                        isWarning = True
+                        warningId = '%s_%s_%s' % (action.path, action1.lineNumber, action2.lineNumber)
+                        if warningId in self._warnings: continue
+                        
+                        log.warning('Attributes: "%s" are different for Action with path="%s" at Line %s and Line %s',
+                                    ', '.join(diffs), action1.path, action1.lineNumber, action2.lineNumber)
+                        self._warnings.add(warningId)
+                        
+                else: actionsFromConfig[action.path] = action
         # if everything was ok, erase all warnings
         if not isWarning and len(self._warnings) > 0: 
             log.warning('Actions OK')

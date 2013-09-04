@@ -70,8 +70,7 @@ def updateRootNodeXMLForGroups():
 
 @ioc.before(assemblyConfiguration)
 def updateAssemblyConfiguration():
-    #assemblyConfiguration().add(parserXML(), synchronizeAction())
-    assemblyConfiguration().add(parserXML())
+    assemblyConfiguration().add(parserXML(), synchronizeAction())
 
 @app.deploy
 def cleanup():

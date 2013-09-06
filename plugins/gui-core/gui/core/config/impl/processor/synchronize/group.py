@@ -9,19 +9,16 @@ Created on Sept 04, 2013
 Provides the synchronization with the database for actions.
 '''
 
-from acl.api.access import IAccessService
 from acl.api.group import IGroupService, Group
 from ally.container import wire
 from ally.container.ioc import injected
 from ally.container.support import setup
 from ally.design.processor.attribute import requires
-from ally.design.processor.context import Context, attributeOf
+from ally.design.processor.context import Context
 from ally.design.processor.execution import Chain
 from ally.design.processor.handler import HandlerProcessor, Handler
-from gui.action.api.category_group import IActionGroupService
 import logging
-from ally.support.util_context import hasAttribute, listBFS
-from ally.design.processor.spec import IAttribute
+from ally.support.util_context import listBFS
 
 # --------------------------------------------------------------------
 

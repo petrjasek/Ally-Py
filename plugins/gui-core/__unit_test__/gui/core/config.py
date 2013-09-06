@@ -100,10 +100,9 @@ class TestConfigurationParsing(unittest.TestCase):
         arg = proc.execute(FILL_ALL, solicit=solicit)
         assert isinstance(arg.solicit, TestSolicit)
         
-        
-        if arg.solicit.repository.groups:
-            for group in arg.solicit.repository.groups:
-                print('Group: %s' % group.name)
+        if arg.solicit.repository.children:
+            for group in arg.solicit.repository.children:
+                print('Group: %s' % group.groupName)
                 if group.description: print('Description: %s' % group.description)
                 
                 print('Actions: ')

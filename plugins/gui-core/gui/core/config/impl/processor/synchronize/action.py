@@ -12,12 +12,12 @@ Provides the synchronization with the database for actions.
 from ally.container import wire
 from ally.container.ioc import injected
 from ally.container.support import setup
-from ally.design.processor.attribute import requires
+from ally.design.processor.attribute import requires, defines
 from ally.design.processor.context import Context
 from ally.design.processor.execution import Chain
 from ally.design.processor.handler import HandlerProcessor, Handler
 from ally.support.api.util_service import copyContainer
-from ally.support.util_context import asData, attributesOf
+from ally.support.util_context import asData, attributesOf, listBFS
 from gui.action.api.action import Action, IActionManagerService
 import logging
 from ally.support.util import modifyFirst
@@ -35,19 +35,19 @@ class Solicit(Context):
     # ---------------------------------------------------------------- Required
     repository = requires(Context)
 
-class RootRepository(Context):
-    '''
-    The group repository context.
-    '''
-    # ---------------------------------------------------------------- Required
-    groups = requires(list)
-
 class Repository(Context):
     '''
     The repository context.
     '''
     # ---------------------------------------------------------------- Required
-    actions = requires(list)
+    children = requires(list, doc='''
+    @rtype: list[Context]
+    The list of children created.
+    ''')
+    actions = defines(list, doc='''
+    @rtype: list[Context]
+    The list of actions created.
+    ''')
 
 class WithTracking(Context):
     '''
@@ -77,7 +77,7 @@ class ActionDefinition(ActionData, WithTracking):
 @setup(Handler, name='synchronizeAction')
 class SynchronizeActionHandler(HandlerProcessor):
     '''
-    Implementation for a processor that parses XML files based on digester rules.
+    Implementation for a processor that synchronizes the actions in the configuration file with the database.
     '''
     
     actionManagerService = IActionManagerService; wire.entity('actionManagerService')
@@ -98,16 +98,16 @@ class SynchronizeActionHandler(HandlerProcessor):
         '''
         assert isinstance(chain, Chain), 'Invalid chain %s' % chain
         assert isinstance(solicit, Solicit), 'Invalid solicit %s' % solicit
-        if solicit.repository is None or solicit.repository.groups is None: return
-        assert isinstance(solicit.repository, RootRepository), 'Invalid repository %s' % solicit.repository
+        assert isinstance(solicit.repository, Repository), 'Invalid repository %s' % solicit.repository
+        
+        withActions = listBFS(solicit.repository, Repository.children, Repository.actions)
         
         actionsFromConfig = {}
         # check for actions with the same path -> display warning message
         isWarning = False
-        for group in solicit.repository.groups:
-            assert isinstance(group, Repository)
-            if not group.actions: continue
-            for action in group.actions:
+        for repository in withActions:
+            assert isinstance(repository, Repository), 'Invalid repository %s' % repository
+            for action in repository.actions:
                 if action.path in actionsFromConfig:
                     action1, action2 = action, actionsFromConfig[action.path]
                     diffs = self.compareActions(action1, action2)

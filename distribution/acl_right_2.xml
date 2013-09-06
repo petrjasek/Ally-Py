@@ -2,51 +2,35 @@
 <Config>
 	<Anonymous>
 		<Action path="menu" label="Menu">
-			<Action path="request" label="Request" >
-				<Action path="blob" label="Blob" />
-			</Action>				
+			<Action path="request" label="Request" />
 		</Action>
 		<Action path="mucu" label="Mucu" parent="menu" />
-		<Action path="cucu" label="Mucu" parent="menu" />
+		<Action path="cucu" label="Cucu" parent="menu" />
 
-		<Allows methods="PUT,DELETE" filter="FilterDummy, Authent, lala">
-			<Method>GET</Method>
-			<URL>User/*</URL>
-			<URL>User/*/Blog</URL>
-			<URL>User/#/SubUser/*</URL>
-		</Allows>
-		
 		<Allows filter="userAuth">
-			<Method>GET</Method>
 			<URL>User/*</URL>
 			<URL>User/*/Blog</URL>
 			<URL>User/#/SubUser/*</URL>
 		</Allows>
 	</Anonymous>
-
+	
 	<Captcha>
-		<Allows methods="GET" filter="userAuth">
+		<Allows filter="userAuth">
 			<URL>User/*</URL>
 			<URL>User/*/Blog</URL>
 			<URL>User/#/SubUser/*</URL>
 		</Allows>
-		<Allows methods="PUT" filter="userAuth">
-			<URL>User/*</URL>
-		</Allows>
 	</Captcha>
-
+	
+	<!--
 	<Right name="Requests inspection">
 		<Actions>
-			<Action path="menu_2" />
-			<Action path="menu_2.request" script="/js/aaa.js">Request</Action>
+			<Action path="menu2"/>
+			<Action path="menu2.request" script="/js/aaa.js">Request</Action>
 		</Actions>
-		<Action path="menu_3" label="Menu">
-			<Action path="request" label="Request" />
-		</Action>
-		<Action path="mucu" label="Mucu" parent="menu_2" />
+		<Action path="mucu" label="Mucu" parent="menu2" />
 
 		<Allows filter="userAuth">
-			<Method>GET</Method>
 			<URL>User/*</URL>
 			<URL>User/*/Blog</URL>
 			<URL>User/#/SubUser/*</URL>
@@ -57,5 +41,5 @@
 			application are also visible.
 		</Description>
 	</Right>
-
+	-->
 </Config>

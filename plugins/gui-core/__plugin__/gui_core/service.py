@@ -26,20 +26,22 @@ import time
 # --------------------------------------------------------------------
 
 # The synchronization processors
-synchronizeAction = support.notCreated  # Just to avoid errors
+synchronizeAction = synchronizeGroups = synchronizeGroupActions = support.notCreated  # Just to avoid errors
 support.createEntitySetup('gui.core.config.impl.processor.synchronize.**.*')
 
 # --------------------------------------------------------------------
 
 @ioc.config
-def names_for_group_access():
+def access_group():
     '''
     Contains the names of the access groups that are expected in the configuration file. Expected properties are name and
     optionally a flag indicating if actions are allowed.
     '''
-    return [dict(name='Anonymous', hasActions=True, hasDescription=False), \
-            dict(name='Captcha', hasActions=False, hasDescription=False), \
-            dict(name='Right', hasActions=True, hasDescription=True)]
+    return {
+            'Anonymous': dict(hasActions=True, isAnonymous=True),
+            'Captcha': dict(hasActions=False),
+            'Right': dict(hasActions=True)
+            }
 
 # --------------------------------------------------------------------
 
@@ -58,20 +60,30 @@ def parserXML() -> Handler:
 
 # --------------------------------------------------------------------
 
+@ioc.before(synchronizeGroupActions)
+def updateAccessGroup():
+    synchronizeGroupActions().anonymousGroups = set(name for name, spec in access_group().items()
+                                                    if spec.get('isAnonymous', False))
+
+@ioc.before(synchronizeGroups)
+def updateGroup():
+    synchronizeGroups().anonymousGroups = set(name for name, spec in access_group().items()
+                                                    if spec.get('isAnonymous', False))
+
 @ioc.before(nodeRootXML)
 def updateRootNodeXMLForGroups():
-    for spec in names_for_group_access():
+    for name, spec in access_group().items():
+        assert isinstance(name, str), 'Invalid name %s' % name
         assert isinstance(spec, dict), 'Invalid specifications %s' % spec
-        assert 'name' in spec, 'A group name is required in %s' % (spec,)
-        node = nodeRootXML().addRule(GroupRule(), 'Config/%s' % spec['name'])
+        node = nodeRootXML().addRule(GroupRule(), 'Config/%s' % name)
         addNodeAccess(node)
+        addNodeDescription(node)
         if spec.get('hasActions', False): addNodeAction(node)
-        if spec.get('hasDescription', False): addNodeDescription(node)
 
 @ioc.before(assemblyConfiguration)
 def updateAssemblyConfiguration():
-    assemblyConfiguration().add(parserXML(), synchronizeAction())
-
+    assemblyConfiguration().add(parserXML(), synchronizeAction(), synchronizeGroups(), synchronizeGroupActions())
+    
 @app.deploy
 def cleanup():
     ''' Start the cleanup process for authentications/sessions'''
@@ -97,19 +109,20 @@ def cleanup():
         arg = proc.execute(FILL_ALL, solicit=solicit)
         assert isinstance(arg.solicit, TestSolicit)
         
-        if arg.solicit.repository.groups:
-            for group in arg.solicit.repository.groups:
-                print('Group: %s' % group.name)
-                if group.description: print('Description: %s' % group.description)
+        if arg.solicit.repository.children:
+            for repository in arg.solicit.repository.children:
+                if repository.groupName:
+                    print('Group: %s' % repository.groupName)
+                    if repository.description: print('Description: %s' % repository.description)
                 
                 print('Actions: ')
-                if group.actions:
-                    for action in group.actions:
+                if repository.actions:
+                    for action in repository.actions:
                         print('Action at line %s: ' % action.lineNumber, action.path, action.label, action.script, action.navBar)
                      
                 print("Accesses: ")
-                if group.accesses:
-                    for access in group.accesses:
+                if repository.accesses:
+                    for access in repository.accesses:
                         print('Access at line %s: ' % access.lineNumber, access.filters, access.methods, access.urls)        
                 print()
     

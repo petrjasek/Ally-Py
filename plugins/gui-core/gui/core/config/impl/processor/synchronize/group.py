@@ -84,7 +84,7 @@ class SynchronizeGroupsHandler(HandlerProcessor):
                 groupNew = Group()
                 groupNew.Name = group.groupName
                 groupNew.IsAnonymous = group.groupName in self.anonymousGroups
-                self.groupService.insert(group) 
+                self.groupService.insert(groupNew) 
             else: groupsDb.remove(group.groupName)
         
         # remove the remaining groups that are only in the db and not in the configuration file

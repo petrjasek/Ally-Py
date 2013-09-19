@@ -67,6 +67,20 @@ class PollNotifier:
         #TODO: add scanining thread.
     
     def scan(self):
+        ''' 
+        Scan the registered paths and launch change events.
+        '''
+        import pdb;pdb.set_trace()
+        self._processing
+        
+        proc = self._processing
+        assert isinstance(proc, Processing), 'Invalid processing %s' % proc
+        
+        i = 0
+        while True:
+            i += 1
+    
+    def _scan_(self):
         '''
         Scan the file changes.
         '''

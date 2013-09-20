@@ -103,13 +103,13 @@ class RegisterListeners(HandlerProcessor):
         assert solicit.registerPaths, 'Invalid register paths %s' % solicit.registerPaths
         
         self._chain = chain
-        if not solicit.itemTree: solicit.itemTree = createItem('ROOT', chain)
+        if not solicit.itemTree: solicit.itemTree = createItem('ROOT', chain, [])
         if not solicit.itemTree.children: solicit.itemTree.children = dict()
         
         listeners = []
         for path in solicit.registerPaths:
             pathList = [e for e in path.split(PATH_SEPARATOR) if e]
-            #create the listener
+            # create the listener
             listener = chain.arg.Listener()
             assert isinstance(listener, FListener), 'Invalid listener %s' % listener
             listener.path = pathList
@@ -122,12 +122,11 @@ class RegisterListeners(HandlerProcessor):
     def createItems(self, listeners):
         '''
         Creates a tree structure of items that matches the given path.
-        
         '''
         chain = self._chain
         assert isinstance(chain, Chain), 'Invalid chain %s' % chain
         
-        root = createItem('ROOT', chain)
+        root = createItem('ROOT', chain, [])
         
         for listener in listeners:
             assert isinstance(listener, FListener), 'Invalid listener %s' % listener
@@ -136,33 +135,33 @@ class RegisterListeners(HandlerProcessor):
             
             startName = listener.path[0]
             queue = deque()
-            queue.append((startName, root)) #name, parent
+            queue.append((startName, root))  # name, parent
             while queue:
                 name, parent = queue.popleft()
                 assert isinstance(name, str), 'Invalid item name %s' % name
                 assert isinstance(parent, FItem), 'Invalid item parent %s' % parent
                 
                 item = parent.children.get(name)
-                if item==None:
+                if item == None:
                     path = parent.path + [name]
                     if not matchPaths(path, listener.path): continue
-                    #if the item does not exist, create it and add it to the tree
+                    # if the item does not exist, create it and add it to the tree
                     item = createItem(name, chain, path, parent)
                     assert isinstance(item, FItem), 'Invalid item %s' % item
-                    #add the new item to the tree (by linking the parent to it)
+                    # add the new item to the tree (by linking the parent to it)
                     if item.parent.children == None: item.parent.children = dict() 
                     item.parent.children[item.name] = item
-                    #set last modified time for the new item
+                    # set last modified time for the new item
                     try:
                         item.lastModified = int(os.path.getmtime(buildPath(item.path, PATH_SEPARATOR)))
                         item.hash = str(datetime.datetime.fromtimestamp(item.lastModified))
                     except: continue
                 
                 if not matchPaths(item.path, listener.path): continue
-                #add the listener
+                # add the listener
                 item.listeners.append(listener)
                 
-                #get the children of this node and add them to the queue
+                # get the children of this node and add them to the queue
                 pathStr = buildPath(item.path, PATH_SEPARATOR)
                 if os.path.isdir(pathStr):
                     for child in [f for f in os.listdir(pathStr) if not f.startswith('.')]:
@@ -170,7 +169,7 @@ class RegisterListeners(HandlerProcessor):
         
         return root.children.get(startName)
 
-def createItem(name, chain, path = [], parent = None):
+def createItem(name, chain, path, parent=None):
     assert isinstance(chain, Chain), 'Invalid chain %s' % chain
     item = chain.arg.Item()
     item.name = name

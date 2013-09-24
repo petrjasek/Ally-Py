@@ -32,6 +32,7 @@ from ally.notifier.impl.scanner import ScannerHandler
 
 logging.basicConfig()
 logging.getLogger('ally.design.processor').setLevel(logging.INFO)
+logging.getLogger('ally.notifier').setLevel(logging.DEBUG)
 
 # --------------------------------------------------------------------
 

@@ -14,15 +14,15 @@ Registering the listeners for the file notifier.
 from ally.container.ioc import injected
 from ally.design.processor.attribute import attribute, requires, defines
 from ally.design.processor.execution import Chain
-from collections import deque
 import os
-import datetime
+import io
 from ally.design.processor.handler import HandlerProcessor
 from ally.design.processor.context import Context
+from ally.support.util_spec import IDo
 
 # --------------------------------------------------------------------
 
-PATH_SEPARATOR = os.path.sep
+PATH_SEP = os.path.sep
 
 class FItem(Context):
     '''
@@ -42,8 +42,12 @@ class FItem(Context):
     The children items.
     ''')
     path = attribute(list, doc='''
-    @rtype: list[str]
+    @rtype: list[string]
     The path of the item.
+    ''')
+    URIType = attribute(str, doc='''
+    @rtype: string
+    The item URI type (e.g. file://, http://, fttp:// ...).
     ''')
 #     doGetStream = attribute(IDo, doc='''
 #     @rtype: callable() -> IInputStream
@@ -63,25 +67,58 @@ class FItem(Context):
     ''')
 
 class FListener(Context):
+    # ---------------------------------------------------------------- Defined
     path = attribute(list, doc='''
-    @rtype: list[str]
+    @rtype: list[string]
     The path of the listener.
     ''')
-
+    doMatch = defines(IDo, doc='''
+    @rtype: callable(listenerPath, itemPath) -> boolean
+    Matches the item path against the paths accepted by the listener.
+    @param listenerPath: list[string]
+        Pattern for paths accepted by the listener.
+    @param itemPath: list[string]
+        Path of the item.
+    ''')
+    doOnContentCreated = defines(IDo, doc='''
+    @rtype: callable(URI, content)
+    Is called when an item for this listener is created.
+    @param URI: string
+        Pattern for paths accepted by the listener.
+    @param content: stream
+        Stream with the content of the resource.
+    ''')
+    doOnContentChanged = defines(IDo, doc='''
+    @rtype: callable(URI, content)
+    Is called when an item for this listener is changed.
+    @param URI: string
+        Pattern for paths accepted by the listener.
+    @param content: stream
+        Stream with the content of the resource.
+    ''')
+    doOnContentRemoved = defines(IDo, doc='''
+    @rtype: callable(URI)
+    Is called when an item for this listener is deleted.
+    @param URI: string
+        Pattern for paths accepted by the listener.
+    @param content: stream
+        Stream with the content of the resource.
+    ''')
+    
 class Solicit(Context):
     '''
     The solicit context.
     '''
-    # ---------------------------------------------------------------- Required
+    # ---------------------------------------------------------------- Requires
     registerPaths = requires(list, doc='''
     @rtype: list[str]
     The list of paths to scan.
     ''')
     
     # ---------------------------------------------------------------- Defines
-    itemTree = defines(Context, doc='''
-    @rtype: Context
-    The root of the item tree structure
+    listeners = defines(list, doc='''
+    @rtype: list[Context]
+    The listeners for the items tree.
     ''')
     
 # --------------------------------------------------------------------
@@ -96,103 +133,56 @@ class RegisterListeners(HandlerProcessor):
         '''
         @see: HandlerProcessor.process
         
-        Builds the items tree and registers listeners for items.
+        Builds the listeners.
         '''
         assert isinstance(chain, Chain), 'Invalid chain %s' % chain
         assert isinstance(solicit, Solicit), 'Invalid solicit %s' % solicit
         assert solicit.registerPaths, 'Invalid register paths %s' % solicit.registerPaths
         
         self._chain = chain
-        if not solicit.itemTree: solicit.itemTree = createItem('ROOT', chain, [])
-        if not solicit.itemTree.children: solicit.itemTree.children = dict()
         
         listeners = []
         for path in solicit.registerPaths:
-            pathList = [e for e in path.split(PATH_SEPARATOR) if e]
+            pathList = [e for e in path.split(PATH_SEP) if e]
             # create the listener
             listener = chain.arg.Listener()
             assert isinstance(listener, FListener), 'Invalid listener %s' % listener
             listener.path = pathList
+            listener.doMatch = match
+            listener.doOnContentCreated = doOnContentCreated
+            listener.doOnContentChanged = doOnContentChanged
+            listener.doOnContentRemoved = doOnContentRemoved
             listeners.append(listener)
-            
-        item = self.createItems(listeners)
-        assert isinstance(item, FItem), 'Invalid item %s' % item
-        solicit.itemTree.children[item.name] = item
         
-    def createItems(self, listeners):
-        '''
-        Creates a tree structure of items that matches the given path.
-        '''
-        chain = self._chain
-        assert isinstance(chain, Chain), 'Invalid chain %s' % chain
-        
-        root = createItem('ROOT', chain, [])
-        
-        for listener in listeners:
-            assert isinstance(listener, FListener), 'Invalid listener %s' % listener
-            assert listener.path, 'Invalid listener path %s' % listener.path
-            assert os.path.isdir(buildPath(listener.path[:1], PATH_SEPARATOR)), 'Invalid root directory %s' % listener.path[:1]
-            
-            startName = listener.path[0]
-            queue = deque()
-            queue.append((startName, root))  # name, parent
-            while queue:
-                name, parent = queue.popleft()
-                assert isinstance(name, str), 'Invalid item name %s' % name
-                assert isinstance(parent, FItem), 'Invalid item parent %s' % parent
-                
-                item = parent.children.get(name)
-                if item == None:
-                    path = parent.path + [name]
-                    if not matchPaths(path, listener.path): continue
-                    # if the item does not exist, create it and add it to the tree
-                    item = createItem(name, chain, path, parent)
-                    assert isinstance(item, FItem), 'Invalid item %s' % item
-                    # add the new item to the tree (by linking the parent to it)
-                    if item.parent.children == None: item.parent.children = dict() 
-                    item.parent.children[item.name] = item
-                    # set last modified time for the new item
-                    try:
-                        item.lastModified = int(os.path.getmtime(buildPath(item.path, PATH_SEPARATOR)))
-                        item.hash = str(datetime.datetime.fromtimestamp(item.lastModified))
-                    except: continue
-                
-                if not matchPaths(item.path, listener.path): continue
-                # add the listener
-                item.listeners.append(listener)
-                
-                # get the children of this node and add them to the queue
-                pathStr = buildPath(item.path, PATH_SEPARATOR)
-                if os.path.isdir(pathStr):
-                    for child in [f for f in os.listdir(pathStr) if not f.startswith('.')]:
-                        queue.append((child, item))
-        
-        return root.children.get(startName)
+        solicit.listeners = listeners
 
-def createItem(name, chain, path, parent=None):
-    assert isinstance(chain, Chain), 'Invalid chain %s' % chain
-    item = chain.arg.Item()
-    item.name = name
-    item.path = path
-    item.parent = parent
-    item.listeners = []
-    item.children = dict()
-    return item
 
-def matchPaths(itemPath, path):
+#------------------------------------------------------------------Methods for listeners     
+def match(listenerPath, itemPath):
     assert isinstance(itemPath, list) and itemPath, 'Invalid item path %s' % itemPath
-    assert isinstance(path, list) and path, 'Invalid path %s' % path
+    assert isinstance(listenerPath, list) and listenerPath, 'Invalid path %s' % listenerPath
     
-    if len(itemPath) > len(path): return False
-    
-    for i in range(len(itemPath)):
-        if itemPath[i] != path[i] and path[i] != '*': return False
-    
+    if len(itemPath) > len(listenerPath): return False
+    for item1, item2 in zip(itemPath, listenerPath):
+        if item1 != item2 and item2 != '*': return False
     return True
+
+def doOnContentCreated(URI, content):
+    '''
+    Parse the file or whatever.
+    '''
+    print(URI)
+    print(content.read())
     
-def buildPath(path, separator):
-    assert isinstance(path, list), 'Invalid path list %s' % path
-    assert isinstance(separator, str), 'Invalid separator %s' % separator
-    return '%s%s' % (separator, separator.join(path))
-        
+def doOnContentChanged(URI, content):
+    '''
+    Parse the file (again) or whatever.
+    '''
+    print(URI)
+    print(content.read())
+
+def doOnContentRemoved(URI):
+    '''
+    Do nothing for now.
+    '''
     

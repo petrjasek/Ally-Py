@@ -188,13 +188,10 @@ class ScannerHandler(HandlerProcessor):
                     # add the new item to the tree (by linking the parent to it)
                     if item.parent.children is None: item.parent.children = {} 
                     item.parent.children[item.name] = item
-                    # set last modified time for the new item
-                    item.lastModified = int(os.path.getmtime(buildPath(item.path, PATH_SEP)))
-                    item.hash = str(datetime.datetime.fromtimestamp(item.lastModified))
+                    
                     
                     #if the item is a file - notify listener
                     if os.path.isfile(buildPath(item.path, os.path.sep)):
-                        assert log.debug('Parse file: %s' % item.path) or True
                         uri = buildItemPath(item, PATH_SEP)
                         listener.doOnContentCreated(uri, getContent(uri))
                 
@@ -241,14 +238,12 @@ class ScannerHandler(HandlerProcessor):
                     if os.path.isdir(buildPath(item.path, os.path.sep)): item = self.rebuildItems(item)
                     #do something else if item.path is a file - like launch the file parser
                     elif os.path.isfile(buildPath(item.path, os.path.sep)):
-                        log.debug('Parse file %s' % item.path)
                         for listener in item.listeners:
                             assert isinstance(listener, FListener), 'Invalid listener %s' % listener
                             uri = buildItemPath(item, PATH_SEP)
                             listener.doOnContentChanged(uri, getContent(uri))
                         
                     item.lastModified = lastModified
-                    continue
             
             if item.children: queue.extend(item.children.values())
     
@@ -313,13 +308,13 @@ class ScannerHandler(HandlerProcessor):
             #if the child is a file, send on_created notification
             if os.path.isfile(childPathStr):
                 for listener in childItem.listeners:
-                    assert log.debug('Parse file: %s' % childItem.path) or True
                     uri = buildItemPath(childItem, PATH_SEP)
                     listener.doOnContentCreated(uri, getContent(uri))
             #else if child is a directory, add its children to the queue
             elif os.path.isdir(childPathStr):
                 for child in os.listdir(childPathStr):
                     queue.append((child, childItem))
+        return item
             
     def onDeleteItem(self, item):
         '''
@@ -335,7 +330,6 @@ class ScannerHandler(HandlerProcessor):
             #if child is file, launch do_on_content_removed for each listener 
             for listener in item.listeners:
                 assert isinstance(listener, FListener), 'Invalid listener %s' % listener
-                assert log.debug('Deleted item: %s' % path) or True
                 listener.doOnContentRemoved(path)
             
             if item.children: queue.extend(item.children.values())
@@ -350,6 +344,10 @@ def createItem(name, chain, path, parent=None):
     item.listeners = []
     item.children = dict()
     item.URIType = ''
+    #only set lastModified time-stamp for non ROOT items
+    if parent:
+        item.lastModified = int(os.path.getmtime(buildPath(item.path, PATH_SEP)))
+        item.hash = str(datetime.datetime.fromtimestamp(item.lastModified))
     return item
 
 def buildPath(path, separator):
@@ -357,7 +355,6 @@ def buildPath(path, separator):
     assert isinstance(separator, str), 'Invalid separator %s' % separator
     return '%s%s' % (separator, separator.join(path))
 
-#is this ok?
 def getContent(uri):
     try:
         return open(uri, "r")

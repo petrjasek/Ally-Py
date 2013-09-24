@@ -19,10 +19,12 @@ import io
 from ally.design.processor.handler import HandlerProcessor
 from ally.design.processor.context import Context
 from ally.support.util_spec import IDo
+import logging
 
 # --------------------------------------------------------------------
-
+log = logging.getLogger(__name__)
 PATH_SEP = os.path.sep
+# --------------------------------------------------------------------
 
 class FItem(Context):
     '''
@@ -171,18 +173,18 @@ def doOnContentCreated(URI, content):
     '''
     Parse the file or whatever.
     '''
-    print(URI)
-    print(content.read())
+    assert log.debug('Parse file: %s' % URI) or True
+    #print(content.read())
     
 def doOnContentChanged(URI, content):
     '''
     Parse the file (again) or whatever.
     '''
-    print(URI)
-    print(content.read())
+    assert log.debug('Parse file: %s' % URI) or True
 
 def doOnContentRemoved(URI):
     '''
     Do nothing for now.
     '''
+    assert log.debug('Deleted item: %s' % URI) or True
     

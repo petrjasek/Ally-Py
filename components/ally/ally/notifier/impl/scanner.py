@@ -16,7 +16,6 @@ from ally.design.processor.attribute import attribute, requires, defines
 from ally.design.processor.execution import Chain
 from collections import deque
 import os
-import datetime
 from ally.design.processor.handler import HandlerProcessor
 from ally.design.processor.context import Context
 from threading import Thread
@@ -30,16 +29,14 @@ log = logging.getLogger(__name__)
 PATH_SEP = os.path.sep
 
 # --------------------------------------------------------------------
+
 class Solicit(Context):
     '''
     The solicit context.
     '''
     # ---------------------------------------------------------------- Requires
     listeners = requires(list, doc='''
-    @rtype: list[Context]
-    The listeners for the items tree.
-    ''')
-    
+    ''')    
     # ---------------------------------------------------------------- Defines
     itemTree = defines(Context, doc='''
     @rtype: Context
@@ -51,43 +48,15 @@ class FItem(Context):
     The file system item context.
     '''
     # ---------------------------------------------------------------- Defined
-    parent = attribute(Context, doc='''
-    @rtype: Context
-    The parent item.
-    ''')
-    name = attribute(str, doc='''
-    @rtype: string
-    The item name.
-    ''')
-    children = attribute(dict, doc='''
-    @rtype: dictionary{string: Context}
-    The children items.
-    ''')
-    path = attribute(list, doc='''
-    @rtype: list[str]
-    The path of the item.
-    ''')
-    URIType = attribute(str, doc='''
-    @rtype: string
-    The item URI type (e.g. file://, http://, fttp:// ...).
-    ''')
-#     doGetStream = attribute(IDo, doc='''
-#     @rtype: callable() -> IInputStream
-#     Provides the input stream for item.
-#     ''')
-    lastModified = attribute(int, doc='''
-    @rtype: integer
-    The time of the modification.
-    ''')
-    hash = attribute(str, doc='''
-    @rtype: datetime
-    The item status hash.
-    ''')
-    listeners = attribute(list, doc='''
-    @rtype: list[Context]
-    The list of listeners for this item.
-    ''')
-    
+    parent = attribute(Context)
+    name = attribute(str)
+    children = attribute(dict)
+    path = attribute(str)
+    URIType = attribute(str)
+    lastModified = attribute(int)
+    hash = attribute(str)
+    listeners = attribute(list)
+        
 class FListener(Context):
     #---------------------------------------------------Defined
     path = attribute(list, doc='''
@@ -96,44 +65,22 @@ class FListener(Context):
     ''')
     #----------------------------------------------------Requires
     doMatch = requires(IDo, doc='''
-    @rtype: callable(listenerPath, itemPath) -> boolean
-    Matches the item path against the paths accepted by the listener.
-    @param listenerPath: list[string]
-        Pattern for paths accepted by the listener.
-    @param itemPath: list[string]
-        Path of the item.
     ''')
     doOnContentCreated = requires(IDo, doc='''
-    @rtype: callable(URI, content)
-    Is called when an item for this listener is created.
-    @param URI: string
-        Pattern for paths accepted by the listener.
-    @param content: stream
-        Stream with the content of the resource.
     ''')
     doOnContentChanged = requires(IDo, doc='''
-    @rtype: callable(URI, content)
-    Is called when an item for this listener is changed.
-    @param URI: string
-        Pattern for paths accepted by the listener.
-    @param content: stream
-        Stream with the content of the resource.
     ''')
     doOnContentRemoved = requires(IDo, doc='''
-    @rtype: callable(URI)
-    Is called when an item for this listener is deleted.
-    @param URI: string
-        Pattern for paths accepted by the listener.
-    @param content: stream
-        Stream with the content of the resource.
     ''')
     
 # --------------------------------------------------------------------
+
 @injected
 class ScannerHandler(HandlerProcessor):
     '''
     Scans the item tree for modified items.
     '''
+    
     def process(self, chain, solicit:Solicit, Item:FItem, Listener:FListener, **keyargs):
         '''
         @see: HandlerProcessor.process
@@ -144,33 +91,30 @@ class ScannerHandler(HandlerProcessor):
         assert isinstance(chain, Chain), 'Invalid chain %s' % chain
         assert isinstance(solicit, Solicit), 'Invalid solicit %s' % solicit
         
-        self._chain = chain
-        if not solicit.itemTree: solicit.itemTree = createItem('ROOT', chain, [])
+        if not solicit.itemTree: solicit.itemTree = createItem(None, chain, '')
         if not solicit.itemTree.children: solicit.itemTree.children = dict()
         
-        item = self.createItems(solicit.listeners)
-        assert isinstance(item, FItem), 'Invalid item %s' % item
-        solicit.itemTree.children[item.name] = item
+        solicit.itemTree = self.createItemTree(solicit.listeners, solicit.itemTree, chain)
         
-        scanThread = ScannerThread(target=self.scanItems, name='Scanner thread', args=(solicit.itemTree,))
+        scanThread = ScannerThread(target=self.scanItems, name='File system notifier scanner thread', args=(solicit.itemTree, chain))
         scanThread.start()
     
-    def createItems(self, listeners):
+    def createItemTree(self, listeners, root, chain):
         '''
         Creates a tree structure of items that matches the given path.
         '''
-        chain = self._chain
         assert isinstance(chain, Chain), 'Invalid chain %s' % chain
         assert isinstance(listeners, list), 'Invalid listeners %s' % listeners 
-        
-        root = createItem('ROOT', chain, [])
         
         for listener in listeners:
             assert isinstance(listener, FListener), 'Invalid listener %s' % listener
             assert listener.path, 'Invalid listener path %s' % listener.path
-            assert os.path.isdir(buildPath(listener.path[:1], PATH_SEP)), 'Invalid root directory %s' % listener.path[:1]
             
-            startName = listener.path[0]
+            offset = 0
+            if os.path.isabs(listener.path): offset = 1
+            startName = listener.path[:listener.path.find(PATH_SEP, offset)]
+            if not os.path.isdir(startName) and not os.path.isfile(startName) : continue
+             
             queue = deque()
             queue.append((startName, root))  # name, parent
             while queue:
@@ -180,8 +124,8 @@ class ScannerHandler(HandlerProcessor):
                 
                 item = parent.children.get(name)
                 if item is None:
-                    path = parent.path + [name]
-                    if not listener.doMatch(listener.path, path): continue
+                    path = os.path.join(parent.path, name)
+                    if not listener.doMatch(path): continue
                     # if the item does not exist, create it and add it to the tree
                     item = createItem(name, chain, path, parent)
                     assert isinstance(item, FItem), 'Invalid item %s' % item
@@ -189,25 +133,23 @@ class ScannerHandler(HandlerProcessor):
                     if item.parent.children is None: item.parent.children = {} 
                     item.parent.children[item.name] = item
                     
-                    
                     #if the item is a file - notify listener
-                    if os.path.isfile(buildPath(item.path, os.path.sep)):
+                    if os.path.isfile(item.path):
                         uri = buildItemPath(item, PATH_SEP)
                         listener.doOnContentCreated(uri, getContent(uri))
                 
-                if not listener.doMatch(listener.path, item.path): continue
+                if not listener.doMatch(item.path): continue
                 # add the listener
                 item.listeners.append(listener)
                 
                 # get the children of this node and add them to the queue
-                pathStr = buildPath(item.path, PATH_SEP)
-                if os.path.isdir(pathStr):
-                    for child in [f for f in os.listdir(pathStr) if not f.startswith('.')]:
-                        queue.append((child, item))
+                path = item.path
+                if os.path.isdir(path):
+                    queue.extend((f, item) for f in os.listdir(path) if not f.startswith('.'))
         
-        return root.children.get(startName)
+        return root
     
-    def scanItems(self, itemTree):
+    def scanItems(self, itemTree, chain):
         '''
         Scans the items tree and keeps it updated. Also launches create, update, delete notifications for listeners.
         '''
@@ -222,8 +164,8 @@ class ScannerHandler(HandlerProcessor):
             assert isinstance(item, FItem), 'Invalid item %s' % item
             
             #check that the path still exists; if not, delete it from the items tree
-            if item.name != 'ROOT':
-                path = buildPath(item.path, os.path.sep)
+            if item.name != None:
+                path = item.path
                 if not os.path.exists(path):
                     item.parent.children.pop(item.name)
                     continue
@@ -235,9 +177,9 @@ class ScannerHandler(HandlerProcessor):
                 if item.lastModified != lastModified:
                     assert log.debug('Item changed: %s' % item.path) or True
                     #recreate child items if item.path is a directory
-                    if os.path.isdir(buildPath(item.path, os.path.sep)): item = self.rebuildItems(item)
+                    if os.path.isdir(item.path): item = self.rebuildItems(item, chain)
                     #do something else if item.path is a file - like launch the file parser
-                    elif os.path.isfile(buildPath(item.path, os.path.sep)):
+                    elif os.path.isfile(item.path):
                         for listener in item.listeners:
                             assert isinstance(listener, FListener), 'Invalid listener %s' % listener
                             uri = buildItemPath(item, PATH_SEP)
@@ -247,19 +189,19 @@ class ScannerHandler(HandlerProcessor):
             
             if item.children: queue.extend(item.children.values())
     
-    def rebuildItems(self, item):
+    def rebuildItems(self, item, chain):
         '''
         The method is called when an item is modified. It will update the children of the item. 
         '''
         assert isinstance(item, FItem), 'Invalid item %s' % item
-        assert isinstance(self._chain, Chain), 'Invalid chain %s' % self._chain
+        assert isinstance(chain, Chain), 'Invalid chain %s' % chain
         
         #compare the list of known children with the list of newly read children
         currentChildren = set(item.children.keys())
         newChildren = set()
-        pathStr = buildPath(item.path, PATH_SEP)
-        if os.path.isdir(pathStr):
-            for child in os.listdir(pathStr):
+        path = item.path
+        if os.path.isdir(path):
+            for child in os.listdir(path):
                 newChildren.add(child)
         
         #create the children that are missing; at the end
@@ -267,7 +209,7 @@ class ScannerHandler(HandlerProcessor):
             if child in currentChildren: currentChildren.remove(child) 
             else:
                 #create the child item and add it to the parent children list
-                self.onCreateItem(item, child)
+                self.onCreateItem(item, child, chain)
         
         #delete the children that are no longer present on the disk
         assert isinstance(item.children, dict)
@@ -277,7 +219,7 @@ class ScannerHandler(HandlerProcessor):
         
         return item
     
-    def onCreateItem(self, item, childName):
+    def onCreateItem(self, item, childName, chain):
         '''
         Recursively creates the subtree starting with childName for the given item, and launches on_content_created notifications on the way.
         '''
@@ -289,30 +231,28 @@ class ScannerHandler(HandlerProcessor):
         
         while queue:
             childName, parent = queue.popleft()
-            childPath = parent.path + [childName]
+            childPath = os.path.join(parent.path, childName)
             
             listeners = []
             for listener in parent.listeners:
                 assert isinstance(listener, FListener), 'Invalid listener %s' % listener
-                if listener.doMatch(listener.path, childPath):
+                if listener.doMatch(childPath):
                     listeners.append(listener)
         
             if not listeners: continue
                 
-            childItem = createItem(childName, self._chain, childPath, parent)
+            childItem = createItem(childName, chain, childPath, parent)
             childItem.listeners = listeners
             #add the child item to its parent
             parent.children[childItem.name] = childItem
             
-            childPathStr = buildPath(childItem.path, PATH_SEP)
             #if the child is a file, send on_created notification
-            if os.path.isfile(childPathStr):
+            if os.path.isfile(childItem.path):
                 for listener in childItem.listeners:
-                    uri = buildItemPath(childItem, PATH_SEP)
-                    listener.doOnContentCreated(uri, getContent(uri))
+                    listener.doOnContentCreated(childItem.path, getContent(childItem.path))
             #else if child is a directory, add its children to the queue
-            elif os.path.isdir(childPathStr):
-                for child in os.listdir(childPathStr):
+            elif os.path.isdir(childItem.path):
+                for child in os.listdir(childItem.path):
                     queue.append((child, childItem))
         return item
             
@@ -326,7 +266,7 @@ class ScannerHandler(HandlerProcessor):
         queue.append(item)
         while queue:
             item = queue.popleft()
-            path = buildPath(item.path, PATH_SEP)
+            path = item.path
             #if child is file, launch do_on_content_removed for each listener 
             for listener in item.listeners:
                 assert isinstance(listener, FListener), 'Invalid listener %s' % listener
@@ -336,6 +276,7 @@ class ScannerHandler(HandlerProcessor):
 
 def createItem(name, chain, path, parent=None):
     assert isinstance(chain, Chain), 'Invalid chain %s' % chain
+    assert isinstance(path, str)
     item = chain.arg.Item()
     assert isinstance(item, FItem), 'Invalid item %s' % item
     item.name = name
@@ -346,8 +287,7 @@ def createItem(name, chain, path, parent=None):
     item.URIType = ''
     #only set lastModified time-stamp for non ROOT items
     if parent:
-        item.lastModified = int(os.path.getmtime(buildPath(item.path, PATH_SEP)))
-        item.hash = str(datetime.datetime.fromtimestamp(item.lastModified))
+        item.lastModified = int(os.path.getmtime(item.path))
     return item
 
 def buildPath(path, separator):
@@ -364,7 +304,7 @@ def getContent(uri):
 
 def buildItemPath(item, separator):
     assert isinstance(item, FItem), 'Invalid item %s' % item
-    return '%s%s' % (item.URIType, buildPath(item.path, separator))
+    return '%s%s' % (item.URIType, item.path)
 
 class ScannerThread(Thread):
     def run(self):

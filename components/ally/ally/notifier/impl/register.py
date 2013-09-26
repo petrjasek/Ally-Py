@@ -15,7 +15,6 @@ from ally.container.ioc import injected
 from ally.design.processor.attribute import attribute, requires, defines
 from ally.design.processor.execution import Chain
 import os
-import io
 from ally.design.processor.handler import HandlerProcessor
 from ally.design.processor.context import Context
 from ally.support.util_spec import IDo
@@ -43,18 +42,14 @@ class FItem(Context):
     @rtype: dictionary{string: Context}
     The children items.
     ''')
-    path = attribute(list, doc='''
-    @rtype: list[string]
+    path = attribute(str, doc='''
+    @rtype: string
     The path of the item.
     ''')
     URIType = attribute(str, doc='''
     @rtype: string
     The item URI type (e.g. file://, http://, fttp:// ...).
     ''')
-#     doGetStream = attribute(IDo, doc='''
-#     @rtype: callable() -> IInputStream
-#     Provides the input stream for item.
-#     ''')
     lastModified = attribute(int, doc='''
     @rtype: integer
     The time of the modification.
@@ -70,21 +65,19 @@ class FItem(Context):
 
 class FListener(Context):
     # ---------------------------------------------------------------- Defined
-    path = attribute(list, doc='''
-    @rtype: list[string]
-    The path of the listener.
-    ''')
+    path = attribute(str, doc='''
+    @rtype: string
+    Pattern for the paths that this listener is interested in.
+    ''') 
     doMatch = defines(IDo, doc='''
-    @rtype: callable(listenerPath, itemPath) -> boolean
+    @rtype: callable(item) -> boolean
     Matches the item path against the paths accepted by the listener.
-    @param listenerPath: list[string]
-        Pattern for paths accepted by the listener.
-    @param itemPath: list[string]
-        Path of the item.
+    @param item: Context
+        The item to match.
     ''')
     doOnContentCreated = defines(IDo, doc='''
     @rtype: callable(URI, content)
-    Is called when an item for this listener is created.
+    Is called when an item for this listener is created. Should handle stream closing.
     @param URI: string
         Pattern for paths accepted by the listener.
     @param content: stream
@@ -92,7 +85,7 @@ class FListener(Context):
     ''')
     doOnContentChanged = defines(IDo, doc='''
     @rtype: callable(URI, content)
-    Is called when an item for this listener is changed.
+    Is called when an item for this listener is changed. Should handle stream closing.
     @param URI: string
         Pattern for paths accepted by the listener.
     @param content: stream
@@ -113,7 +106,7 @@ class Solicit(Context):
     '''
     # ---------------------------------------------------------------- Requires
     registerPaths = requires(list, doc='''
-    @rtype: list[str]
+    @rtype: list[string]
     The list of paths to scan.
     ''')
     
@@ -131,7 +124,7 @@ class RegisterListeners(HandlerProcessor):
     Implementation that provides the file system polling and notifying.
     '''
     
-    def process(self, chain, solicit:Solicit, Item:FItem, Listener:FListener, **keyargs):
+    def process(self, chain, solicit:Solicit, Listener:FListener, Item:FItem, **keyargs):
         '''
         @see: HandlerProcessor.process
         
@@ -141,16 +134,13 @@ class RegisterListeners(HandlerProcessor):
         assert isinstance(solicit, Solicit), 'Invalid solicit %s' % solicit
         assert solicit.registerPaths, 'Invalid register paths %s' % solicit.registerPaths
         
-        self._chain = chain
-        
         listeners = []
         for path in solicit.registerPaths:
-            pathList = [e for e in path.split(PATH_SEP) if e]
             # create the listener
             listener = chain.arg.Listener()
             assert isinstance(listener, FListener), 'Invalid listener %s' % listener
-            listener.path = pathList
-            listener.doMatch = match
+            listener.path = path
+            listener.doMatch = self.createMatch(listener)
             listener.doOnContentCreated = doOnContentCreated
             listener.doOnContentChanged = doOnContentChanged
             listener.doOnContentRemoved = doOnContentRemoved
@@ -158,11 +148,23 @@ class RegisterListeners(HandlerProcessor):
         
         solicit.listeners = listeners
 
+    def createMatch(self, listener):
+        assert isinstance(listener, FListener), 'Invalid listener %s' % listener
+        
+        def doMatch(path):
+            return match(listener.path, path)
+    
+        return doMatch
 
 #------------------------------------------------------------------Methods for listeners     
 def match(listenerPath, itemPath):
-    assert isinstance(itemPath, list) and itemPath, 'Invalid item path %s' % itemPath
-    assert isinstance(listenerPath, list) and listenerPath, 'Invalid path %s' % listenerPath
+    assert isinstance(itemPath, str), 'Invalid item path %s' % itemPath
+    assert isinstance(listenerPath, str), 'Invalid listener path %s' % listenerPath
+    
+    itemPath = [e for e in itemPath.split(PATH_SEP) if e]
+    listenerPath = [e for e in listenerPath.split(PATH_SEP) if e]
+    
+    if not itemPath or not listenerPath: return False
     
     if len(itemPath) > len(listenerPath): return False
     for item1, item2 in zip(itemPath, listenerPath):
@@ -175,12 +177,14 @@ def doOnContentCreated(URI, content):
     '''
     assert log.debug('Parse file: %s' % URI) or True
     #print(content.read())
+    content.close()
     
 def doOnContentChanged(URI, content):
     '''
     Parse the file (again) or whatever.
     '''
     assert log.debug('Parse file: %s' % URI) or True
+    content.close()
 
 def doOnContentRemoved(URI):
     '''

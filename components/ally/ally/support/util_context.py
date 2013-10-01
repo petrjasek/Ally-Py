@@ -177,7 +177,7 @@ def cloneCollection(value):
 
 def listBFS(context, children, search=None):   
     '''
-    Method that does a BFS search in a Context tree structure and extracts the nodes that have a particular attribute.
+    Method that does a Breadth First Search in a Context tree structure and extracts the nodes that have a particular attribute.
     Since we'll be using a queue for the BFS, make sure the structure really is a tree (there are no back 
     references) otherwise  you'll end in an infinite loop.
     

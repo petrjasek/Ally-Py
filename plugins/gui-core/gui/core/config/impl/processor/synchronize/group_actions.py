@@ -92,12 +92,17 @@ class SynchronizeGroupActionsHandler(HandlerProcessor):
         assert isinstance(solicit.repository, Repository), 'Invalid repository %s' % solicit.repository
         
         groups = listBFS(solicit.repository, Repository.children, Repository.groupName)
+        #first group the actions by group name: groupName -> [actions]
+        groupActions = {}
         for group in groups:
-            assert isinstance(group, Repository)
-            
-            actionsDb = set(self.actionGroupService.getActions(group.groupName))
-            if group.actions:
-                actionsSet = set(action.path for action in group.actions)
+            actions = groupActions.get(group.groupName)
+            if not actions: groupActions[group.groupName] = group.actions
+            else: actions.extend(group.actions)
+        
+        for groupName, actions in groupActions.items():
+            actionsDb = set(self.actionGroupService.getActions(groupName))
+            if actions:
+                actionsSet = set(action.path for action in actions)
                 toDelete = actionsDb.difference(actionsSet)
                 toAdd = actionsSet.difference(actionsDb)
             else:
@@ -105,8 +110,12 @@ class SynchronizeGroupActionsHandler(HandlerProcessor):
                 toAdd = None
                 
             if toDelete:
-                for path in toDelete: self.actionGroupService.remAction(group.groupName, path)
+                for path in toDelete:
+                    self.actionGroupService.remAction(groupName, path)
             
             if toAdd:
-                for path in toAdd: self.actionGroupService.addAction(group.groupName, path)
-    
+                for path in toAdd:
+                    self.actionGroupService.addAction(groupName, path)
+            
+            actionsDb = set(self.actionGroupService.getActions(groupName))
+            actions

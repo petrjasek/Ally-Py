@@ -76,16 +76,18 @@ class SynchronizeGroupsHandler(HandlerProcessor):
         
         groupsDb = set(self.groupService.getAll())
         groups = listBFS(solicit.repository, Repository.children, Repository.groupName)
+        #avoid group names duplicates
+        groupsSet = set(group.groupName for group in groups)
         
-        for group in groups:
-            assert isinstance(group, Repository), 'Invalid repository %' % group
+        for groupName in groupsSet:
+            assert isinstance(groupName, str), 'Invalid group name %' % groupName
             
-            if not group.groupName in groupsDb:
+            if not groupName in groupsDb:
                 groupNew = Group()
-                groupNew.Name = group.groupName
-                groupNew.IsAnonymous = group.groupName in self.anonymousGroups
-                self.groupService.insert(groupNew) 
-            else: groupsDb.remove(group.groupName)
+                groupNew.Name = groupName
+                groupNew.IsAnonymous = groupName in self.anonymousGroups
+                self.groupService.insert(groupNew)
+            else: groupsDb.remove(groupName)
         
         # remove the remaining groups that are only in the db and not in the configuration file
         for group in groupsDb: self.groupService.delete(group)

@@ -1,0 +1,111 @@
+
+# ------------------------------------------------------------ '__plugin__.cdm'
+
+### The repository absolute or relative (to the distribution folder) path 
+#repository_path: workspace/shared/cdm
+
+### The HTTP server URI, basically the URL where the content should be fetched from
+#server_uri: /content/
+
+### Set to true when the files should not be copied into cdm
+### !!!Attention, if the mongrel2 server is selected this option will always be "false"
+#use_linked_cdm: true
+
+# ------------------------------------------------------------ '__plugin__.gateway.service'
+
+### A dictionary containing as a key the overrided method and as a value the methods that are overriden.
+#registerMethodOverride.methods_override:
+#  DELETE:
+#  - GET
+#  PUT:
+#  - POST
+
+### The header pattern for the method override, needs to contain '%s' where the value will be placed.
+#registerMethodOverride.pattern_xmethod_override: X\-HTTP\-Method\-Override\:\s*%s\s*$(?i)
+
+# ------------------------------------------------------------ '__plugin__.gateway_acl.patch_ally_core'
+
+### @rtype: list[string]
+### The HTTP method names that can have excludable names to be processed by ACL.
+#indexAccess.excludable_methods:
+#- GET
+
+### @rtype: list[string]
+### The HTTP method names that can have an input model in order to be processed by ACL.
+#indexAccess.input_methods:
+#- POST
+#- PUT
+
+# ------------------------------------------------------------ '__plugin__.gateway_acl.service'
+
+### The prefix used for appending to the Gateway paths.
+#root_uri_acl: resources
+
+# ------------------------------------------------------------ '__plugin__.gui_core'
+
+### Allow for the publish of the gui resources
+#publish_gui_resources: true
+
+# ------------------------------------------------------------ '__plugin__.gui_core.gui_core'
+
+### Describes where the gui files are published 
+#gui_folder_format: lib/%s
+
+### Describes where the gui libraries are published, used by various plugins 
+#lib_folder_format: lib/%s
+
+# ------------------------------------------------------------ '__plugin__.gui_core.gui_lib'
+
+### The javascript core libraries 
+#js_bootstrap_file: scripts/js/startup.js
+
+### The javascript core libraries 
+#js_core_libs:
+#- main
+
+### The javascript bootstrap relative filename 
+#js_core_libs_format: scripts/js/%s.js
+
+### The GUI server URL. This location is used for loading the client java script files.
+### !Attention this configuration needs to be in concordance with 'server_host' an 'server_port' configurations.
+server_url: localhost:8080
+
+### the demo client html file 
+#ui_demo_file: start.html
+
+# ------------------------------------------------------------ '__plugin__.gui_core.service'
+
+### Contains the names of the access groups that are expected in the configuration file. Expected properties are name and
+### optionally a flag indicating if actions are allowed.
+#access_group:
+#  Anonymous:
+#    hasActions: true
+#    isAnonymous: true
+#  Captcha:
+#    hasActions: false
+#  Right:
+#    hasActions: true
+
+# ------------------------------------------------------------ '__plugin__.sql_alchemy.db_application'
+
+### The time to recycle pooled connection
+#alchemy_pool_recycle: 3600
+
+### The database URL, something like:
+###     "sqlite:///{database}.db"
+###     "mysql+mysqlconnector://{user}:{password}@localhost/{database}"
+### This database URL is used for the application tables
+#database_url: sqlite:///workspace/shared/application.db
+database_url: mysql+mysqlconnector://root:@localhost/superdesk
+
+# ------------------------------------------------------------ '__setup__.ally_assemblage.processor'
+
+### The block indexes URI to fetch the index block objects from, the place holder '%s' is replaced with the block id
+### The assemblage indexes URI.
+#assemblage_indexes_uri: resources/Indexing/Block/%s
+
+# ------------------------------------------------------------ '__setup__.ally_gateway.processor'
+
+### The gateway URI to fetch the Gateway objects from
+### The anonymous gateway URI.
+#gateway_uri: resources/Gateway

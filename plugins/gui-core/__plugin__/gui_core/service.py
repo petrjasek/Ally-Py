@@ -9,22 +9,18 @@ Created on Jan 9, 2012
 Contains the services for the gui core.
 '''
 
-from ally.container import ioc, app, support
+from __setup__.ally.notifier import registersListeners
+from ally.container import ioc, support
 from ally.design.processor.assembly import Assembly
-from ally.design.processor.attribute import defines, requires
-from ally.design.processor.context import Context
-from ally.design.processor.execution import Processing, FILL_ALL
 from ally.design.processor.handler import Handler
 from ally.xml.digester import Node, RuleRoot
+from gui.core.config.impl.processor.configuration_notifier import \
+    ConfigurationListeners
 from gui.core.config.impl.processor.xml.parser import ParserHandler
 from gui.core.config.impl.rules import AccessRule, MethodRule, URLRule, \
     ActionRule, DescriptionRule, GroupRule
-from sched import scheduler
-from threading import Thread
-import time
 
 # --------------------------------------------------------------------
-
 # The synchronization processors
 synchronizeAction = synchronizeGroups = synchronizeGroupActions = support.notCreated  # Just to avoid errors
 support.createEntitySetup('gui.core.config.impl.processor.synchronize.**.*')
@@ -43,6 +39,11 @@ def access_group():
             'Right': dict(hasActions=True)
             }
 
+@ioc.config
+def gui_configuration():
+    ''' The URI pattern (can have * for dynamic path elements) where the XML configurations can be found.'''
+    return 'file:///home/mihaigociu/Work/*/config_test.xml'
+
 # --------------------------------------------------------------------
 
 @ioc.entity
@@ -56,6 +57,13 @@ def nodeRootXML() -> Node: return RuleRoot()
 def parserXML() -> Handler:
     b = ParserHandler()
     b.rootNode = nodeRootXML()
+    return b
+
+@ioc.entity
+def configurationListeners() -> Handler:
+    b = ConfigurationListeners()
+    b.assemblyConfiguration = assemblyConfiguration()
+    b.patterns = [gui_configuration()]
     return b
 
 # --------------------------------------------------------------------
@@ -83,55 +91,60 @@ def updateRootNodeXMLForGroups():
 @ioc.before(assemblyConfiguration)
 def updateAssemblyConfiguration():
     assemblyConfiguration().add(parserXML(), synchronizeAction(), synchronizeGroups(), synchronizeGroupActions())
-    
-@app.deploy
-def cleanup():
-    ''' Start the cleanup process for authentications/sessions'''
-    
-    class TestSolicit(Context):
-        '''
-        The solicit context.
-        '''
-        # ---------------------------------------------------------------- Defined
-        file = defines(str, doc='''
-        @rtype: string
-        The file to be parsed.
-        ''')
-        # ---------------------------------------------------------------- Required
-        repository = requires(Context)
-        
-    proc = assemblyConfiguration().create(solicit=TestSolicit)
-    assert isinstance(proc, Processing)
-    solicit = proc.ctx.solicit(file='acl_right_2.xml')
-    
-    schedule = scheduler(time.time, time.sleep)
-    def executeCleanup():
-        arg = proc.execute(FILL_ALL, solicit=solicit)
-        assert isinstance(arg.solicit, TestSolicit)
-        
-        if arg.solicit.repository.children:
-            for repository in arg.solicit.repository.children:
-                if repository.groupName:
-                    print('Group: %s' % repository.groupName)
-                    if repository.description: print('Description: %s' % repository.description)
-                
-                print('Actions: ')
-                if repository.actions:
-                    for action in repository.actions:
-                        print('Action at line %s: ' % action.lineNumber, action.path, action.label, action.script, action.navBar)
-                     
-                print("Accesses: ")
-                if repository.accesses:
-                    for access in repository.accesses:
-                        print('Access at line %s: ' % access.lineNumber, access.filters, access.methods, access.urls)        
-                print()
-    
-        schedule.enter(3, 1, executeCleanup, ())
 
-    schedule.enter(3, 1, executeCleanup, ())
-    scheduleRunner = Thread(name='Configuration scanner', target=schedule.run)
-    scheduleRunner.daemon = True
-    scheduleRunner.start()
+@ioc.before(registersListeners)
+def updateRegistersListenersForConfiguration():
+    registersListeners().append(configurationListeners())
+
+
+# @app.deploy
+# def cleanup():
+#     ''' Start the cleanup process for authentications/sessions'''
+#     
+#     class TestSolicit(Context):
+#         '''
+#         The solicit context.
+#         '''
+#         # ---------------------------------------------------------------- Defined
+#         file = defines(str, doc='''
+#         @rtype: string
+#         The file to be parsed.
+#         ''')
+#         # ---------------------------------------------------------------- Required
+#         repository = requires(Context)
+#         
+#     proc = assemblyConfiguration().create(solicit=TestSolicit)
+#     assert isinstance(proc, Processing)
+#     solicit = proc.ctx.solicit(file='acl_right_2.xml')
+     
+#     schedule = scheduler(time.time, time.sleep)
+#     def executeCleanup():
+#         arg = proc.execute(FILL_ALL, solicit=solicit)
+#         assert isinstance(arg.solicit, TestSolicit)
+#         
+#         if arg.solicit.repository.children:
+#             for repository in arg.solicit.repository.children:
+#                 if repository.groupName:
+#                     print('Group: %s' % repository.groupName)
+#                     if repository.description: print('Description: %s' % repository.description)
+#                 
+#                 print('Actions: ')
+#                 if repository.actions:
+#                     for action in repository.actions:
+#                         print('Action at line %s: ' % action.lineNumber, action.path, action.label, action.script, action.navBar)
+#                      
+#                 print("Accesses: ")
+#                 if repository.accesses:
+#                     for access in repository.accesses:
+#                         print('Access at line %s: ' % access.lineNumber, access.filters, access.methods, access.urls)        
+#                 print()
+#     
+#         schedule.enter(3, 1, executeCleanup, ())
+# 
+#     schedule.enter(3, 1, executeCleanup, ())
+#     scheduleRunner = Thread(name='Configuration scanner', target=schedule.run)
+#     scheduleRunner.daemon = True
+#     scheduleRunner.start()
     
 # --------------------------------------------------------------------
 

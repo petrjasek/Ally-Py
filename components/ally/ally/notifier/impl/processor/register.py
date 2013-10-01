@@ -131,32 +131,10 @@ class RegisterListeners(HandlerProcessor):
             for item1, item2 in zip(pathItem, pathListener):
                 if item1 != item2 and item2 != '*': return False
             return True
-# 
-#             for item in items:
-#                 if not uri.startswith(item): return False
-#                 uri = uri[len(item):]
-#                 index = uri.find('/')
-#                 if index >= 0: uri = uri[index:]
-#                 if not uri: return True
-#             return False
         
         return doMatch
 
 #------------------------------------------------------------------Methods for listeners   
-  
-#     def match(self, listenerPath, itemPath):
-#         assert isinstance(itemPath, str), 'Invalid item path %s' % itemPath
-#         assert isinstance(listenerPath, str), 'Invalid listener path %s' % listenerPath
-#         
-#         itemPath = [e for e in itemPath.split(PATH_SEP) if e]
-#         listenerPath = [e for e in listenerPath.split(PATH_SEP) if e]
-#         
-#         if not itemPath or not listenerPath: return False
-#         
-#         if len(itemPath) > len(listenerPath): return False
-#         for item1, item2 in zip(itemPath, listenerPath):
-#             if item1 != item2 and item2 != '*': return False
-#         return True
 
     def doOnContentCreated(self, uri, content):
         '''

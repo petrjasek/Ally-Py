@@ -66,8 +66,6 @@ class ParserHandler(HandlerProcessor):
         assert isinstance(chain, Chain), 'Invalid chain %s' % chain
         assert isinstance(solicit, Solicit), 'Invalid solicit %s' % solicit
         
-        #TODO: problems on content created !!! - no actions are added - to be checked
-        
         #if there is no stream, just clean the repository for this URI (delete URI from self.uriRepository)
         if solicit.stream is None: self.uriRepository.pop(solicit.uri, None)
         else:

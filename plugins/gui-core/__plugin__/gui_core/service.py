@@ -42,7 +42,8 @@ def access_group():
 @ioc.config
 def gui_configuration():
     ''' The URI pattern (can have * for dynamic path elements) where the XML configurations can be found.'''
-    return 'file:///home/mihaigociu/Work/*/config_test.xml'
+    #return 'file:///home/mihaigociu/Work/*/config_test.xml'
+    return 'file://plugins-ui/*/config.xml'
 
 # --------------------------------------------------------------------
 
@@ -96,56 +97,6 @@ def updateAssemblyConfiguration():
 def updateRegistersListenersForConfiguration():
     registersListeners().append(configurationListeners())
 
-
-# @app.deploy
-# def cleanup():
-#     ''' Start the cleanup process for authentications/sessions'''
-#     
-#     class TestSolicit(Context):
-#         '''
-#         The solicit context.
-#         '''
-#         # ---------------------------------------------------------------- Defined
-#         file = defines(str, doc='''
-#         @rtype: string
-#         The file to be parsed.
-#         ''')
-#         # ---------------------------------------------------------------- Required
-#         repository = requires(Context)
-#         
-#     proc = assemblyConfiguration().create(solicit=TestSolicit)
-#     assert isinstance(proc, Processing)
-#     solicit = proc.ctx.solicit(file='acl_right_2.xml')
-     
-#     schedule = scheduler(time.time, time.sleep)
-#     def executeCleanup():
-#         arg = proc.execute(FILL_ALL, solicit=solicit)
-#         assert isinstance(arg.solicit, TestSolicit)
-#         
-#         if arg.solicit.repository.children:
-#             for repository in arg.solicit.repository.children:
-#                 if repository.groupName:
-#                     print('Group: %s' % repository.groupName)
-#                     if repository.description: print('Description: %s' % repository.description)
-#                 
-#                 print('Actions: ')
-#                 if repository.actions:
-#                     for action in repository.actions:
-#                         print('Action at line %s: ' % action.lineNumber, action.path, action.label, action.script, action.navBar)
-#                      
-#                 print("Accesses: ")
-#                 if repository.accesses:
-#                     for access in repository.accesses:
-#                         print('Access at line %s: ' % access.lineNumber, access.filters, access.methods, access.urls)        
-#                 print()
-#     
-#         schedule.enter(3, 1, executeCleanup, ())
-# 
-#     schedule.enter(3, 1, executeCleanup, ())
-#     scheduleRunner = Thread(name='Configuration scanner', target=schedule.run)
-#     scheduleRunner.daemon = True
-#     scheduleRunner.start()
-    
 # --------------------------------------------------------------------
 
 def addNodeDescription(node):

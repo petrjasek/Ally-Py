@@ -314,22 +314,6 @@ class FileSystemScanner(HandlerProcessor):
             
         return item
 
-# def buildPath(path, separator):
-#     assert isinstance(path, list), 'Invalid path list %s' % path
-#     assert isinstance(separator, str), 'Invalid separator %s' % separator
-#     return '%s%s' % (separator, separator.join(path))
-# 
-# def getContent(uri):
-#     try:
-#         return open(uri, "r")
-#     except Exception as e:
-#         log.debug(str(e))
-#         return None
-# 
-# def buildItemPath(item, separator):
-#     assert isinstance(item, FItem), 'Invalid item %s' % item
-#     return '%s%s' % (item.URIType, item.path)
-
 class ScannerThread(Thread):
     def run(self):
         while True:

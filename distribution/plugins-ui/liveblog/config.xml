@@ -8,6 +8,8 @@
 		</Action>
 		<Action path="mucu" label="Mucu" parent="menu" />
 		<Action path="cucu" label="Mucu" parent="menu" />
+		<Action path="bucu" label="Mucu" parent="menu" />
+		<Action path="ducu" label="Mucu" parent="menu" />
 
 		<Allows methods="PUT,DELETE" filter="FilterDummy, Authent, lala">
 			<Method>GET</Method>

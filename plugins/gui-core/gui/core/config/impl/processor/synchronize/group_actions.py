@@ -9,8 +9,7 @@ Created on Sept 04, 2013
 Provides the synchronization with the database for actions.
 '''
 
-from acl.api.access import IAccessService
-from acl.api.group import IGroupService, Group
+from acl.api.group import IGroupService
 from ally.container import wire
 from ally.container.ioc import injected
 from ally.container.support import setup

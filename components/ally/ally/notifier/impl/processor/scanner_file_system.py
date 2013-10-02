@@ -87,6 +87,7 @@ class Listener(Context):
     #----------------------------------------------------Requires
     uri = requires(str)
     doMatch = requires(IDo)
+    doMatchResource = requires(IDo)
     doOnContentCreated = requires(IDo)
     doOnContentChanged = requires(IDo)
     doOnContentRemoved = requires(IDo)
@@ -133,7 +134,7 @@ class FileSystemScanner(HandlerProcessor):
     
     def createItemTree(self, listeners, root, Item):
         '''
-        Creates a tree structure of items that matches the given path.
+        Creates a tree structure of items that match the patterns of the listeners.
         '''
         assert isinstance(listeners, list), 'Invalid listeners %s' % listeners 
         
@@ -156,7 +157,11 @@ class FileSystemScanner(HandlerProcessor):
                 item = parent.children.get(name)
                 if item is None:
                     path = os.path.join(parent.path or '', name)
-                    if not listener.doMatch('file://%s' % '/'.join(path.split(os.path.sep))): continue
+                    #match with listener
+                    if os.path.isfile(path):
+                        if not listener.doMatchResource('file://%s' % '/'.join(path.split(os.path.sep))): continue
+                    elif not listener.doMatch('file://%s' % '/'.join(path.split(os.path.sep))): continue
+                    
                     # if the item does not exist, create it and add it to the tree
                     item = self.createItem(name, path, Item, parent)
                     assert isinstance(item, ItemFile), 'Invalid item %s' % item
@@ -168,7 +173,10 @@ class FileSystemScanner(HandlerProcessor):
                     if os.path.isfile(item.path):
                         with open(item.path, 'rb') as content: listener.doOnContentCreated(item.uri, content)
                 
-                if not listener.doMatch(item.uri): continue
+                #match with listener
+                if os.path.isfile(item.path):
+                    if not listener.doMatchResource(item.uri): continue
+                elif not listener.doMatch(item.uri): continue
                 # add the listener
                 item.listeners.append(listener)
                 
@@ -261,8 +269,10 @@ class FileSystemScanner(HandlerProcessor):
             listeners = []
             for listener in parent.listeners:
                 assert isinstance(listener, Listener), 'Invalid listener %s' % listener
-                if listener.doMatch(childUri):
-                    listeners.append(listener)
+                #match with listener
+                if os.path.isfile(childPath):
+                    if listener.doMatchResource(childUri): listeners.append(listener)
+                elif listener.doMatch(childUri): listeners.append(listener)
         
             if not listeners: continue
                 

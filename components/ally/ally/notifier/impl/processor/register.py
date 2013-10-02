@@ -10,6 +10,7 @@ Created on Sep 12, 2013
 
 Registering the listeners for the file notifier.
 '''
+import re
 
 from ally.container.ioc import injected
 from ally.design.processor.attribute import defines
@@ -17,7 +18,7 @@ from ally.design.processor.handler import HandlerProcessor
 from ally.design.processor.context import Context
 from ally.support.util_spec import IDo
 import logging
-from urllib.parse import urlsplit
+from urllib.parse import urlsplit, urljoin
 
 # --------------------------------------------------------------------
 
@@ -36,7 +37,13 @@ class ListenerRegister(Context):
     ''') 
     doMatch = defines(IDo, doc='''
     @rtype: callable(item) -> boolean
-    Matches the item path against the paths accepted by the listener.
+    Matches the item path against the paths accepted by the listener. To be used for folders.
+    @param item: Context
+        The item to match.
+    ''')
+    doMatchResource = defines(IDo, doc='''
+    @rtype: callable(item) -> boolean
+    Matches the item path against the paths accepted by the listener. To be used for resources (like files) not folders.
     @param item: Context
         The item to match.
     ''')
@@ -107,32 +114,40 @@ class RegisterListeners(HandlerProcessor):
             assert isinstance(listener, ListenerRegister), 'Invalid listener %s' % listener
             
             listener.uri = pattern
-            listener.doMatch = self.createMatch(urlsplit(pattern))
+            listener.doMatch, listener.doMatchResource = self.createMatch(pattern)
             listener.doOnContentCreated = self.doOnContentCreated
             listener.doOnContentChanged = self.doOnContentChanged
             listener.doOnContentRemoved = self.doOnContentRemoved
             register.listeners.append(listener)
-
-    def createMatch(self, uriListener):
+    
+    def createMatch(self, uriPattern):
         '''
         Create the match for the provided items.
         '''
-        pathListener = uriListener.path.split('/')
+        uriListener = urlsplit(uriPattern)
+        pathListener = [s for s in (uriListener.netloc+uriListener.path).split('/')]
+        patterns = [re.compile('\/'.join(pathListener[:i+1]).replace('*', '[a-zA-Z0-9_.]+')+'$') \
+                    for i in range(len(pathListener))]
+        
         def doMatch(uri):
-            '''
-            Process the match of the pattern URI with the provided URI.
-            '''
             uriItem = urlsplit(uri)
+            pathItem = uriItem.netloc + uriItem.path
             if uriListener.scheme != uriItem.scheme: return False
-            pathItem = uriItem.path.split('/')
-            if not pathItem or not pathListener: return False
             
-            if len(pathItem) > len(pathListener): return False
-            for item1, item2 in zip(pathItem, pathListener):
-                if item1 != item2 and item2 != '*': return False
+            for pattern in patterns:
+                if pattern.match(pathItem): return True
+            
+            return False
+        
+        def doMatchResource(uri):
+            uriItem = urlsplit(uri)
+            pathItem = uriItem.netloc + uriItem.path
+            if uriListener.scheme != uriItem.scheme: return False
+            
+            if not patterns[-1].match(pathItem): return False
             return True
         
-        return doMatch
+        return doMatch, doMatchResource
 
 #------------------------------------------------------------------Methods for listeners   
 

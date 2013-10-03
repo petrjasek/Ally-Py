@@ -18,4 +18,8 @@ AUTHOR = 'Gabriel Nistor'
 AUTHOR_EMAIL = 'gabriel.nistor@sourcefabric.org'
 KEYWORDS = ['Ally', 'REST', 'gateway', 'service', 'assemblage']
 TEST_SUITE = '__unit_test__'
+<<<<<<< HEAD
 CLASSIFIERS = ['Development Status :: 4 - Beta']
+=======
+CLASSIFIERS = ['Development Status :: 4 - Beta']
+>>>>>>> corrected assemblage init file

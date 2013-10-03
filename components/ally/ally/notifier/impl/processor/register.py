@@ -125,9 +125,10 @@ class RegisterListeners(HandlerProcessor):
         Create the match for the provided items.
         '''
         uriListener = urlsplit(uriPattern)
-        pathListener = [s for s in (uriListener.netloc+uriListener.path).split('/')]
-        patterns = [re.compile('\/'.join(pathListener[:i+1]).replace('*', '[a-zA-Z0-9_.]+')+'$') \
-                    for i in range(len(pathListener))]
+        pathListener = (uriListener.netloc + uriListener.path).split('/')
+        # TODO: filename regex
+        patterns = [re.compile(p) for p in ['\/'.join(pathListener[:i+1]).replace('*', '[a-zA-Z0-9_. ]+')+'$' \
+                                            for i in range(len(pathListener))] if len(p) > 1]
         
         def doMatch(uri):
             uriItem = urlsplit(uri)

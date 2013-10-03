@@ -42,9 +42,9 @@ def access_group():
 @ioc.config
 def gui_configuration():
     ''' The URI pattern (can have * for dynamic path elements) where the XML configurations can be found.'''
-    #TODO: remove this
-    #return 'file:///home/mihaigociu/Work/*/config_test.xml'
-    return 'file://plugins-ui/*/config.xml'
+    #TODO: add URI examples in the doc
+    return 'file:///home/mihaigociu/Work/*/config_test.xml'
+    #return 'file://plugins-ui/*/config.xml'
 
 # --------------------------------------------------------------------
 

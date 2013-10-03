@@ -301,7 +301,7 @@ class FileSystemScanner(HandlerProcessor):
         queue.append(item)
         while queue:
             item = queue.popleft()
-            # if child is file, launch do_on_content_removed for each listener 
+            # if child is file, launch do_on_content_removed for each listener
             for listener in item.listeners:
                 assert isinstance(listener, Listener), 'Invalid listener %s' % listener
                 listener.doOnContentRemoved(item.uri)

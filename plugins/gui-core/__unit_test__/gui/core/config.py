@@ -8,7 +8,6 @@ Created on Aug 22, 2013
 
 GUI core configuration XML testing.
 '''
-
 # Required in order to register the package extender whenever the unit test is run.
 if True:
     import package_extender
@@ -17,9 +16,10 @@ if True:
 # --------------------------------------------------------------------
 
 import logging
-from os.path import join, dirname
 import unittest
+import os
 
+from ally.support.util_io import IInputStream
 from ally.container.ioc import initialize
 from ally.design.processor.assembly import Assembly
 from ally.design.processor.attribute import defines, requires
@@ -29,6 +29,10 @@ from ally.xml.digester import RuleRoot, Node
 from gui.core.config.impl.processor.xml.parser import ParserHandler
 from gui.core.config.impl.rules import URLRule, ActionRule, MethodRule, \
     AccessRule, GroupRule, DescriptionRule
+from ally.support.util_context import listBFS
+
+from gui.core.config.impl.processor.synchronize.action import Repository as RepositoryAction
+from gui.core.config.impl.processor.synchronize.group import Repository as RepositoryGroup
 
 # --------------------------------------------------------------------
 
@@ -42,10 +46,8 @@ class TestSolicit(Context):
     The solicit context.
     '''
     # ---------------------------------------------------------------- Defined
-    file = defines(str, doc='''
-    @rtype: string
-    The file to be parsed.
-    ''')
+    stream = defines(IInputStream)
+    uri = defines(str)
     # ---------------------------------------------------------------- Required
     repository = requires(Context)
 
@@ -96,26 +98,30 @@ class TestConfigurationParsing(unittest.TestCase):
         proc = assemblyParsing.create(solicit=TestSolicit)
         assert isinstance(proc, Processing)
         
-        solicit = proc.ctx.solicit(file=join(dirname(__file__), 'config_test.xml'))
+        uri = 'file://%s' % os.path.abspath('config_test.xml')
+        content = open('config_test.xml', 'rb')
+        solicit = proc.ctx.solicit(stream=content, uri = uri)
+        
         arg = proc.execute(FILL_ALL, solicit=solicit)
         assert isinstance(arg.solicit, TestSolicit)
+        content.close()
         
-        if arg.solicit.repository.children:
-            for group in arg.solicit.repository.children:
-                print('Group: %s' % group.groupName)
-                if group.description: print('Description: %s' % group.description)
-                
-                print('Actions: ')
-                if group.actions:
-                    for action in group.actions:
-                        print('Action at line %s: ' % action.lineNumber, action.path, action.label, action.script, action.navBar)
-                     
-                print("Accesses: ")
-                if group.accesses:
-                    for access in group.accesses:
-                        print('Access at line %s: ' % access.lineNumber, access.filters, access.methods, access.urls)
-                
-                print()
+        withActions = listBFS(arg.solicit.repository, RepositoryGroup.children, RepositoryGroup.groupName)
+        for group in withActions:
+            print('Group: %s' % group.groupName)
+            if group.description: print('Description: %s' % group.description)
+            
+            print('Actions: ')
+            if group.actions:
+                for action in group.actions:
+                    print('Action at line %s: ' % action.lineNumber, action.path, action.label, action.script, action.navBar)
+                 
+            print("Accesses: ")
+            if group.accesses:
+                for access in group.accesses:
+                    print('Access at line %s: ' % access.lineNumber, access.filters, access.methods, access.urls)
+            
+            print()
 
 # --------------------------------------------------------------------
 

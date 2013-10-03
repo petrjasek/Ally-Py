@@ -100,12 +100,12 @@ class SynchronizeActionHandler(HandlerProcessor):
         assert isinstance(solicit, Solicit), 'Invalid solicit %s' % solicit
         assert isinstance(solicit.repository, Repository), 'Invalid repository %s' % solicit.repository
         
-        withActions = listBFS(solicit.repository, Repository.children, Repository.actions)
+        groups = listBFS(solicit.repository, Repository.children, Repository.actions)
         
         actionsFromConfig = {}
         # check for actions with the same path -> display warning message
         isWarning = False
-        for repository in withActions:
+        for repository in groups:
             assert isinstance(repository, Repository), 'Invalid repository %s' % repository
             for action in repository.actions:
                 if action.path in actionsFromConfig:

@@ -11,14 +11,7 @@
 		<Action path="bucu" label="Mucu" parent="menu" />
 		<Action path="ducu" label="Mucu" parent="menu" />
 
-		<Allows methods="PUT,DELETE" filter="FilterDummy, Authent, lala">
-			<Method>GET</Method>
-			<URL>User/*</URL>
-			<URL>User/*/Blog</URL>
-			<URL>User/#/SubUser/*</URL>
-		</Allows>
-		
-		<Allows filter="userAuth">
+		<Allows methods="GET>
 			<Method>GET</Method>
 			<URL>User/*</URL>
 			<URL>User/*/Blog</URL>
@@ -31,9 +24,6 @@
 			<URL>User/*</URL>
 			<URL>User/*/Blog</URL>
 			<URL>User/#/SubUser/*</URL>
-		</Allows>
-		<Allows methods="PUT" filter="userAuth">
-			<URL>User/*</URL>
 		</Allows>
 	</Captcha>
 

@@ -10,7 +10,7 @@ Provides the setup for general resources.
 '''
 
 from .request_api import external_host, external_port
-from .service import packager, path_components
+from .service import packager_components, path_components, packager_plugins, path_plugins
 from ally.container import event, support
 from ally.support.util_deploy import Options, PREPARE, DEPLOY
 from argparse import ArgumentParser
@@ -25,6 +25,9 @@ logging.getLogger('ally.distribution').setLevel(logging.INFO)
 FLAG_PACKAGE = 'package'
 # Flag indicating the packaging action.
 
+FLAG_BUILD_EGGS = 'build'
+# Flag indicating the build eggs action.
+
 # --------------------------------------------------------------------
 
 @event.on(PREPARE)
@@ -37,6 +40,9 @@ def prepare():
     distribution.options.port = None
     
     distribution.options.registerFlagTrue(FLAG_PACKAGE)
+    distribution.options.registerFlagTrue(FLAG_BUILD_EGGS)
+    distribution.parser.add_argument('--plugins', dest='plugins', help='Package only plugins', )
+    distribution.parser.add_argument('--components', dest='components', help='Package only components')
     distribution.parser.add_argument('--location', metavar='folder', dest='location', help='The location where '
                                      'the distribution results should be placed, if none provided it will default to '
                                      'a location based on the performed action.')
@@ -53,6 +59,15 @@ def deploy():
     port = getattr(distribution.options, 'port', None)
     if port: support.force(external_port, port)
     if distribution.options.isFlag(FLAG_PACKAGE):
+        onlyPlugins = getattr(distribution.options, 'plugins', None)
+        onlyComponents = getattr(distribution.options, 'components', None)
         location = getattr(distribution.options, 'location', None)
         if location: support.force(path_components, location)
-        packager().generateSetupFiles()
+        if not onlyPlugins and not onlyComponents: 
+            onlyComponents = onlyPlugins = True 
+        if onlyPlugins:
+            packager_plugins().destFolder = onlyPlugins
+            packager_plugins().generateSetupFiles()
+        if onlyComponents: 
+            packager_plugins().destFolder = onlyComponents
+            packager_components().generateSetupFiles()

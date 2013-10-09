@@ -13,6 +13,8 @@ from ally.container.ioc import injected
 import logging
 import os
 import sys
+from types import ModuleType
+from .builder import Builder
 
 # --------------------------------------------------------------------
 
@@ -55,7 +57,7 @@ ATTRIBUTE_MAPPING = {'NAME'            : 'name',
                      'KEYWORDS'        : 'keywords',
                      'INSTALL_REQUIRES': 'install_requires',
                      'DESCRIPTION'     : 'description',
-                     'LONG_DESCRIPTION': 'long_desciption',
+                     'LONG_DESCRIPTION': 'long_description',
                      'TEST_SUITE'      : 'test_suite',
                      'CLASSIFIERS'     : 'classifiers',
                      }
@@ -72,9 +74,16 @@ class Packager:
     
     pathSource = str
     # The path where the components/plugins are located.
+    folderType = str
+    # type of folder to look for configuration __init__ file 
+    # __setup__ for components
+    # __plugin__ for plugins
+    destFolder = str
+    #destination folder to deploy distribution
     
     def __init__(self):
         assert isinstance(self.pathSource, str), 'Invalid path provided %s' % self.pathSource
+        assert isinstance(self.folderType, str), 'Invalid folderType provided %s' % self.folderType
 
     def getDirs(self, path):
         '''
@@ -90,7 +99,7 @@ class Packager:
         @purpose: setuptools 
         '''
         
-        assert isinstance(module,), 'Invalid module name '
+        assert isinstance(module, ModuleType), 'Invalid module name %s' % module
         setupDict = {}
         for attribute, value in ATTRIBUTE_MAPPING.items():
             if hasattr(module, attribute):
@@ -118,11 +127,15 @@ class Packager:
  
         for packageName in components:
             all += 1
+            
             assert log.info('-' * 50) or True
             assert log.info('*** Package name *** {0} ***'.format(packageName)) or True
+            
             packagePath = os.path.join(self.pathSource, packageName)
-            if '__setup__' in self.getDirs(packagePath):
-                setupPath = os.path.join(self.pathSource, packageName, '__setup__')
+            egg_builder = Builder(packagePath, packageName)
+            
+            if self.folderType in self.getDirs(packagePath):
+                setupPath = os.path.join(self.pathSource, packageName, self.folderType)
                 setupDirs = self.getDirs(setupPath)
                 sys.path.append(os.path.abspath(setupPath))
                 if len(setupDirs) != 1:
@@ -134,21 +147,30 @@ class Packager:
                     setupModule = setupDirs[0] 
                     try:
                         module = __import__(setupModule, locals=locals(), globals=globals())
-                        try: 
+                        try:
+                            
                             info = self.constructDict(module)
-                            self.writeSetupFile(packagePath, info)
-                            assert log.info('*** File succesfully writen *** {0} *** OK'.format(packagePath)) or True
-                        except: 
-                            assert log.info('*** File writing failed *** {0} *** NOK'.format(packagePath)) or True
+                            info['name'] = packageName
+                            assert log.info('*** Setup info import from module {0} *** OK'.format(module.__name__)) or True
+                            try:
+                                self.writeSetupFile(packagePath, info)
+                                assert log.info('*** Setup file succesfully writen *** {0} *** OK'.format(packagePath)) or True
+                                try:
+                                    egg_builder.generateEggFile()
+                                    assert log.info('*** Egg file succesfully deployed *** {0} *** OK'.format(packageName)) or True
+                                except:
+                                    assert log.info('*** Egg file failed to deploy *** {0} *** NOK'.format(packageName)) or True
+                            except:
+                                assert log.info('*** Setup file writing failed *** {0} *** NOK'.format(packageName)) or True
+                        except:
+                            assert log.info('*** info import from module {0} *** NOK'.format(module)) or True
                         assert log.info('*** Setup module *** {0} *** OK'.format(setupModule)) or True
                         success += 1
                     except: 
                         assert log.info('*** Setup module *** {0} *** NOK'.format(setupModule)) or True
                         failed += 1
-        
+
         assert log.info('-' * 50) or True                
         assert log.info('All components: {0}'.format(all)) or True
         assert log.info('Succeded: {0}'.format(success)) or True
         assert log.info('Failed: {0}'.format(failed)) or True
-        print('***All:{0}***Succ:{1}***Fail:{2}***'.format(all, success, failed))
-

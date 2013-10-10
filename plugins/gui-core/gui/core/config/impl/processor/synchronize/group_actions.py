@@ -38,18 +38,9 @@ class Repository(Context):
     The repository context.
     '''
     # ---------------------------------------------------------------- Required
-    groupName = requires(str, doc='''
-    @rtype: string
-    The name of the group (e.g. "Anonymous").
-    ''')
-    children = requires(list, doc='''
-    @rtype: list[Context]
-    The list of children created.
-    ''')
-    actions = requires(list, doc='''
-    @rtype: list[Action]
-    The list of actions created.
-    ''')
+    groupName = requires(str)
+    children = requires(list)
+    actions = requires(list)
     
 class ActionData(Context):
     '''

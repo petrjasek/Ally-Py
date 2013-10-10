@@ -11,23 +11,22 @@
 		<Action path="bucu" label="Mucu" parent="menu" />
 		<Action path="ducu" label="Mucu" parent="menu" />
 
-		<Allows methods="GET>
-			<Method>GET</Method>
-			<URL>User/*</URL>
-			<URL>User/*/Blog</URL>
-			<URL>User/#/SubUser/*</URL>
+		<Allows methods="GET">
+			<URL>ACL/Group/*/Action</URL>
+			<URL>ACL/Group/*/Action/*</URL>
+			<URL>ACL/Group/*/Action/*/SubAction</URL>
 		</Allows>
 	</Anonymous>
 
 	<Captcha>
-		<Allows methods="GET" filter="userAuth">
+		<Allows methods="GET" filter="authenticated">
 			<URL>User/*</URL>
 			<URL>User/*/Blog</URL>
 			<URL>User/#/SubUser/*</URL>
 		</Allows>
 	</Captcha>
 
-	<Right name="Requests inspection">
+	<Right name="Requests_inspection">
 		<Actions>
 			<Action path="menu_2" />
 			<Action path="menu_2.request" script="/js/aaa.js">Request</Action>
@@ -37,11 +36,9 @@
 		</Action>
 		<Action path="mucu" label="Mucu" parent="menu_2" />
 
-		<Allows filter="userAuth">
+		<Allows filter="authenticated">
 			<Method>GET</Method>
-			<URL>User/*</URL>
-			<URL>User/*/Blog</URL>
-			<URL>User/#/SubUser/*</URL>
+			<URL>HR/User/*</URL>
 		</Allows>
 
 		<Description>Allows for the viewing of all possible requests that can be made on the REST server, also the plugins and

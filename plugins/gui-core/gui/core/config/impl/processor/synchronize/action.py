@@ -40,14 +40,8 @@ class Repository(Context):
     The repository context.
     '''
     # ---------------------------------------------------------------- Required
-    children = requires(list, doc='''
-    @rtype: list[Context]
-    The list of children created.
-    ''')
-    actions = defines(list, doc='''
-    @rtype: list[Context]
-    The list of actions created.
-    ''')
+    children = requires(list)
+    actions = requires(list)
 
 class WithTracking(Context):
     '''

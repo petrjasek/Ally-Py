@@ -37,14 +37,8 @@ class Repository(Context):
     The repository context.
     '''
     # ---------------------------------------------------------------- Required
-    groupName = requires(str, doc='''
-    @rtype: string
-    The name of the group (e.g. "Anonymous").
-    ''')
-    children = requires(list, doc='''
-    @rtype: list[Context]
-    The list of children created.
-    ''')
+    groupName = requires(str)
+    children = requires(list)
 
 @injected
 @setup(Handler, name='synchronizeGroups')

@@ -22,7 +22,7 @@ from gui.core.config.impl.rules import AccessRule, MethodRule, URLRule, \
 
 # --------------------------------------------------------------------
 # The synchronization processors
-synchronizeAction = synchronizeGroups = synchronizeGroupActions = support.notCreated  # Just to avoid errors
+synchronizeAction = synchronizeGroups = synchronizeGroupActions = synchronizeAccesses = support.notCreated  # Just to avoid errors
 support.createEntitySetup('gui.core.config.impl.processor.synchronize.**.*')
 
 # --------------------------------------------------------------------
@@ -43,8 +43,8 @@ def access_group():
 def gui_configuration():
     ''' The URI pattern (can have * for dynamic path elements) where the XML configurations can be found.'''
     #TODO: add URI examples in the doc
-    return 'file:///home/mihaigociu/Work/*/config_test.xml'
-    #return 'file://plugins-ui/*/config.xml'
+    #return 'file:///home/mihaigociu/Work/*/config_test.xml'
+    return 'file://plugins-ui/*/config.xml'
 
 # --------------------------------------------------------------------
 
@@ -92,7 +92,8 @@ def updateRootNodeXMLForGroups():
 
 @ioc.before(assemblyConfiguration)
 def updateAssemblyConfiguration():
-    assemblyConfiguration().add(parserXML(), synchronizeAction(), synchronizeGroups(), synchronizeGroupActions())
+    assemblyConfiguration().add(parserXML(), synchronizeAction(), synchronizeGroups(), synchronizeGroupActions(), \
+                                synchronizeAccesses())
 
 @ioc.before(registersListeners)
 def updateRegistersListenersForConfiguration():

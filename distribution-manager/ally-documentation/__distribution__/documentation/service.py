@@ -15,21 +15,34 @@ from ally.container import ioc
 # --------------------------------------------------------------------
 
 @ioc.config
-def path_template():
-    ''' The path where the template files are located.'''
-    return 'templates'
+def path_source():
+    ''' The source path where the code to be documented is found.'''
+    return ''
 
 @ioc.config
 def path_location():
     ''' The location path where to dump the documentation.'''
     return ''
 
+@ioc.config
+def path_template():
+    ''' The path where the template files are located.'''
+    return 'templates'
+
 # --------------------------------------------------------------------
 
 @ioc.entity
-def generator():
-    from ally.distribution.documentation.generator import DocumentGenerator
-    b = DocumentGenerator()
+def generatorCode():
+    from ally.distribution.documentation.generator_code import DocumentCodeGenerator
+    b = DocumentCodeGenerator()
+    b.pathSource = path_source()
+    b.pathLocation = path_location()
+    return b
+
+@ioc.entity
+def generatorAPI():
+    from ally.distribution.documentation.generator_api import DocumentAPIGenerator
+    b = DocumentAPIGenerator()
     b.pathTemplate = path_template()
     b.pathLocation = path_location()
     b.requesterGetJSON = requesterGetJSON()

@@ -6,7 +6,7 @@ Created on Oct 2, 2013
 @license: http://www.gnu.org/licenses/gpl-3.0.txt
 @author: Gabriel Nistor
 
-Provides the creation of documentation based on wheezy template engine.
+Provides the creation of API documentation based on jinja2 template engine.
 '''
 
 from ally.container.ioc import injected
@@ -24,9 +24,9 @@ log = logging.getLogger(__name__)
 # --------------------------------------------------------------------
 
 @injected
-class DocumentGenerator:
+class DocumentAPIGenerator:
     '''
-    Provides the documentation based on wheezy template engine.
+    Provides the documentation based on jinja2 template engine.
     '''
     
     pathTemplate = str

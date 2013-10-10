@@ -12,9 +12,8 @@ Provides the setup for general resources.
 from .request_api import external_host, external_port
 from .service import packager, path_components
 from ally.container import event, support
-from ally.support.util_deploy import Options, PREPARE, DEPLOY
-from argparse import ArgumentParser
-import distribution
+from ally.support.util_deploy import PREPARE, DEPLOY
+from distribution import parser, options
 import logging
 
 # --------------------------------------------------------------------
@@ -29,30 +28,26 @@ FLAG_PACKAGE = 'package'
 
 @event.on(PREPARE)
 def prepare():
-    assert isinstance(distribution.parser, ArgumentParser), 'Invalid distribution parser %s' % distribution.parser
-    assert isinstance(distribution.options, Options), 'Invalid distribution options %s' % distribution.options
     
-    distribution.options.location = None
-    distribution.options.host = None
-    distribution.options.port = None
+    options.location = None
+    options.host = None
+    options.port = None
+    options.registerFlagTrue(FLAG_PACKAGE)
     
-    distribution.options.registerFlagTrue(FLAG_PACKAGE)
-    distribution.parser.add_argument('--location', metavar='folder', dest='location', help='The location where '
-                                     'the distribution results should be placed, if none provided it will default to '
-                                     'a location based on the performed action.')
-    distribution.parser.add_argument('--host', dest='host', help='The host from where to fetch API data, this is used '
-                                     'only for services that require API data from a deployed application, if not specified '
-                                     'it will default to "localhost".')
-    distribution.parser.add_argument('--port', dest='port', type=int, help='The port to use with the host, if not specified '
-                                     'it will default to "8080".')
+    parser.add_argument('--location', metavar='folder', dest='location', help='The location where '
+                        'the distribution results should be placed, if none provided it will default to '
+                        'a location based on the performed action.')
+    parser.add_argument('--host', dest='host', help='The host from where to fetch API data, this is used '
+                        'only for services that require API data from a deployed application, if not specified '
+                        'it will default to "localhost".')
+    parser.add_argument('--port', dest='port', type=int, help='The port to use with the host, if not specified '
+                        'it will default to "8080".')
 
 @event.on(DEPLOY)
 def deploy():
-    host = getattr(distribution.options, 'host', None)
-    if host: support.force(external_host, host)
-    port = getattr(distribution.options, 'port', None)
-    if port: support.force(external_port, port)
-    if distribution.options.isFlag(FLAG_PACKAGE):
-        location = getattr(distribution.options, 'location', None)
+    if options.host: support.force(external_host, options.host)
+    if options.port: support.force(external_port, options.port)
+    if options.isFlag(FLAG_PACKAGE):
+        location = getattr(options, 'location', None)
         if location: support.force(path_components, location)
         packager().generateSetupFiles()

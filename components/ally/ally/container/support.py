@@ -9,6 +9,12 @@ Created on Jan 12, 2012
 Provides support functions for the container.
 '''
 
+from collections import Iterable
+from functools import partial
+from inspect import isclass, ismodule, getsource, isfunction, ismethod
+
+from ally.design.priority import sortByPriorities
+
 from ..support.util_sys import callerLocals, callerGlobals
 from ._impl._aop import AOPResources
 from ._impl._assembly import Assembly
@@ -21,13 +27,9 @@ from .event import ITrigger, createEvents
 from .impl.config import Config
 from .priority import PRIORITY_LOAD_ENTITIES
 from .wire import createWirings
-from ally.design.priority import sortByPriorities
-from collections import Iterable
-from functools import partial
-from inspect import isclass, ismodule, getsource, isfunction, ismethod
+
 
 # --------------------------------------------------------------------
-
 def nameEntity(target, location=None):
     '''
     Provides the setup names to be used setup modules based on a setup target and name.
@@ -385,6 +387,14 @@ def eventsFor(*triggers, source=None):
     sortByPriorities(calls, priority=lambda item: item[0].priority)
     return calls
 
+def performEventsFor(*triggers, source=None):
+    '''
+    Executes all the events for the provided triggers.
+    
+    @see: eventsFor
+    '''
+    for call, *_other in eventsFor(*triggers, source=source): call()
+    
 # --------------------------------------------------------------------
 
 def force(setup, value, assembly=None):
@@ -408,7 +418,7 @@ def force(setup, value, assembly=None):
     try:
         call = assembly.fetchForName(setup.name)
         assert isinstance(call, CallConfig), 'Invalid call %s' % call
-        call.value = value
+        call.setValue(value, False)
     finally: Assembly.stack.pop()
     
 def persist(setup, value, assembly=None):
@@ -427,7 +437,14 @@ def persist(setup, value, assembly=None):
     assembly = assembly or Assembly.current()
     assert isinstance(assembly, Assembly), 'Invalid assembly %s' % assembly
     
-    config = assembly.configurations.get(setup.name)
-    assert isinstance(config, Config), 'Invalid configuration %s for the assembly' % setup.name
-    config.value = value
+    Assembly.stack.append(assembly)
+    try:
+        call = assembly.fetchForName(setup.name)
+        assert isinstance(call, CallConfig), 'Invalid call %s' % call
+        config = call.config()
+        assert isinstance(config, Config), 'Invalid config %s' % config
+        config.value = value
+        config.isCommented = False
+        
+    finally: Assembly.stack.pop()
     

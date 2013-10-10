@@ -18,3 +18,6 @@ DESCRIPTION = \
 '''
 This plugin provides the assemblage service. 
 '''
+INSTALL_REQUIRES = ['ally-api>=1.0', 'ally-core>=1.0']
+LONG_DESCRIPTION = '''This plugin offers the Indexing API and the implementation provides details related to 
+                    the REST models content response indexing based on data associate with ally-core.'''

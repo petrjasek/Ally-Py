@@ -16,9 +16,11 @@ from setuptools import setup, find_packages
 
 # --------------------------------------------------------------------
 
-setup(version='1.0',
-name='gateway-acl',
+setup(install_requires=['gateway>=1.0', 'ally-core-http>=1.0'],
 description='\nThis plugin provides the service gateways. \n',
+version='1.0',
+name='gateway-acl',
+long_description='The ACL (access control layer) gateway plugin integrates gateways that are designed based on published REST models and services, basically makes the conversion between access allowed on a service call and a gateway REST model.',
 packages=find_packages('.'),
       platforms=['all'],
       zip_safe=True,

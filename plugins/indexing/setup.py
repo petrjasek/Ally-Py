@@ -16,9 +16,11 @@ from setuptools import setup, find_packages
 
 # --------------------------------------------------------------------
 
-setup(version='1.0',
-name='indexing',
+setup(install_requires=['ally-api>=1.0', 'ally-core>=1.0'],
 description='\nThis plugin provides the assemblage service. \n',
+version='1.0',
+name='indexing',
+long_description='This plugin offers the Indexing API and the implementation provides details related to \n                    the REST models content response indexing based on data associate with ally-core.',
 packages=find_packages('.'),
       platforms=['all'],
       zip_safe=True,

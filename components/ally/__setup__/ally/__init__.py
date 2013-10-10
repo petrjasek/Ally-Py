@@ -12,7 +12,7 @@ Contains ally base setup files.
 # --------------------------------------------------------------------
 
 NAME = 'ally'
-VERSION = '1.0'
+VERSION = '1.0.3'
 DESCRIPTION = 'Ally framework - utilities component'
 AUTHOR = 'Gabriel Nistor'
 AUTHOR_EMAIL = 'gabriel.nistor@sourcefabric.org'

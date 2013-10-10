@@ -15,6 +15,8 @@ import os
 import sys
 from types import ModuleType
 from .builder import Builder
+from publish import Publisher
+import imp
 
 # --------------------------------------------------------------------
 
@@ -23,6 +25,7 @@ log = logging.getLogger(__name__)
 # --------------------------------------------------------------------
 
 SETUP_FILENAME = 'setup.py'
+INIT_FILENAME = '__init__.py'
 SETUP_TEMPLATE_BEGIN = '''
 \'\'\'
 Created on Oct 1, 2013
@@ -123,6 +126,7 @@ class Packager:
     def generateSetupFiles(self):
         
         all = success = failed = 0
+        publishList = []
         components = self.getDirs(self.pathSource)
  
         for packageName in components:
@@ -132,7 +136,7 @@ class Packager:
             assert log.info('*** Package name *** {0} ***'.format(packageName)) or True
             
             packagePath = os.path.join(self.pathSource, packageName)
-            egg_builder = Builder(packagePath, packageName)
+            eggBuilder = Builder(packagePath, packageName)
             
             if self.folderType in self.getDirs(packagePath):
                 setupPath = os.path.join(self.pathSource, packageName, self.folderType)
@@ -144,9 +148,14 @@ class Packager:
                             *** SKIPING *** {0) ***'''.format(packageName)) or True
                     continue
                 else:
-                    setupModule = setupDirs[0] 
+                    setupModule = setupDirs[0]
+                    infoTimestamp = os.path.getmtime(os.path.join(setupPath, setupModule, INIT_FILENAME))
+                    setupTimestamp = os.path.getmtime(os.path.join(packagePath, SETUP_FILENAME)) 
+#                     if infoTimestamp < setupTimestamp: 
+#                         assert log.info('*** SKIPPED (no new info found) ***') or True
+#                         continue 
                     try:
-                        module = __import__(setupModule, locals=locals(), globals=globals())
+                        module = imp.load_source(setupModule, os.path.join(setupPath, setupModule, INIT_FILENAME))
                         try:
                             
                             info = self.constructDict(module)
@@ -156,7 +165,7 @@ class Packager:
                                 self.writeSetupFile(packagePath, info)
                                 assert log.info('*** Setup file succesfully writen *** {0} *** OK'.format(packagePath)) or True
                                 try:
-                                    egg_builder.generateEggFile()
+                                    eggBuilder.generateEggFile()
                                     assert log.info('*** Egg file succesfully deployed *** {0} *** OK'.format(packageName)) or True
                                 except:
                                     assert log.info('*** Egg file failed to deploy *** {0} *** NOK'.format(packageName)) or True
@@ -165,6 +174,7 @@ class Packager:
                         except:
                             assert log.info('*** info import from module {0} *** NOK'.format(module)) or True
                         assert log.info('*** Setup module *** {0} *** OK'.format(setupModule)) or True
+                        publishList.append(os.path.abspath(packagePath))
                         success += 1
                     except: 
                         assert log.info('*** Setup module *** {0} *** NOK'.format(setupModule)) or True
@@ -174,3 +184,5 @@ class Packager:
         assert log.info('All components: {0}'.format(all)) or True
         assert log.info('Succeded: {0}'.format(success)) or True
         assert log.info('Failed: {0}'.format(failed)) or True
+        p = Publisher(publishList)
+        p.publish()

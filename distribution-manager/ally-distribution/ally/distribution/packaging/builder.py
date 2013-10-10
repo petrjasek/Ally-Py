@@ -58,8 +58,6 @@ class Builder:
         # do a preclean
         chdir(packageDir)
         assert logging.info('*** BUILD %s' % packageName) or True
-        #os.system('python3 {0} bdist_egg'.format(SETUP_FILENAME))
+        os.system('python3 {0} bdist_egg'.format(SETUP_FILENAME))
         assert logging.info("\n".rjust(79, '-')) or True
-        print(self.getDistDir(self.packageDir))
-#         assert logging.info(os.walk())
         

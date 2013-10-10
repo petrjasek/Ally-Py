@@ -11,8 +11,7 @@ Provides the setup for general resources.
 
 from .request_api import external_host, external_port
 from .service import packager, path_components
-from ally.container import event, support
-from ally.support.util_deploy import PREPARE, DEPLOY
+from ally.container import support, deploy
 from distribution import parser, options
 import logging
 
@@ -26,12 +25,13 @@ FLAG_PACKAGE = 'package'
 
 # --------------------------------------------------------------------
 
-@event.on(PREPARE)
+@deploy.prepare
 def prepare():
     
     options.location = None
     options.host = None
     options.port = None
+    
     options.registerFlagTrue(FLAG_PACKAGE)
     
     parser.add_argument('--location', metavar='folder', dest='location', help='The location where '
@@ -43,7 +43,7 @@ def prepare():
     parser.add_argument('--port', dest='port', type=int, help='The port to use with the host, if not specified '
                         'it will default to "8080".')
 
-@event.on(DEPLOY)
+@deploy.start
 def deploy():
     if options.host: support.force(external_host, options.host)
     if options.port: support.force(external_port, options.port)

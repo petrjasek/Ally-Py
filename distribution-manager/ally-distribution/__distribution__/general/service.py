@@ -11,9 +11,13 @@ Provides the services setup for distribution.
 
 from ally.container import ioc
 from ally.distribution.packaging.packager import Packager
-from ally.distribution.packaging.builder import Builder
 
 # --------------------------------------------------------------------
+
+@ioc.config
+def package_location():
+    ''' The location path where the components/plugins eggs will be placed'''
+    return 'packaged-eggs'
 
 @ioc.config
 def path_components():
@@ -22,21 +26,23 @@ def path_components():
 
 @ioc.config
 def path_plugins():
-    ''' The location path where the components sources are located'''
+    ''' The location path where the plugins sources are located'''
     return '../../plugins'
 
 # --------------------------------------------------------------------
 
 @ioc.entity
-def packager_components():
+def packagerComponents():
     b = Packager()
     b.pathSource = path_components()
     b.folderType = '__setup__'
+    b.destFolder = package_location()
     return b
 
 @ioc.entity
-def packager_plugins():
+def packagerPlugins():
     b = Packager()
     b.pathSource = path_plugins()
     b.folderType = '__plugin__'
+    b.destFolder = package_location()
     return b

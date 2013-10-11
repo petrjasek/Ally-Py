@@ -9,10 +9,11 @@ Created on Oct 2, 2013
 Provides the setup for general resources.
 '''
 
-from .request_api import external_host, external_port
-from .service import packager, path_components
+from .service import packagerPlugins, packagerComponents, path_components, \
+    package_location, path_plugins
 from ally.container import support, deploy
 from distribution import parser, options
+from pydoc import getdoc
 import logging
 
 # --------------------------------------------------------------------
@@ -22,32 +23,44 @@ logging.getLogger('ally.distribution').setLevel(logging.INFO)
 
 FLAG_PACKAGE = 'package'
 # Flag indicating the packaging action.
+FLAG_BUILD_EGGS = 'build'
+# Flag indicating the build eggs action.
+FLAG_BUILD_COMPONENT = 'packageComponent'
+FLAG_BUILD_PLUGIN = 'packagePlugins'
 
 # --------------------------------------------------------------------
 
 @deploy.prepare
 def prepare():
     
+    destComponents = options.registerConfiguration(path_components)
+    destPlugins = options.registerConfiguration(path_plugins)
+    
     options.location = None
-    options.host = None
-    options.port = None
     
     options.registerFlagTrue(FLAG_PACKAGE)
+    options.registerFlag(FLAG_BUILD_COMPONENT)
+    options.registerFlag(FLAG_BUILD_PLUGIN)
+    options.registerFlagLink(destComponents, FLAG_BUILD_COMPONENT)
+    options.registerFlagLink(destPlugins, FLAG_BUILD_PLUGIN)
     
     parser.add_argument('--location', metavar='folder', dest='location', help='The location where '
                         'the distribution results should be placed, if none provided it will default to '
-                        'a location based on the performed action.')
-    parser.add_argument('--host', dest='host', help='The host from where to fetch API data, this is used '
-                        'only for services that require API data from a deployed application, if not specified '
-                        'it will default to "localhost".')
-    parser.add_argument('--port', dest='port', type=int, help='The port to use with the host, if not specified '
-                        'it will default to "8080".')
+                        'a location based on the performed action, if packaging is performed it will default to "packaged-eggs" '
+                        'in current folder')
+    parser.add_argument('--components', metavar='folder', nargs='?', dest=destComponents, help=getdoc(path_components))
+    parser.add_argument('--plugins', metavar='folder', nargs='?', dest=destPlugins, help=getdoc(path_plugins))
 
 @deploy.start
 def deploy():
-    if options.host: support.force(external_host, options.host)
-    if options.port: support.force(external_port, options.port)
     if options.isFlag(FLAG_PACKAGE):
-        location = getattr(options, 'location', None)
-        if location: support.force(path_components, location)
-        packager().generateSetupFiles()
+        if options.location: support.force(package_location, options.location)
+        onlyPlugins, onlyComponents = options.isFlag(FLAG_BUILD_COMPONENT), options.isFlag(FLAG_BUILD_PLUGIN)
+        if not onlyPlugins and not onlyComponents: 
+            onlyComponents = onlyPlugins = True 
+        if onlyPlugins:
+            packagerPlugins().destFolder = onlyPlugins
+            packagerPlugins().generateSetupFiles()
+        if onlyComponents: 
+            packagerComponents().destFolder = onlyComponents
+            packagerComponents().generateSetupFiles()

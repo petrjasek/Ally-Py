@@ -13,11 +13,11 @@ Contains the setup files for assemblage.
 
 NAME = 'assemblage'
 GROUP = 'assemblage'
-VERSION = '1.0'
+VERSION = '1.0.dev'
 DESCRIPTION = \
 '''
 This plugin provides the assemblage service. 
 '''
-INSTALL_REQUIRES = ['ally-api>=1.0', 'ally-core>=1.0']
+INSTALL_REQUIRES = ['ally-api', 'ally-core']
 LONG_DESCRIPTION = '''This plugin offers the Indexing API and the implementation provides details related to 
                     the REST models content response indexing based on data associate with ally-core.'''

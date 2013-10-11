@@ -16,7 +16,7 @@ from setuptools import setup, find_packages
 
 # --------------------------------------------------------------------
 
-setup(install_requires=['support-sqlalchemy>=1.0'],
+setup(install_requires=['support-sqlalchemy'],
 description='\nThis plugin provides the default gateway service. \n',
 version='1.0',
 name='gateway',

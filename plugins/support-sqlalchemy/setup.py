@@ -16,7 +16,7 @@ from setuptools import setup, find_packages
 
 # --------------------------------------------------------------------
 
-setup(install_requires=['ally-api>=1.0'],
+setup(install_requires=['ally-api'],
 description='Provides the support for SQL alchemy',
 version='1.0',
 name='support-sqlalchemy',

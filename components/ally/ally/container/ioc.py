@@ -13,6 +13,7 @@ single thread at one time.
 from functools import partial, update_wrapper
 from inspect import isclass, ismodule, getfullargspec, isfunction, cleandoc
 import logging
+from pydoc import getdoc
 
 from ally.design.priority import Priority, PRIORITY_NORMAL  # @UnusedImport
 
@@ -152,6 +153,14 @@ def replace(setup):
     assert isinstance(setup, SetupFunction), 'Invalid setup function %s' % setup
     def decorator(function):
         hasArg, hasType, type = processWithOneArg(function)
+        
+        if isinstance(setup, SetupConfig):
+            # Updating the replaced configuration documentation.
+            assert isinstance(setup, SetupConfig)
+            documentation = getdoc(function)
+            if documentation:
+                if setup.__doc__: setup.__doc__ += '\n%s' % documentation
+                else: setup.__doc__ = documentation
         
         if isinstance(setup, SetupEvent):
             if hasArg: raise SetupError('No argument expected for function %s, when replacing an event' % function)

@@ -17,9 +17,10 @@ from ally.design.priority import Priority
 from ally.support.util_sys import locationStack
 from collections import Iterable
 from functools import partial
-from inspect import isclass, isfunction, getfullargspec, getdoc
+from inspect import isclass, isfunction, getfullargspec
 from numbers import Number
 import logging
+from pydoc import getdoc
 
 # --------------------------------------------------------------------
 

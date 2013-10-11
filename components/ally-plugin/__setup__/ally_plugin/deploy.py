@@ -73,6 +73,7 @@ def start():
     with activate(plugins(), 'start'):
         context.configurationsLoad(configurations())
         context.processStart()
+        triggerEvents(app.SETUP)
     
 @ioc.start(priority=PRIORITY_TRIGGER_EVENTS)
 def startEvents():

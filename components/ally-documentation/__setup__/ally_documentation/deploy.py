@@ -40,6 +40,7 @@ def prepareDocumentationActions():
     options.registerFlagLink(dest, FLAG_DOCUMENT)
     
     parser.add_argument('-doc', metavar='folder', nargs='?', dest=dest, help=getdoc(path_documentation))
+    
 
 @ioc.after(preparePreferences)
 def prepareDocumentationPreferences():

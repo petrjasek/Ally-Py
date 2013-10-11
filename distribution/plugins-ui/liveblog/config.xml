@@ -20,9 +20,7 @@
 
 	<Captcha>
 		<Allows methods="GET" filter="authenticated">
-			<URL>User/*</URL>
-			<URL>User/*/Blog</URL>
-			<URL>User/#/SubUser/*</URL>
+			<URL>HR/User/*</URL>
 		</Allows>
 	</Captcha>
 
@@ -37,7 +35,6 @@
 		<Action path="mucu" label="Mucu" parent="menu_2" />
 
 		<Allows filter="authenticated">
-			<Method>GET</Method>
 			<URL>HR/User/*</URL>
 		</Allows>
 

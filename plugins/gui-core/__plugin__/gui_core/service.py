@@ -22,7 +22,7 @@ from gui.core.config.impl.rules import AccessRule, MethodRule, URLRule, \
 
 # --------------------------------------------------------------------
 # The synchronization processors
-synchronizeAction = synchronizeGroups = synchronizeGroupActions = synchronizeAccesses = support.notCreated  # Just to avoid errors
+synchronizeAction = synchronizeGroups = synchronizeGroupActions = synchronizeRights = synchronizeAccesses = support.notCreated  # Just to avoid errors
 support.createEntitySetup('gui.core.config.impl.processor.synchronize.**.*')
 
 # --------------------------------------------------------------------
@@ -93,7 +93,7 @@ def updateRootNodeXMLForGroups():
 @ioc.before(assemblyConfiguration)
 def updateAssemblyConfiguration():
     assemblyConfiguration().add(parserXML(), synchronizeAction(), synchronizeGroups(), synchronizeGroupActions(), \
-                                synchronizeAccesses())
+                                synchronizeRights(), synchronizeAccesses())
 
 @ioc.before(registersListeners)
 def updateRegistersListenersForConfiguration():

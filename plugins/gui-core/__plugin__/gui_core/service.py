@@ -18,11 +18,12 @@ from gui.core.config.impl.processor.configuration_notifier import \
     ConfigurationListeners
 from gui.core.config.impl.processor.xml.parser import ParserHandler
 from gui.core.config.impl.rules import AccessRule, MethodRule, URLRule, \
-    ActionRule, DescriptionRule, GroupRule
+    ActionRule, DescriptionRule, GroupRule, RightRule
 
 # --------------------------------------------------------------------
 # The synchronization processors
-synchronizeAction = synchronizeGroups = synchronizeGroupActions = synchronizeRights = synchronizeAccesses = support.notCreated  # Just to avoid errors
+synchronizeAction = synchronizeGroups = synchronizeRights = synchronizeGroupActions = synchronizeRightActions =\
+synchronizeGroupAccesses = synchronizeRightAccesses = support.notCreated  # Just to avoid errors
 support.createEntitySetup('gui.core.config.impl.processor.synchronize.**.*')
 
 # --------------------------------------------------------------------
@@ -36,13 +37,12 @@ def access_group():
     return {
             'Anonymous': dict(hasActions=True, isAnonymous=True),
             'Captcha': dict(hasActions=False),
-            'Right': dict(hasActions=True)
+            'Right': dict(hasActions=True, isRight=True)
             }
-
+    
 @ioc.config
 def gui_configuration():
     ''' The URI pattern (can have * for dynamic path elements) where the XML configurations can be found.'''
-    #TODO: add URI examples in the doc
     #return 'file:///home/mihaigociu/Work/*/config_test.xml'
     return 'file://plugins-ui/*/config.xml'
 
@@ -85,15 +85,17 @@ def updateRootNodeXMLForGroups():
     for name, spec in access_group().items():
         assert isinstance(name, str), 'Invalid name %s' % name
         assert isinstance(spec, dict), 'Invalid specifications %s' % spec
-        node = nodeRootXML().addRule(GroupRule(), 'Config/%s' % name)
+        if spec.get('isRight', False): node = nodeRootXML().addRule(RightRule('name'), 'Config/%s' % name)
+        else: node = nodeRootXML().addRule(GroupRule(), 'Config/%s' % name)
         addNodeAccess(node)
         addNodeDescription(node)
         if spec.get('hasActions', False): addNodeAction(node)
 
 @ioc.before(assemblyConfiguration)
 def updateAssemblyConfiguration():
-    assemblyConfiguration().add(parserXML(), synchronizeAction(), synchronizeGroups(), synchronizeGroupActions(), \
-                                synchronizeRights(), synchronizeAccesses())
+    assemblyConfiguration().add(parserXML(), synchronizeAction(), synchronizeGroups(), synchronizeRights(), 
+                                synchronizeGroupActions(), synchronizeRightActions(), 
+                                synchronizeGroupAccesses(), synchronizeRightAccesses())
 
 @ioc.before(registersListeners)
 def updateRegistersListenersForConfiguration():

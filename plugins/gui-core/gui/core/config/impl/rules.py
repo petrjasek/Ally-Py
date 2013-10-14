@@ -70,7 +70,7 @@ class GroupRule(Rule, IPrepare):
         '''
         @see: IVerifier.prepare
         '''
-        merge(resolvers, dict(Repository=GroupRule.Repository))
+        merge(resolvers, dict(Repository=self.Repository))
         
     def begin(self, digester, **attributes):
         '''
@@ -80,24 +80,60 @@ class GroupRule(Rule, IPrepare):
         
         group = digester.arg.Repository()
         assert isinstance(group, GroupRule.Repository)        
-        group.groupName = attributes.get('name')
-        if not group.groupName: group.groupName = digester.currentName()
+        group.groupName = digester.currentName()
         digester.stack.append(group)
         
     def end(self, node, digester):
         '''
         @see: Rule.end
         '''
-        
         assert isinstance(digester, DigesterArg), 'Invalid digester %s' % digester
         assert digester.stack, 'Expected a repository on the digester stack'
         group = digester.stack.pop()
-        assert isinstance(group, GroupRule.Repository), 'Invalid repository %s' % group        
+        assert isinstance(group, self.Repository), 'Invalid repository %s' % group        
         repository = digester.stack[-1]
-        assert isinstance(repository, GroupRule.Repository), 'Invalid repository %s' % repository
+        assert isinstance(repository, self.Repository), 'Invalid repository %s' % repository
         
         if repository.children is None: repository.children = []
         repository.children.append(group)
+
+class RightRule(GroupRule):
+    '''
+    Digester rule for extracting groups from the xml configuration file.
+    '''
+    class Repository(Context):
+        '''
+        The group context.
+        '''
+        # ---------------------------------------------------------------- Defined
+        rightName = defines(str, doc='''
+        @rtype: string
+        The name of the group (e.g. "Anonymous").
+        ''')
+        description = defines(str, doc='''
+        @rtype: string
+        The description of the group (e.g. "Allows for the viewing of all possible requests").
+        ''')
+        children = defines(list, doc='''
+        @rtype: list[Context]
+        The list of children created.
+        ''')
+    
+    def __init__(self, name):
+        '''
+        @param name: the configuration attribute containing the name of the right
+        ''' 
+        self.name = name
+        
+    def begin(self, digester, **attributes):
+        '''
+        @see: Rule.begin
+        '''
+        assert isinstance(digester, DigesterArg), 'Invalid digester %s' % digester
+        repository = digester.arg.Repository()
+        assert isinstance(repository, RightRule.Repository), 'Invalid repository %s' % repository
+        repository.rightName = attributes.get(self.name)
+        digester.stack.append(repository)
 
 class ActionRule(Rule, IPrepare):
     '''
@@ -183,7 +219,7 @@ class ActionRule(Rule, IPrepare):
         '''
         assert isinstance(digester, DigesterArg), 'Invalid digester %s' % digester
         arepository = digester.stack.pop()
-        #the parent repository - will move all actions from arepository to parent repository
+        # the parent repository - will move all actions from arepository to parent repository
         prepository = digester.stack[-1]
         
         assert isinstance(arepository, ActionRule.Repository), 'Invalid repository %s' % arepository
@@ -365,21 +401,21 @@ class DescriptionRule(Rule, IPrepare):
         ''')
      
     def prepare(self, resolvers):
-       '''
-       @see: IVerifier.prepare
-       '''
-       merge(resolvers, dict(Repository=DescriptionRule.Repository))
+        '''
+        @see: IVerifier.prepare
+        '''
+        merge(resolvers, dict(Repository=DescriptionRule.Repository))
     
     def content(self, digester, content):
-       '''
-       @see: Rule.content
-       '''
-       assert isinstance(digester, DigesterArg), 'Invalid digester %s' % digester
-       assert digester.stack, 'Expected a group repository on the digester stack'
-       repository = digester.stack[-1]
-       assert isinstance(repository, DescriptionRule.Repository), 'Invalid Repository class %s' % repository
-       
-       content = content.strip()
-       if content:
-           if repository.description is None: repository.description = ''
-           repository.description += content
+        '''
+        @see: Rule.content
+        '''
+        assert isinstance(digester, DigesterArg), 'Invalid digester %s' % digester
+        assert digester.stack, 'Expected a group repository on the digester stack'
+        repository = digester.stack[-1]
+        assert isinstance(repository, DescriptionRule.Repository), 'Invalid Repository class %s' % repository
+        
+        content = content.strip()
+        if content:
+            if repository.description is None: repository.description = ''
+            repository.description += content

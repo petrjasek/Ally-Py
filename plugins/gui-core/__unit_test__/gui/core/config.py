@@ -28,11 +28,11 @@ from ally.design.processor.execution import Processing, FILL_ALL
 from ally.xml.digester import RuleRoot, Node
 from gui.core.config.impl.processor.xml.parser import ParserHandler
 from gui.core.config.impl.rules import URLRule, ActionRule, MethodRule, \
-    AccessRule, GroupRule, DescriptionRule
+    AccessRule, GroupRule, DescriptionRule, RightRule
 from ally.support.util_context import listBFS
 
-from gui.core.config.impl.processor.synchronize.action import Repository as RepositoryAction
 from gui.core.config.impl.processor.synchronize.group import Repository as RepositoryGroup
+from gui.core.config.impl.processor.synchronize.right import Repository as RepositoryRight
 
 # --------------------------------------------------------------------
 
@@ -62,7 +62,7 @@ class TestConfigurationParsing(unittest.TestCase):
         
         anonymous = parser.rootNode.addRule(GroupRule(), 'Config/Anonymous')
         captcha = parser.rootNode.addRule(GroupRule(), 'Config/Captcha')
-        right = parser.rootNode.addRule(GroupRule(), 'Config/Right')
+        right = parser.rootNode.addRule(RightRule('name'), 'Config/Right')
         right.addRule(DescriptionRule(), 'Description')
         
         #allows = anonymous.addRule(AccessRule(), 'Allows')
@@ -106,19 +106,20 @@ class TestConfigurationParsing(unittest.TestCase):
         assert isinstance(arg.solicit, TestSolicit)
         content.close()
         
-        withActions = listBFS(arg.solicit.repository, RepositoryGroup.children, RepositoryGroup.groupName)
-        for group in withActions:
-            print('Group: %s' % group.groupName)
-            if group.description: print('Description: %s' % group.description)
+        groups = listBFS(arg.solicit.repository, RepositoryGroup.children, RepositoryGroup.groupName)
+        rights = listBFS(arg.solicit.repository, RepositoryGroup.children, RepositoryRight.rightName)
+        for entity in groups+rights:
+            print('Group: %s' % entity.groupName if entity.groupName else entity.rightName )
+            if entity.description: print('Description: %s' % entity.description)
             
             print('Actions: ')
-            if group.actions:
-                for action in group.actions:
+            if entity.actions:
+                for action in entity.actions:
                     print('Action at line %s: ' % action.lineNumber, action.path, action.label, action.script, action.navBar)
                  
             print("Accesses: ")
-            if group.accesses:
-                for access in group.accesses:
+            if entity.accesses:
+                for access in entity.accesses:
                     print('Access at line %s: ' % access.lineNumber, access.filters, access.methods, access.urls)
             
             print()

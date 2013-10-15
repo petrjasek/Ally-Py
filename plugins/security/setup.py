@@ -16,9 +16,13 @@ from setuptools import setup, find_packages
 
 # --------------------------------------------------------------------
 
-setup(version='1.0',
-name='security',
-description='\nThis plugin provides the basic security models. \n',
+setup(name='security',
+author='Ioan Pocol',
+install_requires=['ally-api >= 1.0', 'support-sqlalchemy >= 1.0'],
+author_email=('gabriel.nistor@sourcefabric.org',),
+version='1.0',
+keywords=['Ally', 'REST', 'plugin', 'support', 'security'],
+description='This plugin provides the basic security models.',
 packages=find_packages('.'),
       platforms=['all'],
       zip_safe=True,

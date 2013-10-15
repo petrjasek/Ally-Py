@@ -16,8 +16,12 @@ from setuptools import setup, find_packages
 
 # --------------------------------------------------------------------
 
-setup(version='1.0',
-name='internationalization',
+setup(name='internationalization',
+author='Gabriel Nistor',
+install_requires=['ally-api >= 1.0', 'ally-plugin >= 1.0', 'support-sqlalchemy >= 1.0', 'support-cdm >= 1.0'],
+author_email='gabriel.nistor@sourcefabric.org',
+version='1.0',
+keywords=['Ally', 'REST', 'plugin', 'internationalization'],
 description='Provides the scanning and persistance for the localized messages',
 packages=find_packages('.'),
       platforms=['all'],

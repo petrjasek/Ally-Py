@@ -18,7 +18,7 @@ from setuptools import setup, find_packages
 
 setup(name='ally-http-asyncore-server',
 author='Gabriel Nistor',
-install_requires=['ally-http>=1.0'],
+install_requires=['ally-http >= 1.0'],
 long_description='Provides an HTTP server substitute for the basic server from ally-http \nthat handles the requests in an asyncore manner by using the python built in asyncore package.',
 author_email='gabriel.nistor@sourcefabric.org',
 version='1.0',

@@ -16,12 +16,16 @@ from setuptools import setup, find_packages
 
 # --------------------------------------------------------------------
 
-setup(version='1.0',
-name='support-cdm',
+setup(name='support-cdm',
+author='Gabriel Nistor',
+install_requires=['ally >= 1.0'],
+author_email='gabriel.nistor@sourcefabric.org',
+version='1.0',
+keywords=['Ally', 'REST', 'plugin', 'cdm'],
 description='Provides the cdm file system service',
 packages=find_packages('.'),
       platforms=['all'],
       zip_safe=True,
       license='GPL v3',
-      url='http://www.sourcefabric.org/en/superdesk/', # project home page
+      url='http://www.sourcefabric.org/en/superdesk/'
       )

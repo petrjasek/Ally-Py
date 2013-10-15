@@ -16,9 +16,10 @@ from setuptools import setup, find_packages
 
 # --------------------------------------------------------------------
 
-setup(name='service-cdm',
+setup(package_data={'': ['*.zip']},
+name='service-cdm',
 author='Gabriel Nistor',
-install_requires=['ally-http>=1.0'],
+install_requires=['ally-http >= 1.0'],
 long_description='This component provide the content delivery management, basically the static resources streaming \nsince REST is only for models, usually the REST models will have references to static files, like media files and \nthe CDM is used for delivery them.',
 author_email='gabriel.nistor@sourcefabric.org',
 version='1.0',

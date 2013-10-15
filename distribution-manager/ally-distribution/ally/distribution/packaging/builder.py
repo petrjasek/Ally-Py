@@ -12,9 +12,6 @@ from configparser import ConfigParser
 from os.path import join, dirname, isfile, normpath
 from os import chdir
 import logging
-import sys
-from copy import copy
-from io import StringIO
 import os
 
 # --------------------------------------------------------------------

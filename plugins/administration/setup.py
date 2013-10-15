@@ -16,8 +16,12 @@ from setuptools import setup, find_packages
 
 # --------------------------------------------------------------------
 
-setup(version='1.0',
-name='administration',
+setup(name='administration',
+author='Gabriel Nistor',
+install_requires=['ally-http >= 1.0'],
+author_email='gabriel.nistor@sourcefabric.org',
+version='1.0',
+keywords=['Ally', 'REST', 'administration'],
 description='Provides the administration services that interact with the application code',
 packages=find_packages('.'),
       platforms=['all'],

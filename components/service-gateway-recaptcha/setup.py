@@ -16,7 +16,8 @@ from setuptools import setup, find_packages
 
 # --------------------------------------------------------------------
 
-setup(version='1.0',
+setup(package_data={'': ['*.zip']},
+version='1.0',
 name='service-gateway-recaptcha',
 description='Provides the gateway reCAPTCHA service',
 packages=find_packages('.'),

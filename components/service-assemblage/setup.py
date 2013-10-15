@@ -16,8 +16,10 @@ from setuptools import setup, find_packages
 
 # --------------------------------------------------------------------
 
-setup(name='service-assemblage',
+setup(package_data={'': ['*.zip']},
+name='service-assemblage',
 author='Gabriel Nistor',
+install_requires=['ally-http >= 1.0', 'ally-indexing >= 1.0'],
 author_email='gabriel.nistor@sourcefabric.org',
 version='1.0',
 test_suite='__unit_test__',

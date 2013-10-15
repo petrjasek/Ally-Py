@@ -16,9 +16,13 @@ from setuptools import setup, find_packages
 
 # --------------------------------------------------------------------
 
-setup(version='1.0',
-name='security-rbac',
-description='\nThis plugin handles the support for RBAC security. \n',
+setup(name='security-rbac',
+author='Ioan Pocol',
+install_requires=['security >= 1.0'],
+author_email='ioan.pocol@sourcefabric.org',
+version='1.0',
+keywords=['Ally', 'REST', 'plugin', 'support', 'RBAC'],
+description='This plugin handles the support for RBAC security.',
 packages=find_packages('.'),
       platforms=['all'],
       zip_safe=True,

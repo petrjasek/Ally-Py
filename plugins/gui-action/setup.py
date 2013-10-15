@@ -16,9 +16,12 @@ from setuptools import setup, find_packages
 
 # --------------------------------------------------------------------
 
-setup(version='1.0',
+setup(description='Provides the the GUI actions',
+author='Mihai Balaceanu',
+install_requires=['ally-api >= 1.0'],
+author_email='mihai.balaceanu@sourcefabric.org',
+version='1.0',
 name='gui-action',
-description='Provides the the GUI actions',
 packages=find_packages('.'),
       platforms=['all'],
       zip_safe=True,

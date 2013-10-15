@@ -15,7 +15,7 @@ import os
 import sys
 from types import ModuleType
 from .builder import Builder
-from publish import Publisher
+from .publish import Publisher
 import imp
 
 # --------------------------------------------------------------------
@@ -82,7 +82,7 @@ class Packager:
     # __setup__ for components
     # __plugin__ for plugins
     destFolder = str
-    #destination folder to deploy distribution
+    # destination folder to deploy distribution
     
     def __init__(self):
         assert isinstance(self.pathSource, str), 'Invalid path provided %s' % self.pathSource
@@ -142,15 +142,17 @@ class Packager:
                 setupPath = os.path.join(self.pathSource, packageName, self.folderType)
                 setupDirs = self.getDirs(setupPath)
                 sys.path.append(os.path.abspath(setupPath))
-                if len(setupDirs) != 1:
+                setupFilePath = os.path.join(packagePath, SETUP_FILENAME)
+                if (len(setupDirs) != 1) or (not os.path.isfile(setupFilePath)):
                     assert log.info('''No setup module to configure or 
                             more than one setup module in this package 
-                            *** SKIPING *** {0) ***'''.format(packageName)) or True
+                            *** SKIPING *** {0} ***'''.format(packageName)) or True
                     continue
                 else:
                     setupModule = setupDirs[0]
+
                     infoTimestamp = os.path.getmtime(os.path.join(setupPath, setupModule, INIT_FILENAME))
-                    setupTimestamp = os.path.getmtime(os.path.join(packagePath, SETUP_FILENAME)) 
+                    setupTimestamp = os.path.getmtime(setupFilePath) 
                     if infoTimestamp < setupTimestamp: 
                         assert log.info('*** SKIPPED (no new info found) ***') or True
                         continue 
@@ -165,7 +167,8 @@ class Packager:
                                 self.writeSetupFile(packagePath, info)
                                 assert log.info('*** Setup file succesfully writen *** {0} *** OK'.format(packagePath)) or True
                                 try:
-                                    eggBuilder.generateEggFile()
+                                    #TODO: Update destination folder for eggs in setup.cfg
+                                    #eggBuilder.generateEggFile(self.destFolder)
                                     assert log.info('*** Egg file succesfully deployed *** {0} *** OK'.format(packageName)) or True
                                 except:
                                     assert log.info('*** Egg file failed to deploy *** {0} *** NOK'.format(packageName)) or True

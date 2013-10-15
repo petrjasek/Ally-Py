@@ -18,7 +18,7 @@ from setuptools import setup, find_packages
 
 setup(name='ally-core',
 author='Gabriel Nistor',
-install_requires=['ally-api>=1.0', 'ally-indexing>=1.0'],
+install_requires=['ally-api >= 1.0', 'ally-indexing >= 1.0'],
 long_description='Provides the general support for handling the [API] services that have been decorated as [REST] services.',
 author_email='gabriel.nistor@sourcefabric.org',
 version='1.0',

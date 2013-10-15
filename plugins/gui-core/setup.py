@@ -16,9 +16,13 @@ from setuptools import setup, find_packages
 
 # --------------------------------------------------------------------
 
-setup(version='1.0',
+setup(description='Provides the core for the GUI (Graphical User Interface)',
+author='Mihai Balaceanu',
+install_requires=['ally_api >= 1.0', 'ally_core_plugin >= 1.0', 'support_cdm >= 1.0'],
+include_package_data=True,
+author_email='mihai.balaceanu@sourcefabric.org',
+version='1.0',
 name='gui-core',
-description='Provides the core for the GUI (Graphical User Interface)',
 packages=find_packages('.'),
       platforms=['all'],
       zip_safe=True,

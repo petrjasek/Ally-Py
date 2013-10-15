@@ -17,7 +17,7 @@ from setuptools import setup, find_packages
 # --------------------------------------------------------------------
 
 setup(name='ally-core-http',
-install_requires=['ally-core>=1.0', 'ally-http>=1.0'],
+install_requires=['ally-core >= 1.0', 'ally-http >= 1.0'],
 long_description='This component provides the actual handling for the HTTP [REST] by combining the ally-core and ally-http.',
 author_email='gabriel.nistor@sourcefabric.org',
 version='1.0',

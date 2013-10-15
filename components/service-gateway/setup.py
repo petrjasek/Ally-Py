@@ -16,9 +16,10 @@ from setuptools import setup, find_packages
 
 # --------------------------------------------------------------------
 
-setup(name='service-gateway',
+setup(package_data={'': ['*.zip']},
+name='service-gateway',
 author='Gabriel Nistor',
-install_requires=['ally-http>=1.0', 'ally-indexing>=1.0'],
+install_requires=['ally-http >= 1.0', 'ally-indexing >= 1.0'],
 long_description='This component provides the gateway security service.',
 author_email='gabriel.nistor@sourcefabric.org',
 version='1.0',

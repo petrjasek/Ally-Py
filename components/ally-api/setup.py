@@ -18,7 +18,7 @@ from setuptools import setup, find_packages
 
 setup(name='ally-api',
 author='Gabriel Nistor',
-install_requires=['ally>=1.0'],
+install_requires=['ally >= 1.0'],
 long_description='Contains HTTP specific handling for requests and also the basic HTTP server based on the python built in server.',
 author_email='gabriel.nistor@sourcefabric.org',
 version='1.0.1',

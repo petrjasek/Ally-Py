@@ -15,3 +15,5 @@ NAME = 'gateway reCAPTCHA service'
 GROUP = 'gateway'
 VERSION = '1.0'
 DESCRIPTION = 'Provides the gateway reCAPTCHA service'
+
+__extra__ = dict(package_data = {'': ['*.zip']})

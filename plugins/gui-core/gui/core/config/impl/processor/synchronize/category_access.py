@@ -15,11 +15,12 @@ from ally.design.processor.attribute import requires
 from ally.design.processor.context import Context
 from ally.design.processor.execution import Chain
 from ally.design.processor.handler import HandlerProcessor, Handler
-from ally.support.util_context import listBFS
+from ally.support.util_context import listBFS, hasAttribute
 import logging
 from acl.api.access import generateId
 from acl.api.group import IGroupService
 from security.api.right import IRightService
+from acl.api.acl import IAclPrototype
 
 # --------------------------------------------------------------------
 
@@ -41,8 +42,6 @@ class Repository(Context):
     # ---------------------------------------------------------------- Required
     children = requires(list)
     accesses = requires(list)
-    groupName = requires(str)
-    rightName = requires(str)
     
 class AccessData(Context):
     '''
@@ -58,30 +57,32 @@ class AccessData(Context):
 # --------------------------------------------------------------------
 
 @injected
-class SynchronizeAccessHandler(HandlerProcessor):
+class SynchronizeCategoryAccessHandler(HandlerProcessor):
     '''
     Base implementation for a processor that synchronizes the accesses in the configuration file with the database.
     '''
-    def __init__(self):
+    
+    default_access_methods = ['GET']; wire.config('default_access_methods', doc='''
+    The default access methods (will be used if no methods are provided for an access). 
+    ''')
+    accessCategoryService = IAclPrototype; wire.entity('accessCategoryService')
+    
+    def __init__(self, Repository):
         super().__init__(Repository=Repository)
     
-    #TODO: don't send service as parameter; add it to this class and overwrite it in child classes
-    def syncEntityAccessesWithDb(self, service, entityAccesses):
+    def syncEntityAccessesWithDb(self, entityAccesses):
         '''
         Method to synchronize entity accesses from the configuration file with the database.
-        @param service: the service for the entity to be synchronized 
         @param entityAccesses: mapping entityId : list of accesses 
         '''
         for entity, accesses in entityAccesses.items():
-            accessesFromDb = set(service.getAccesses(entity))
+            accessesFromDb = set(self.accessCategoryService.getAccesses(entity))
             
             for accessData in accesses:
                 assert isinstance(accessData, AccessData), 'Invalid access data %s' % accessData
                 
                 if not accessData.urls: continue
-                #TODO: add GET to a list of configurations and get it with wire
-                #defaults_methods = wire.config...
-                if not accessData.methods: accessData.methods = ['GET']
+                if not accessData.methods: accessData.methods = self.default_access_methods
                 #a list of tuples containing all combinations of methods and urls
                 urlsMethods = [(url, method) for url in accessData.urls for method in accessData.methods]
                 
@@ -94,30 +95,52 @@ class SynchronizeAccessHandler(HandlerProcessor):
                             accessesFromDb.discard(accessId)
                             
                             try:
-                                service.remAcl(entity, accessId)
-                                service.addAcl(entity, accessId)
+                                self.accessCategoryService.remAcl(entity, accessId)
+                                self.accessCategoryService.addAcl(entity, accessId)
                                 if filter:
-                                    service.registerFilter(entity, accessId, filter)
+                                    self.accessCategoryService.registerFilter(entity, accessId, filter)
                             except: log.warning('Invalid filter access: %s, %s, %s, %s, %s',
                                               entity, filter, url, method, accessId)
                             
             #now remove from db the accesses that are no longer present in the configuration files
             for accessId in accessesFromDb:
-                service.remAcl(entity, accessId)
+                self.accessCategoryService.remAcl(entity, accessId)
+    
+    def groupAccesses(self, repositories, Repository, idName):
+        '''
+        For a list of repositories, groups the accesses by some Id attribute.
+        @return: mapping Id : list of actions
+        '''
+        groupAccesses = {}
+        for repository in repositories:
+            assert isinstance(repository, Repository), 'Invalid repository %s' % repository
+            assert hasAttribute(Repository, idName), 'Invalid repository %s' % repository
+            accesses = groupAccesses.get(getattr(repository, idName))
+            if not accesses: groupAccesses[getattr(repository, idName)] = repository.accesses
+            else: accesses.extend(repository.accesses)
+        
+        return groupAccesses
 
+class RepositoryGroup(Repository):
+    '''
+    The repository context.
+    '''
+    # ---------------------------------------------------------------- Required
+    groupName = requires(str)
+    
 @injected
 @setup(Handler, name='synchronizeGroupAccesses')
-class SynchronizeGroupAccessHandler(SynchronizeAccessHandler):
+class SynchronizeGroupAccessHandler(SynchronizeCategoryAccessHandler):
     '''
     Implementation for a processor that synchronizes the group accesses in the configuration file with the database.
     '''
     
-    groupService = IGroupService; wire.entity('groupService')
+    accessCategoryService = IGroupService; wire.entity('accessCategoryService')
     
     def __init__(self):
-        assert isinstance(self.groupService, IGroupService), \
-        'Invalid group service %s' % self.groupService
-        super().__init__()
+        assert isinstance(self.accessCategoryService, IGroupService), \
+        'Invalid group service %s' % self.accessCategoryService
+        super().__init__(RepositoryGroup)
         
     def process(self, chain, solicit:Solicit, **keyargs):
         '''
@@ -127,31 +150,35 @@ class SynchronizeGroupAccessHandler(SynchronizeAccessHandler):
         '''
         assert isinstance(chain, Chain), 'Invalid chain %s' % chain
         assert isinstance(solicit, Solicit), 'Invalid solicit %s' % solicit
-        assert isinstance(solicit.repository, Repository), 'Invalid repository %s' % solicit.repository
+        assert isinstance(solicit.repository, RepositoryGroup), 'Invalid repository %s' % solicit.repository
         
-        groups = listBFS(solicit.repository, Repository.children, Repository.groupName)
-        groupAccesses = {}
-        for group in groups:
-            assert isinstance(group, Repository), 'Invalid group %s' % group
-            accesses = groupAccesses.get(group.groupName)
-            if not accesses: groupAccesses[group.groupName] = group.accesses
-            else: accesses.extend(group.accesses)
-            
-        self.syncEntityAccessesWithDb(self.groupService, groupAccesses)
+        groups = listBFS(solicit.repository, RepositoryGroup.children, RepositoryGroup.groupName)
+        #first group the accesses by group name: groupName -> [accesses]
+        groupAccesses = self.groupAccesses(groups, RepositoryGroup, 'groupName')
+        self.syncEntityAccessesWithDb(groupAccesses)
+
+
+class RepositoryRight(Repository):
+    '''
+    The repository context.
+    '''
+    # ---------------------------------------------------------------- Required
+    rightName = requires(str)
+    rightId = requires(int)
 
 @injected
 @setup(Handler, name='synchronizeRightAccesses')
-class SynchronizeRightAccessHandler(SynchronizeAccessHandler):
+class SynchronizeRightAccessHandler(SynchronizeCategoryAccessHandler):
     '''
     Implementation for a processor that synchronizes the right accesses in the configuration file with the database.
     '''
     
-    rightService = IRightService; wire.entity('rightService')
+    accessCategoryService = IRightService; wire.entity('accessCategoryService')
     
     def __init__(self):
-        assert isinstance(self.rightService, IRightService), \
-        'Invalid right service %s' % self.rightService
-        super().__init__()
+        assert isinstance(self.accessCategoryService, IRightService), \
+        'Invalid right service %s' % self.accessCategoryService
+        super().__init__(RepositoryRight)
         
     def process(self, chain, solicit:Solicit, **keyargs):
         '''
@@ -161,18 +188,10 @@ class SynchronizeRightAccessHandler(SynchronizeAccessHandler):
         '''
         assert isinstance(chain, Chain), 'Invalid chain %s' % chain
         assert isinstance(solicit, Solicit), 'Invalid solicit %s' % solicit
-        assert isinstance(solicit.repository, Repository), 'Invalid repository %s' % solicit.repository
+        assert isinstance(solicit.repository, RepositoryRight), 'Invalid repository %s' % solicit.repository
         
-        #maps the right.Name : right.Id
-        rightsDb = {r.Name: r.Id for r in [self.rightService.getById(id) for id in self.rightService.getAll()]}
-        rights = listBFS(solicit.repository, Repository.children, Repository.rightName)
-        #TODO: duplicate logic for rights and groups - fix it (add method to parent class)
-        rightAccesses = {}
-        for right in rights:
-            assert isinstance(right, Repository), 'Invalid right %s' % right
-            accesses = rightAccesses.get(rightsDb.get(right.rightName))
-            if not accesses: rightAccesses[rightsDb.get(right.rightName)] = right.accesses
-            else: accesses.extend(right.accesses)
-        
-        self.syncEntityAccessesWithDb(self.rightService, rightAccesses)
+        rights = listBFS(solicit.repository, RepositoryRight.children, RepositoryRight.rightName)
+        #first group the accesses by right id: rightId -> [accesses]
+        rightAccesses = self.groupAccesses(rights, RepositoryRight, 'rightId')
+        self.syncEntityAccessesWithDb(rightAccesses)
     

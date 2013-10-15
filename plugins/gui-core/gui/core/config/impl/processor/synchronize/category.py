@@ -77,12 +77,13 @@ class SynchronizeGroupsHandler(HandlerProcessor):
         '''
         assert isinstance(chain, Chain), 'Invalid chain %s' % chain
         assert isinstance(solicit, Solicit), 'Invalid solicit %s' % solicit
-        assert isinstance(solicit.repository, Repository), 'Invalid repository %s' % solicit.repository
+        assert isinstance(solicit.repository, RepositoryGroup), 'Invalid repository %s' % solicit.repository
         
         #maps name to id
         groupsDb = {name:name for name in self.groupService.getAll()}
         #maps group_name to arguments required for group creation (None for groups)
-        groups = {r.groupName:self.createEntity for r in listBFS(solicit.repository, Repository.children, Repository.groupName)}
+        groups = {r.groupName:self.createEntity for r in listBFS(solicit.repository, 
+                                                                 RepositoryGroup.children, RepositoryGroup.groupName)}
         syncWithDatabase(self.groupService, groups, groupsDb)
     
     def createEntity(self, groupName):
@@ -97,7 +98,7 @@ class RepositoryRight(Repository):
     The repository context.
     '''
     # ---------------------------------------------------------------- Defines
-    rightId = defines(str)
+    rightId = defines(int)
     # ---------------------------------------------------------------- Optional
     description = optional(str)
     # ---------------------------------------------------------------- Required
@@ -110,7 +111,7 @@ class SynchronizeRightsHandler(HandlerProcessor):
     Implementation for a processor that synchronizes the rights in the configuration file with the database.
     '''
     
-    type_name = 'GUI Access'; wire.config('type_name', doc='''
+    type_name = 'GUIAccess'; wire.config('type_name', doc='''
     The right type name to be used in inserting the configured rights. 
     ''')
     rightService = IRightService; wire.entity('rightService')
@@ -130,7 +131,7 @@ class SynchronizeRightsHandler(HandlerProcessor):
         '''
         assert isinstance(chain, Chain), 'Invalid chain %s' % chain
         assert isinstance(solicit, Solicit), 'Invalid solicit %s' % solicit
-        assert isinstance(solicit.repository, Repository), 'Invalid repository %s' % solicit.repository
+        assert isinstance(solicit.repository, RepositoryRight), 'Invalid repository %s' % solicit.repository
         
         try: self.rightTypeService.getById(self.type_name)
         except:
@@ -141,13 +142,13 @@ class SynchronizeRightsHandler(HandlerProcessor):
         #maps name to id
         rightsDb = {e.Name: e.Id for e in [self.rightService.getById(id) for id in self.rightService.getAll(self.type_name)]}
         #maps right_name to arguments required for right creation
-        rightRepositories = listBFS(solicit.repository, Repository.children, Repository.rightName)
+        rightRepositories = listBFS(solicit.repository, RepositoryRight.children, RepositoryRight.rightName)
         rights = {r.rightName: partial(self.createEntity, r) for r in rightRepositories}     
-        newRights = syncWithDatabase(self.rightService, rights, rightsDb)
+        rightIds = syncWithDatabase(self.rightService, rights, rightsDb)
         
         #add id to right repositories
         for r in rightRepositories:
-            r.rightId = rightsDb.get(r.rightName) or newRights.get(r.rightName) 
+            r.rightId = rightIds.get(r.rightName)
     
     def createEntity(self, rightRepository, rightName):
         assert isinstance(rightRepository, RepositoryRight), 'Invalid repository %s' % rightRepository
@@ -168,17 +169,17 @@ def syncWithDatabase(service, entitiesConfig, entitiesDb):
     '''
     assert isinstance(entitiesDb, dict), 'Invalid entities mapping %s' % entitiesDb
     
-    #will store the name:id mapping of the newly created entities
-    newEntities = {}
+    #will store the name:id mapping of the old and newly created entities
+    entityIds = {}
     for entityName, creator in entitiesConfig.items():
         if not entityName in entitiesDb:
             entity = creator(entityName)
             try:
-                newEntities[entityName] = service.insert(entity)
+                entityIds[entityName] = service.insert(entity)
             except:
                 log.warning('Error adding %s to database' % entity)
-        else: entitiesDb.pop(entityName)
+        else: entityIds[entityName] = entitiesDb.pop(entityName)
     
     # remove the remaining entities that are only in the db and not in the configuration file
     for entityId in entitiesDb.values(): service.delete(entityId)
-    return newEntities
+    return entityIds

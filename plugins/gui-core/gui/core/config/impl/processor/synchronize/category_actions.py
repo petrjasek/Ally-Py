@@ -19,7 +19,7 @@ from ally.design.processor.attribute import requires
 from ally.design.processor.context import Context
 from ally.design.processor.execution import Chain
 from ally.design.processor.handler import HandlerProcessor, Handler
-from ally.support.util_context import listBFS
+from ally.support.util_context import listBFS, hasAttribute
 from gui.action.api.category_group import IActionGroupService
 from gui.action.api.category import IActionCategoryPrototype
 from gui.action.api.category_right import IActionRightService
@@ -57,7 +57,6 @@ class SynchronizeCategoryActionsHandler(HandlerProcessor):
     actionCategoryService = IActionCategoryPrototype; wire.entity('actionCategoryService')
     
     def __init__(self, Repository):
-        #assert isinstance(self.actionCategoryService, IActionGroupService), \
         assert isinstance(self.actionCategoryService, IActionCategoryPrototype), \
         'Invalid action category service %s' % self.actionCategoryService
         super().__init__(Repository=Repository)
@@ -84,6 +83,22 @@ class SynchronizeCategoryActionsHandler(HandlerProcessor):
             if toAdd:
                 for path in toAdd:
                     self.actionCategoryService.addAction(entity, path)
+                
+    def groupActions(self, repositories, Repository, idName):
+        '''
+        For a list of repositories, groups the actions by some Id attribute.
+        @param idName: the name of the attribute representing the id of the entity (e.g groupName or rightId) 
+        @return: mapping Id : list of actions
+        '''
+        groupActions = {}
+        for repository in repositories:
+            assert isinstance(repository, Repository), 'Invalid repository %s' % repository
+            assert hasAttribute(Repository, idName), 'Invalid repository %s' % repository
+            actions = groupActions.get(getattr(repository, idName))
+            if not actions: groupActions[getattr(repository, idName)] = repository.actions
+            else: actions.extend(repository.actions)
+        
+        return groupActions
                     
 # --------------------------------------------------------------------
 
@@ -121,13 +136,7 @@ class SynchronizeGroupActionsHandler(SynchronizeCategoryActionsHandler):
         
         groups = listBFS(solicit.repository, RepositoryGroup.children, RepositoryGroup.groupName)
         #first group the actions by group name: groupName -> [actions]
-        groupActions = {}
-        for group in groups:
-            assert isinstance(group, RepositoryGroup), 'Invalid group %s' % group
-            actions = groupActions.get(group.groupName)
-            if not actions: groupActions[group.groupName] = group.actions
-            else: actions.extend(group.actions)
-        
+        groupActions = self.groupActions(groups, RepositoryGroup, 'groupName')        
         self.synchronize(groupActions)
         
 # --------------------------------------------------------------------
@@ -138,6 +147,7 @@ class RepositoryRight(Repository):
     '''
     # ---------------------------------------------------------------- Required
     rightName = requires(str)
+    rightId = requires(int)
 
 # --------------------------------------------------------------------
 
@@ -166,16 +176,7 @@ class SynchronizeRightActionsHandler(SynchronizeCategoryActionsHandler):
         assert isinstance(solicit.repository, RepositoryRight), 'Invalid repository %s' % solicit.repository
         
         rights = listBFS(solicit.repository, RepositoryRight.children, RepositoryRight.rightName)
-        #TODO: add rightId on Repository to avoid querying the database again
-        rightsIds = {e.Name: e.Id for e in [self.rightService.getById(id) for id in self.rightService.getAll()]}
-        
-        #group the actions by right name: rightName -> [actions]
-        #TODO: duplicate logic for rights and groups - fix it (add method to parent class)
-        rightActions = {}
-        for right in rights:
-            assert isinstance(right, RepositoryRight), 'Invalid group %s' % right
-            actions = rightActions.get(rightsIds.get(right.rightName))
-            if not actions: rightActions[rightsIds.get(right.rightName)] = right.actions
-            else: actions.extend(right.actions)
-        
+        #group the actions by right name: rightId -> [actions]
+        rightActions = self.groupActions(rights, RepositoryRight, 'rightId')
         self.synchronize(rightActions)
+    

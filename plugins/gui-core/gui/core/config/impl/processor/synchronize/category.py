@@ -51,6 +51,8 @@ class RepositoryGroup(Repository):
     # ---------------------------------------------------------------- Required
     groupName = requires(str)
 
+# --------------------------------------------------------------------
+
 @injected
 @setup(Handler, name='synchronizeGroups')
 class SynchronizeGroupsHandler(HandlerProcessor):
@@ -92,6 +94,7 @@ class SynchronizeGroupsHandler(HandlerProcessor):
         group.IsAnonymous = groupName in self.anonymousGroups
         return group
 
+# --------------------------------------------------------------------
 
 class RepositoryRight(Repository):
     '''
@@ -103,6 +106,8 @@ class RepositoryRight(Repository):
     description = optional(str)
     # ---------------------------------------------------------------- Required
     rightName = requires(str)
+
+# --------------------------------------------------------------------
     
 @injected
 @setup(Handler, name='synchronizeRights')
@@ -111,7 +116,7 @@ class SynchronizeRightsHandler(HandlerProcessor):
     Implementation for a processor that synchronizes the rights in the configuration file with the database.
     '''
     
-    type_name = 'GUIAccess'; wire.config('type_name', doc='''
+    type_name = 'GUI Access'; wire.config('type_name', doc='''
     The right type name to be used in inserting the configured rights. 
     ''')
     rightService = IRightService; wire.entity('rightService')
@@ -158,16 +163,18 @@ class SynchronizeRightsHandler(HandlerProcessor):
         right.Description = rightRepository.description
         return right
 
+# --------------------------------------------------------------------
+
 def syncWithDatabase(service, entitiesConfig, entitiesDb):
     '''Generic method to synchronize entities (groups and rights) from configuration file with the database.
     
     @param service: the service for the entity to be synchronized 
     @type service: IAclPrototype 
-    @param entitiesRepository: list of repositories containing the entity data from the configuration files
-    @type entitiesRepository: dictionary{string: dictionary{string: object}}
+    @param entitiesConfig: mapping entityName : entityCreator
     @param entitiesDb: mapping entityName : entityId
     '''
     assert isinstance(entitiesDb, dict), 'Invalid entities mapping %s' % entitiesDb
+    assert isinstance(entitiesConfig, dict), 'Invalid entities mapping %s' % entitiesConfig
     
     #will store the name:id mapping of the old and newly created entities
     entityIds = {}
@@ -176,8 +183,10 @@ def syncWithDatabase(service, entitiesConfig, entitiesDb):
             entity = creator(entityName)
             try:
                 entityIds[entityName] = service.insert(entity)
-            except:
+            except Exception as e:
+                #TODO: make the warning more user friendly: include file, line and column number
                 log.warning('Error adding %s to database' % entity)
+                log.warning(e)
         else: entityIds[entityName] = entitiesDb.pop(entityName)
     
     # remove the remaining entities that are only in the db and not in the configuration file

@@ -9,7 +9,7 @@ Created on Aug 22, 2013
 XML Digester rules.
 '''
 
-from ally.design.processor.attribute import attribute, defines
+from ally.design.processor.attribute import attribute, defines, requires
 from ally.design.processor.context import Context
 from ally.design.processor.resolvers import merge
 from ally.support.util_context import IPrepare
@@ -31,6 +31,10 @@ class WithTracking(Context):
     @rtype: int
     The starting column number for this element in the configuration file. 
     ''')
+    uri = attribute(str, doc='''
+    @rtype: str
+    Uri of the file containing this element. 
+    ''')
 
 def trackOn(digester, context):
     '''
@@ -39,7 +43,7 @@ def trackOn(digester, context):
     assert isinstance(digester, Digester), 'Invalid digester %s' % digester
     assert isinstance(context, WithTracking), 'Invalid context %s' % context
     
-    context.lineNumber, context.colNumber = digester.getLineNumber(), digester.getColumnNumber()
+    context.lineNumber, context.colNumber, context.uri = digester.getLineNumber(), digester.getColumnNumber(), digester.arg.solicit.uri
 
 # --------------------------------------------------------------------
 

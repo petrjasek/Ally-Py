@@ -87,6 +87,7 @@ class SynchronizeCategoryActionsHandler(HandlerProcessor):
     def groupActions(self, repositories, Repository, idName):
         '''
         For a list of repositories, groups the actions by some Id attribute.
+        @type Repository: Context
         @param idName: the name of the attribute representing the id of the entity (e.g groupName or rightId) 
         @return: mapping Id : list of actions
         '''
@@ -146,7 +147,6 @@ class RepositoryRight(Repository):
     The repository context.
     '''
     # ---------------------------------------------------------------- Required
-    rightName = requires(str)
     rightId = requires(int)
 
 # --------------------------------------------------------------------
@@ -175,7 +175,7 @@ class SynchronizeRightActionsHandler(SynchronizeCategoryActionsHandler):
         assert isinstance(solicit, Solicit), 'Invalid solicit %s' % solicit
         assert isinstance(solicit.repository, RepositoryRight), 'Invalid repository %s' % solicit.repository
         
-        rights = listBFS(solicit.repository, RepositoryRight.children, RepositoryRight.rightName)
+        rights = listBFS(solicit.repository, RepositoryRight.children, RepositoryRight.rightId)
         #group the actions by right name: rightId -> [actions]
         rightActions = self.groupActions(rights, RepositoryRight, 'rightId')
         self.synchronize(rightActions)

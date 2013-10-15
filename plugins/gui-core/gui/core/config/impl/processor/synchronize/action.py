@@ -12,7 +12,7 @@ Provides the synchronization with the database for actions.
 from ally.container import wire
 from ally.container.ioc import injected
 from ally.container.support import setup
-from ally.design.processor.attribute import requires, defines
+from ally.design.processor.attribute import requires
 from ally.design.processor.context import Context
 from ally.design.processor.execution import Chain
 from ally.design.processor.handler import HandlerProcessor, Handler
@@ -49,6 +49,7 @@ class WithTracking(Context):
     '''
     lineNumber = requires(int)
     colNumber = requires(int)
+    uri = requires(str)
 
 class ActionData(Context):
     '''
@@ -79,7 +80,7 @@ class SynchronizeActionHandler(HandlerProcessor):
     def __init__(self):
         assert isinstance(self.actionManagerService, IActionManagerService), \
         'Invalid action service %s' % self.actionManagerService
-        super().__init__(Repository=Repository)
+        super().__init__(Repository=Repository, Action=ActionDefinition)
         
         # will keep a track of the warnings displayed to avoid displaying the same warning multiple times
         self._warnings = set()

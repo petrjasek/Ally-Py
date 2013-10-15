@@ -12,7 +12,7 @@ from ally.container import wire
 from ally.container.ioc import injected
 from ally.container.support import setup
 from ally.design.processor.attribute import requires
-from ally.design.processor.context import Context
+from ally.design.processor.context import Context, attributeOf
 from ally.design.processor.execution import Chain
 from ally.design.processor.handler import HandlerProcessor, Handler
 from ally.support.util_context import listBFS, hasAttribute
@@ -43,7 +43,7 @@ class Repository(Context):
     children = requires(list)
     accesses = requires(list)
     
-class AccessData(Context):
+class Access(Context):
     '''
     The access container context.
     '''
@@ -53,6 +53,7 @@ class AccessData(Context):
     urls = requires(list)
     lineNumber = requires(int)
     colNumber = requires(int)
+    uri = requires(str)
 
 # --------------------------------------------------------------------
 
@@ -68,18 +69,18 @@ class SynchronizeCategoryAccessHandler(HandlerProcessor):
     accessCategoryService = IAclPrototype; wire.entity('accessCategoryService')
     
     def __init__(self, Repository):
-        super().__init__(Repository=Repository)
+        super().__init__(Repository=Repository, Access=Access)
     
     def syncEntityAccessesWithDb(self, entityAccesses):
         '''
         Method to synchronize entity accesses from the configuration file with the database.
         @param entityAccesses: mapping entityId : list of accesses 
         '''
-        for entity, accesses in entityAccesses.items():
-            accessesFromDb = set(self.accessCategoryService.getAccesses(entity))
+        for entityId, accesses in entityAccesses.items():
+            accessesFromDb = set(self.accessCategoryService.getAccesses(entityId))
             
             for accessData in accesses:
-                assert isinstance(accessData, AccessData), 'Invalid access data %s' % accessData
+                assert isinstance(accessData, Access), 'Invalid access data %s' % accessData
                 
                 if not accessData.urls: continue
                 if not accessData.methods: accessData.methods = self.default_access_methods
@@ -88,35 +89,51 @@ class SynchronizeCategoryAccessHandler(HandlerProcessor):
                 
                 filters = accessData.filters
                 if not filters: filters = [None]
-                 
+                unusedFilters = set(f for f in filters if f)
+                
                 for filter in filters:
-                    for (url, method) in urlsMethods:
+                    for url, method in urlsMethods:
                             accessId = generateId(url.replace('#', '*'), method)
                             accessesFromDb.discard(accessId)
                             
                             try:
-                                self.accessCategoryService.remAcl(entity, accessId)
-                                self.accessCategoryService.addAcl(entity, accessId)
-                                if filter:
-                                    self.accessCategoryService.registerFilter(entity, accessId, filter)
-                            except: log.warning('Invalid filter access: %s, %s, %s, %s, %s',
-                                              entity, filter, url, method, accessId)
-                            
+                                self.accessCategoryService.remAcl(entityId, accessId)
+                                self.accessCategoryService.addAcl(entityId, accessId)
+                            except:
+                                log.warning('Unknown access \'%s\' for method \'%s\' defined in category with id \'%s\' in file \'%s\' at line \'%s\' column \'%s\' ',
+                                            url, method, entityId, accessData.uri, accessData.lineNumber, accessData.colNumber)
+                                #TODO add file info for tracking (besides line and column numbers)
+                                #TODO entityName instead of entityId for Rights
+                            else:
+                                #TODO: handle exception for invalid filter name
+                                #TODO: handle case where filter is not applicable for any of the accesses
+                                #(registerFilter returns False all the time)
+                                try:
+                                    if filter and self.accessCategoryService.registerFilter(entityId, accessId, filter, url):
+                                        unusedFilters.remove(filter)
+                                except:
+                                    log.warning('Unknown filter \'%s\' in category with id \'%s\' in file \'%s\' at line \'%s\' column \'%s\'', 
+                                                filter, entityId, accessData.uri, accessData.lineNumber, accessData.colNumber)
+                if unusedFilters:
+                    log.warning('Filters \'%s\' do not apply to any of the access URLs \'%s\' defined in category with id \'%s\' in file \'%s\' at line \'%s\' column \'%s\' ',
+                                unusedFilters, accessData.urls, entityId, accessData.uri, accessData.lineNumber, accessData.colNumber)
+                
             #now remove from db the accesses that are no longer present in the configuration files
             for accessId in accessesFromDb:
-                self.accessCategoryService.remAcl(entity, accessId)
+                self.accessCategoryService.remAcl(entityId, accessId)
     
-    def groupAccesses(self, repositories, Repository, idName):
+    def groupAccesses(self, repositories, Repository, idAttr):
         '''
         For a list of repositories, groups the accesses by some Id attribute.
         @return: mapping Id : list of actions
         '''
         groupAccesses = {}
+        iattr = attributeOf(idAttr)
         for repository in repositories:
             assert isinstance(repository, Repository), 'Invalid repository %s' % repository
-            assert hasAttribute(Repository, idName), 'Invalid repository %s' % repository
-            accesses = groupAccesses.get(getattr(repository, idName))
-            if not accesses: groupAccesses[getattr(repository, idName)] = repository.accesses
+            assert hasAttribute(Repository, iattr.__name__), 'Invalid repository %s' % repository
+            accesses = groupAccesses.get(getattr(repository, iattr.__name__))
+            if not accesses: groupAccesses[getattr(repository, iattr.__name__)] = repository.accesses
             else: accesses.extend(repository.accesses)
         
         return groupAccesses
@@ -154,7 +171,7 @@ class SynchronizeGroupAccessHandler(SynchronizeCategoryAccessHandler):
         
         groups = listBFS(solicit.repository, RepositoryGroup.children, RepositoryGroup.groupName)
         #first group the accesses by group name: groupName -> [accesses]
-        groupAccesses = self.groupAccesses(groups, RepositoryGroup, 'groupName')
+        groupAccesses = self.groupAccesses(groups, RepositoryGroup, RepositoryGroup.groupName)
         self.syncEntityAccessesWithDb(groupAccesses)
 
 
@@ -163,7 +180,6 @@ class RepositoryRight(Repository):
     The repository context.
     '''
     # ---------------------------------------------------------------- Required
-    rightName = requires(str)
     rightId = requires(int)
 
 @injected
@@ -190,8 +206,8 @@ class SynchronizeRightAccessHandler(SynchronizeCategoryAccessHandler):
         assert isinstance(solicit, Solicit), 'Invalid solicit %s' % solicit
         assert isinstance(solicit.repository, RepositoryRight), 'Invalid repository %s' % solicit.repository
         
-        rights = listBFS(solicit.repository, RepositoryRight.children, RepositoryRight.rightName)
+        rights = listBFS(solicit.repository, RepositoryRight.children, RepositoryRight.rightId)
         #first group the accesses by right id: rightId -> [accesses]
-        rightAccesses = self.groupAccesses(rights, RepositoryRight, 'rightId')
+        rightAccesses = self.groupAccesses(rights, RepositoryRight, RepositoryRight.rightId)
         self.syncEntityAccessesWithDb(rightAccesses)
     

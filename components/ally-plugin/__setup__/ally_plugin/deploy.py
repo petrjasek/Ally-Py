@@ -72,8 +72,8 @@ def start():
                  'with "-dump" option', path_configuration())
     with activate(plugins(), 'start'):
         context.configurationsLoad(configurations())
-        context.processStart()
         triggerEvents(app.SETUP)
+        context.processStart()
     
 @ioc.start(priority=PRIORITY_TRIGGER_EVENTS)
 def startEvents():

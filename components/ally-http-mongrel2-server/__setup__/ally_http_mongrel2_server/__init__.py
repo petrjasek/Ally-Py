@@ -25,5 +25,4 @@ CLASSIFIERS = ['Development Status :: 4 - Beta']
 INSTALL_REQUIRES = ['ally-http >= 1.0']
 # --------------------------------------------------------------------
 # The extra configurations
-__extra__ = dict(package_data={
--        '': ['*.txt', '*.conf']})
+__extra__ = dict(package_data={'': ['*.txt', '*.conf']})

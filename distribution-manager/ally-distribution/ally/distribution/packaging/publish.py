@@ -21,5 +21,5 @@ class Publisher:
         Register and update a pypi component
         '''
         for path in self.publish_list:
-            setupFile = os.path.join(path, 'setup.py')
-            os.system('python3 ' + setupFile + ' register -r pypitest sdist bdist_egg upload -r pypitest')
+            os.chdir(path)
+            os.system('python3 setup.py register -r pypitest sdist bdist_egg upload -r pypitest')

@@ -16,9 +16,10 @@ from setuptools import setup, find_packages
 
 # --------------------------------------------------------------------
 
-setup(name='ally-http-mongrel2-server',
+setup(package_data={'': ['*.txt', '*.conf']},
+name='ally-http-mongrel2-server',
 author='Gabriel Nistor',
-install_requires=['ally-http>=1.0'],
+install_requires=['ally-http >= 1.0'],
 long_description='Similar to the asyncore server but provides support for using \n0MQ messaging in order to communicate with Mongrel2 HTTP server.',
 author_email='gabriel.nistor@sourcefabric.org',
 version='1.0',

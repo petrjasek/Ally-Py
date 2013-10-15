@@ -12,7 +12,7 @@ The API of ally py framework for REST.
 # --------------------------------------------------------------------
 
 NAME = 'ally API'
-VERSION = '1.0.1'
+VERSION = '1.0'
 AUTHOR = 'Gabriel Nistor'
 AUTHOR_EMAIL = 'gabriel.nistor@sourcefabric.org'
 KEYWORDS = ['Ally', 'REST', 'API']

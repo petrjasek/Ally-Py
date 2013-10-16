@@ -107,6 +107,7 @@ def configurationsExtract(assembly=None):
     try:
         for name, call in assembly.calls.items():
             if not isinstance(call, CallConfig): continue
+            if not call.assembly == assembly: continue
             assert isinstance(call, CallConfig)
             configurations[name] = call.config()
     
@@ -167,7 +168,7 @@ def configurationsLoad(configs, assembly=None):
                                          'instead of "url")' % (name, call.name))
                     used.add(name)
                     call.setValue(value)
-                
+                    
     finally: Assembly.stack.pop()
     
     unused = set(configs)

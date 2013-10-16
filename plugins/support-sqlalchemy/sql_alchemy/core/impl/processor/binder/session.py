@@ -29,11 +29,11 @@ log = logging.getLogger(__name__)
 
 class Bind(Context):
     '''
-    The session bind context.
+    The bind context.
     '''
     # ---------------------------------------------------------------- Required
     proxy = requires(object)
-
+    
 # --------------------------------------------------------------------
 
 @injected
@@ -56,9 +56,9 @@ class BindSessionHandler(HandlerProcessor, IProxyHandler):
         Binds a session creator wrapping for the provided proxy.
         '''
         assert isinstance(bind, Bind), 'Invalid bind %s' % bind
-        
-        if not hasProxyHandler(BindSessionHandler, bind.proxy):
-            registerProxyHandler(self, bind.proxy)
+        assert not hasProxyHandler(BindSessionHandler, bind.proxy), 'Proxy already has a session %s' % bind.proxy
+
+        registerProxyHandler(self, bind.proxy)
 
     # ----------------------------------------------------------------
 

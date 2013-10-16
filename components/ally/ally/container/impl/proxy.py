@@ -193,7 +193,7 @@ class Execution:
         '''
         try: handler = self.handlers.popleft()
         except IndexError:
-            raise AttributeError('No proxy handler resolves method %r' % self.methodName)
+            raise AttributeError('No proxy handler resolves method %r' % self.proxyCall.proxyMethod.name)
         assert isinstance(handler, IProxyHandler), 'Invalid handler %s' % handler
         return handler.handle(self)
 

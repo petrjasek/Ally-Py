@@ -18,6 +18,7 @@ from ally.support.api.util_service import copyContainer
 from gateway.api.gateway import IGatewayService, Custom
 import logging
 import re
+from ally.api.error import InputError
 
 # --------------------------------------------------------------------
 
@@ -64,4 +65,4 @@ def populateDefaulyGateways():
         custom = copyContainer(data, Custom())
         assert isinstance(custom, Custom)
         try: serviceGateway.insert(custom)
-        except: log.info('Gateway \'%s\' already exists' % custom.Name)
+        except InputError: log.info('Gateway \'%s\' already exists' % custom.Name)

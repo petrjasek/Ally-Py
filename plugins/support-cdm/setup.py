@@ -27,5 +27,5 @@ packages=find_packages('.'),
       platforms=['all'],
       zip_safe=True,
       license='GPL v3',
-      url='http://www.sourcefabric.org/en/superdesk/'
+      url='http://www.sourcefabric.org/en/superdesk/', # project home page
       )

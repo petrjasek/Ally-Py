@@ -153,9 +153,9 @@ class Packager:
 
                     infoTimestamp = os.path.getmtime(os.path.join(setupPath, setupModule, INIT_FILENAME))
                     setupTimestamp = os.path.getmtime(setupFilePath) 
-                    if infoTimestamp < setupTimestamp: 
-                        assert log.info('*** SKIPPED (no new info found) ***') or True
-                        continue 
+#                     if infoTimestamp < setupTimestamp: 
+#                         assert log.info('*** SKIPPED (no new info found) ***') or True
+#                         continue 
                     try:
                         module = imp.load_source(setupModule, os.path.join(setupPath, setupModule, INIT_FILENAME))
                         try:

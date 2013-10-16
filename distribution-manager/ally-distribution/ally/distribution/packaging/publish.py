@@ -10,6 +10,14 @@ Simple implementation for publishing components/plugins on pypi.
 '''
 import os
 
+PY_RUN = 'python3'
+OFFICIAL_REP = '-r pypi'
+REGISTER = 'register'
+SOURCE = 'sdist'
+EGG = 'bdist_egg'
+WIN = 'bdist_wininst'
+UPLOAD = 'upload'
+
 class Publisher:
     
     def __init__(self, publish_list):
@@ -22,4 +30,7 @@ class Publisher:
         '''
         for path in self.publish_list:
             os.chdir(path)
-            os.system('python3 setup.py register -r pypitest sdist bdist_egg upload -r pypitest')
+            os.system(' '.join([PY_RUN, 'setup.py', OFFICIAL_REP, SOURCE, EGG, WIN, UPLOAD, OFFICIAL_REP])) 
+                                
+                                
+#                                  sdist bdist_egg upload -r pypi')

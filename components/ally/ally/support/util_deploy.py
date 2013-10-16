@@ -8,7 +8,7 @@ Created on Sep 14, 2012
 
 Contains ZIP utils
 '''
-
+# TODO: Gabriel: see if this module still makes sense
 from os.path import join, isdir
 from platform import system, machine, system_alias, release, version, \
     linux_distribution

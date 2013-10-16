@@ -52,7 +52,7 @@ class GroupRule(Rule, IPrepare):
     Digester rule for extracting groups from the xml configuration file.
     '''
     
-    class Repository(Context):
+    class Repository(WithTracking):
         '''
         The group context.
         '''
@@ -85,6 +85,7 @@ class GroupRule(Rule, IPrepare):
         group = digester.arg.Repository()
         assert isinstance(group, GroupRule.Repository)        
         group.groupName = digester.currentName()
+        trackOn(digester, group)
         digester.stack.append(group)
         
     def end(self, node, digester):
@@ -103,11 +104,12 @@ class GroupRule(Rule, IPrepare):
 
 class RightRule(GroupRule):
     '''
-    Digester rule for extracting groups from the xml configuration file.
+    Digester rule for extracting rights from the xml configuration file.
     '''
-    class Repository(Context):
+    #TODO: support for inheritance between rights
+    class Repository(WithTracking):
         '''
-        The group context.
+        The right context.
         '''
         # ---------------------------------------------------------------- Defined
         rightName = defines(str, doc='''
@@ -137,6 +139,7 @@ class RightRule(GroupRule):
         repository = digester.arg.Repository()
         assert isinstance(repository, RightRule.Repository), 'Invalid repository %s' % repository
         repository.rightName = attributes.get(self.name)
+        trackOn(digester, repository)
         digester.stack.append(repository)
 
 class ActionRule(Rule, IPrepare):

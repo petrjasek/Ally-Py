@@ -71,11 +71,12 @@ class SynchronizeCategoryAccessHandler(HandlerProcessor):
     def __init__(self, Repository):
         super().__init__(Repository=Repository, Access=Access)
     
-    def syncEntityAccessesWithDb(self, entityAccesses):
+    def syncEntityAccessesWithDb(self, entityAccesses, entityIdNameMapping=None):
         '''
         Method to synchronize entity accesses from the configuration file with the database.
         @param entityAccesses: mapping entityId : list of accesses 
         '''
+        if entityIdNameMapping is None: entityIdNameMapping = {}
         for entityId, accesses in entityAccesses.items():
             accessesFromDb = set(self.accessCategoryService.getAccesses(entityId))
             
@@ -100,23 +101,18 @@ class SynchronizeCategoryAccessHandler(HandlerProcessor):
                                 self.accessCategoryService.remAcl(entityId, accessId)
                                 self.accessCategoryService.addAcl(entityId, accessId)
                             except:
-                                log.warning('Unknown access \'%s\' for method \'%s\' defined in category with id \'%s\' in file \'%s\' at line \'%s\' column \'%s\' ',
-                                            url, method, entityId, accessData.uri, accessData.lineNumber, accessData.colNumber)
-                                #TODO add file info for tracking (besides line and column numbers)
-                                #TODO entityName instead of entityId for Rights
+                                log.warning('Unknown access \'%s\' for method \'%s\' defined in category \'%s\' in file \'%s\' at line \'%s\' column \'%s\' ',
+                                            url, method, entityIdNameMapping.get(entityId, entityId), accessData.uri, accessData.lineNumber, accessData.colNumber)
                             else:
-                                #TODO: handle exception for invalid filter name
-                                #TODO: handle case where filter is not applicable for any of the accesses
-                                #(registerFilter returns False all the time)
                                 try:
                                     if filter and self.accessCategoryService.registerFilter(entityId, accessId, filter, url):
                                         unusedFilters.remove(filter)
                                 except:
-                                    log.warning('Unknown filter \'%s\' in category with id \'%s\' in file \'%s\' at line \'%s\' column \'%s\'', 
-                                                filter, entityId, accessData.uri, accessData.lineNumber, accessData.colNumber)
+                                    log.warning('Unknown filter \'%s\' in category \'%s\' in file \'%s\' at line \'%s\' column \'%s\'', 
+                                                filter, entityIdNameMapping.get(entityId, entityId), accessData.uri, accessData.lineNumber, accessData.colNumber)
                 if unusedFilters:
-                    log.warning('Filters \'%s\' do not apply to any of the access URLs \'%s\' defined in category with id \'%s\' in file \'%s\' at line \'%s\' column \'%s\' ',
-                                unusedFilters, accessData.urls, entityId, accessData.uri, accessData.lineNumber, accessData.colNumber)
+                    log.warning('Filters \'%s\' do not apply to any of the access URLs \'%s\' defined in category \'%s\' in file \'%s\' at line \'%s\' column \'%s\' ',
+                                unusedFilters, accessData.urls, entityIdNameMapping.get(entityId, entityId), accessData.uri, accessData.lineNumber, accessData.colNumber)
                 
             #now remove from db the accesses that are no longer present in the configuration files
             for accessId in accessesFromDb:
@@ -128,12 +124,11 @@ class SynchronizeCategoryAccessHandler(HandlerProcessor):
         @return: mapping Id : list of actions
         '''
         groupAccesses = {}
-        iattr = attributeOf(idAttr)
         for repository in repositories:
             assert isinstance(repository, Repository), 'Invalid repository %s' % repository
-            assert hasAttribute(Repository, iattr.__name__), 'Invalid repository %s' % repository
-            accesses = groupAccesses.get(getattr(repository, iattr.__name__))
-            if not accesses: groupAccesses[getattr(repository, iattr.__name__)] = repository.accesses
+            assert hasAttribute(Repository, idAttr.__name__), 'Invalid repository %s' % repository
+            accesses = groupAccesses.get(getattr(repository, idAttr.__name__))
+            if not accesses: groupAccesses[getattr(repository, idAttr.__name__)] = repository.accesses
             else: accesses.extend(repository.accesses)
         
         return groupAccesses
@@ -180,6 +175,7 @@ class RepositoryRight(Repository):
     The repository context.
     '''
     # ---------------------------------------------------------------- Required
+    rightName = requires(str)
     rightId = requires(int)
 
 @injected
@@ -208,6 +204,21 @@ class SynchronizeRightAccessHandler(SynchronizeCategoryAccessHandler):
         
         rights = listBFS(solicit.repository, RepositoryRight.children, RepositoryRight.rightId)
         #first group the accesses by right id: rightId -> [accesses]
+        idNameMapping = self.getIdNameMapping(rights, RepositoryRight, RepositoryRight.rightId, RepositoryRight.rightName)
         rightAccesses = self.groupAccesses(rights, RepositoryRight, RepositoryRight.rightId)
-        self.syncEntityAccessesWithDb(rightAccesses)
+        self.syncEntityAccessesWithDb(rightAccesses, idNameMapping)
+    
+    def getIdNameMapping(self, repositories, Repository, idAttr, nameAttr):
+        '''
+        Creates mapping rightId : rightName for the given repositories. 
+        '''
+        idNameMapping = {}
+        for repository in repositories:
+            assert isinstance(repository, Repository), 'Invalid repository %s' % repository
+            assert hasAttribute(Repository, idAttr.__name__), 'Invalid repository %s' % repository
+            assert hasAttribute(Repository, nameAttr.__name__), 'Invalid repository %s' % repository
+            idNameMapping[getattr(repository, idAttr.__name__)] = getattr(repository, nameAttr.__name__)
+        
+        return idNameMapping
+        
     

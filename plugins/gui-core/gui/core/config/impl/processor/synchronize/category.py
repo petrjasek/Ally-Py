@@ -41,6 +41,9 @@ class Repository(Context):
     '''
     # ---------------------------------------------------------------- Required
     children = requires(list)
+    lineNumber = requires(int)
+    colNumber = requires(int)
+    uri = requires(str)
 
 # --------------------------------------------------------------------
 
@@ -84,7 +87,7 @@ class SynchronizeGroupsHandler(HandlerProcessor):
         #maps name to id
         groupsDb = {name:name for name in self.groupService.getAll()}
         #maps group_name to arguments required for group creation (None for groups)
-        groups = {r.groupName:self.createEntity for r in listBFS(solicit.repository, 
+        groups = {r.groupName: (self.createEntity, r) for r in listBFS(solicit.repository, 
                                                                  RepositoryGroup.children, RepositoryGroup.groupName)}
         syncWithDatabase(self.groupService, groups, groupsDb)
     
@@ -148,7 +151,7 @@ class SynchronizeRightsHandler(HandlerProcessor):
         rightsDb = {e.Name: e.Id for e in [self.rightService.getById(id) for id in self.rightService.getAll(self.type_name)]}
         #maps right_name to arguments required for right creation
         rightRepositories = listBFS(solicit.repository, RepositoryRight.children, RepositoryRight.rightName)
-        rights = {r.rightName: partial(self.createEntity, r) for r in rightRepositories}     
+        rights = {r.rightName: (partial(self.createEntity, r), r) for r in rightRepositories}
         rightIds = syncWithDatabase(self.rightService, rights, rightsDb)
         
         #add id to right repositories
@@ -168,7 +171,7 @@ class SynchronizeRightsHandler(HandlerProcessor):
 def syncWithDatabase(service, entitiesConfig, entitiesDb):
     '''Generic method to synchronize entities (groups and rights) from configuration file with the database.
     
-    @param service: the service for the entity to be synchronized 
+    @param service: the service for the entity to be synchronized
     @type service: IAclPrototype 
     @param entitiesConfig: mapping entityName : entityCreator
     @param entitiesDb: mapping entityName : entityId
@@ -178,14 +181,15 @@ def syncWithDatabase(service, entitiesConfig, entitiesDb):
     
     #will store the name:id mapping of the old and newly created entities
     entityIds = {}
-    for entityName, creator in entitiesConfig.items():
+    for entityName, (creator, repository) in entitiesConfig.items():
         if not entityName in entitiesDb:
+            assert isinstance(repository, Repository), 'Invalid repository %s' % repository 
             entity = creator(entityName)
             try:
                 entityIds[entityName] = service.insert(entity)
             except Exception as e:
-                #TODO: make the warning more user friendly: include file, line and column number
-                log.warning('Error adding %s to database' % entity)
+                log.warning('Error adding \'%s\' to database in file \'%s\' at line \'%s\', column \'%s\' ', 
+                            entity, repository.uri, repository.lineNumber, repository.colNumber)
                 log.warning(e)
         else: entityIds[entityName] = entitiesDb.pop(entityName)
     

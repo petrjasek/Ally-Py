@@ -1,0 +1,15 @@
+
+About:
+- Collect package information from __setup__(__plugin__)/__init__.py files in each package.
+- Generate eggs to path
+- Generate setup.py files used for pypi upload
+- Publish package to pypi (requires auth)
+
+
+Usage:
+distribution.py --location [path] 
+				--location [path] --components (Deploy only components from ally-py)
+				--location [path] --plugins (Deploy only plugins from ally-py)
+				
+
+pip-3.2 install --target /opt/superdesk/ --use-wheel -r requirements.txt 

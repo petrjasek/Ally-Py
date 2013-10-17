@@ -14,7 +14,8 @@ Contains the setup files for security.
 NAME = 'Security'
 GROUP = 'Security'
 VERSION = '1.0'
-DESCRIPTION = \
-'''
-This plugin provides the basic security models. 
-'''
+DESCRIPTION = 'This plugin provides the basic security models.'
+KEYWORDS = ['Ally', 'REST', 'plugin', 'support', 'security']
+AUTHOR = 'Ioan Pocol'
+AUTHOR_EMAIL = "gabriel.nistor@sourcefabric.org",
+INSTALL_REQUIRES = ['ally-api >= 1.0', 'support-sqlalchemy >= 1.0'] 

@@ -1,10 +1,13 @@
-'''
-Created on June 14, 2012
 
-@package: gateway acl
-@copyright: 2012 Sourcefabric o.p.s.
+'''
+Created on Oct 1, 2013
+ 
+@package: distribution_manager
+@copyright: 2013 Sourcefabric o.p.s.
 @license: http://www.gnu.org/licenses/gpl-3.0.txt
-@author: Gabriel Nistor
+@author: Cristian Domsa
+ 
+Setup configuration for components/plugins needed for pypi.
 '''
 
 # --------------------------------------------------------------------
@@ -13,20 +16,14 @@ from setuptools import setup, find_packages
 
 # --------------------------------------------------------------------
 
-setup(
-    name="gateway_acl",
-    version="1.0",
-    packages=find_packages(),
-    install_requires=['gateway >= 1.0'],
-    platforms=['all'],
-    zip_safe=True,
-
-    # metadata for upload to PyPI
-    author="Gabriel Nistor",
-    author_email="gabriel.nistor@sourcefabric.org",
-    description="Ally framework - gateway acl",
-    long_description='The plugin that provides the gateway based on services access control layer',
-    license="GPL v3",
-    keywords="Ally REST framework plugin gateway services access control layer",
-    url="http://www.sourcefabric.org/en/superdesk/",  # project home page
-)
+setup(install_requires=['gateway >= 1.0', 'ally-core-http >= 1.0'],
+description='This plugin provides the service gateways.',
+version='1.0',
+name='gateway-acl',
+long_description='The ACL (access control layer) gateway plugin integrates gateways that are designed based on published REST models and services, basically makes the conversion between access allowed on a service call and a gateway REST model.',
+packages=find_packages('.'),
+      platforms=['all'],
+      zip_safe=True,
+      license='GPL v3',
+      url='http://www.sourcefabric.org/en/superdesk/', # project home page
+      )

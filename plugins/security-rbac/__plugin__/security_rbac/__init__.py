@@ -14,7 +14,9 @@ Contains the setup files for security rbac.
 NAME = 'security RBAC'
 GROUP = 'security'
 VERSION = '1.0'
-DESCRIPTION = \
-'''
-This plugin handles the support for RBAC security. 
-'''
+DESCRIPTION = '''This plugin handles the support for RBAC security.'''
+KEYWORDS = ['Ally', 'REST', 'plugin', 'support', 'RBAC']
+AUTHOR = 'Ioan Pocol'
+AUTHOR_EMAIL = 'ioan.pocol@sourcefabric.org'
+INSTALL_REQUIRES = ['security >= 1.0'] 
+

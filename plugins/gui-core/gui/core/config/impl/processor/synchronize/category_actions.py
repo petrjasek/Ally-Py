@@ -24,7 +24,6 @@ from gui.action.api.category_group import IActionGroupService
 from gui.action.api.category import IActionCategoryPrototype
 from gui.action.api.category_right import IActionRightService
 
-
 # --------------------------------------------------------------------
 log = logging.getLogger(__name__)
 
@@ -100,7 +99,7 @@ class SynchronizeCategoryActionsHandler(HandlerProcessor):
             else: actions.extend(repository.actions)
         
         return groupActions
-                    
+
 # --------------------------------------------------------------------
 
 class RepositoryGroup(Repository):

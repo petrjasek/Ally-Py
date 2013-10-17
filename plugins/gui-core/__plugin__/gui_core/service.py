@@ -85,7 +85,7 @@ def updateRootNodeXMLForGroups():
     for name, spec in access_group().items():
         assert isinstance(name, str), 'Invalid name %s' % name
         assert isinstance(spec, dict), 'Invalid specifications %s' % spec
-        if spec.get('isRight', False): node = nodeRootXML().addRule(RightRule('name'), 'Config/%s' % name)
+        if spec.get('isRight', False): node = nodeRootXML().addRule(RightRule('name', 'parents'), 'Config/%s' % name)
         else: node = nodeRootXML().addRule(GroupRule(), 'Config/%s' % name)
         addNodeAccess(node)
         addNodeDescription(node)

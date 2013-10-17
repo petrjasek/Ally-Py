@@ -24,7 +24,7 @@
 		</Allows>
 	</Captcha>
 
-	<Right name="Requests_inspection">
+	<Right name="Requests_inspection_1" parents="Requests_inspection_2">
 		<Actions>
 			<Action path="menu_2" />
 			<Action path="menu_2.request" script="/js/aaa.js">Request</Action>
@@ -44,7 +44,7 @@
 		</Description>
 	</Right>
 	
-	<Right name="Requests_inspection">
+	<Right name="Requests_inspection_2" parents="Requests_inspection_3">
 		<Actions>
 			<Action path="menu_2" />
 			<Action path="menu_2.request" script="/js/aaa.js">Request</Action>
@@ -63,5 +63,26 @@
 			application are also visible.
 		</Description>
 	</Right>
+	
+	<Right name="Requests_inspection_3">
+		<Actions>
+			<Action path="menu_2" />
+			<Action path="menu_2.request" script="/js/aaa.js">Request</Action>
+		</Actions>
+		<Action path="menu_3" label="Menu">
+			<Action path="request" label="Request" />
+		</Action>
+		<Action path="bucu" label="Mucu" parent="menu_2" />
+
+		<Allows filter="authenticated">
+			<URL>ACL/Group/*/Action</URL>
+		</Allows>
+
+		<Description>Allows for the viewing of all possible requests that can be made on the REST server, also the plugins and
+			components that are part of the
+			application are also visible.
+		</Description>
+	</Right>
+	
 
 </Config>

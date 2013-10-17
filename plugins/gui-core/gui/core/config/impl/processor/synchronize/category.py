@@ -165,7 +165,7 @@ class SynchronizeRightsHandler(HandlerProcessor):
         #maps right_name to arguments required for right creation
         rightRepositories = listBFS(solicit.repository, RepositoryRight.children, RepositoryRight.rightName)
         #do rights inheritance 
-        #self.doInheritance(rightRepositories)
+        self.doInheritance(rightRepositories)
         rights = {r.rightName: (partial(self.createEntity, r), r) for r in rightRepositories}
         rightIds = syncWithDatabase(self.rightService, rights, rightsDb)
         

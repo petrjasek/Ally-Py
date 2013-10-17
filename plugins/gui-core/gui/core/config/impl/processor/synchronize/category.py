@@ -22,6 +22,7 @@ from ally.support.util_context import listBFS
 from security.api.right_type import IRightTypeService
 from security.api.right import IRightService, Right, RightType
 from functools import partial
+from collections import deque
 
 # --------------------------------------------------------------------
 
@@ -44,6 +45,16 @@ class Repository(Context):
     lineNumber = requires(int)
     colNumber = requires(int)
     uri = requires(str)
+
+class ActionData(Context):
+    '''
+    The action container context.
+    '''
+    # ---------------------------------------------------------------- Required
+    path = requires(str)
+    label = requires(str)
+    script = requires(str)
+    navBar = requires(str)
 
 # --------------------------------------------------------------------
 
@@ -109,6 +120,8 @@ class RepositoryRight(Repository):
     description = optional(str)
     # ---------------------------------------------------------------- Required
     rightName = requires(str)
+    rightParents = defines(list)
+    actions = requires(list)
 
 # --------------------------------------------------------------------
     
@@ -151,6 +164,8 @@ class SynchronizeRightsHandler(HandlerProcessor):
         rightsDb = {e.Name: e.Id for e in [self.rightService.getById(id) for id in self.rightService.getAll(self.type_name)]}
         #maps right_name to arguments required for right creation
         rightRepositories = listBFS(solicit.repository, RepositoryRight.children, RepositoryRight.rightName)
+        #do rights inheritance 
+        #self.doInheritance(rightRepositories)
         rights = {r.rightName: (partial(self.createEntity, r), r) for r in rightRepositories}
         rightIds = syncWithDatabase(self.rightService, rights, rightsDb)
         
@@ -158,6 +173,74 @@ class SynchronizeRightsHandler(HandlerProcessor):
         for r in rightRepositories:
             r.rightId = rightIds.get(r.rightName)
     
+    def doInheritance(self, repositories):
+        '''
+        @param repositories: list of right repositories 
+        '''
+        #first we have to group the repositories by rightName
+        rights = {}
+        for repository in repositories:
+            assert isinstance(repository, RepositoryRight), 'Invalid right %s' % repository
+            if repository.rightName in rights: rights[repository.rightName].append(repository)
+            else: rights[repository.rightName] = [repository]
+        
+        #detect cyclic inheritance
+        for rightName in rights:
+            result = self.isCyclicInheritance(rightName, rights)
+            if result: 
+                log.warning('Cyclic inheritance detected for rights: %s', result)
+                return
+        
+        handled = set()
+        for rightName in rights:
+            self.handleRight(rightName, rights, handled)
+    
+    def isCyclicInheritance(self, rightName, rights, visited=None, path=None):
+        '''
+        Will detect if there is cyclic inheritance for the given rights.
+        '''
+        if visited is None: 
+            visited = set()
+            path = []
+            
+        if rightName in visited: return path
+        
+        parents = [parent for right in rights[rightName] if right.rightParents for parent in right.rightParents]
+        if not parents: return False
+        
+        visited.add(rightName)
+        path.append(rightName)
+        
+        for parent in parents:
+            if not parent in rights: continue
+            if self.isCyclicInheritance(parent, rights, visited, path): return path
+        return False
+    
+    def handleRight(self, rightName, rights, handled):
+        '''
+        Recursively solves inheritance of actions and accesses for the right.
+        ''' 
+        assert isinstance(handled, set), 'Invalid handled set %s' % handled
+        if rightName in handled: return
+        
+        parents = [parent for right in rights[rightName] if right.rightParents for parent in right.rightParents]
+        if not parents:
+            handled.add(rightName)
+            return
+        
+        #handle parents
+        for parent in parents: self.handleRight(parent, rights, handled)
+        
+        #now add the actions from parent rights
+        actions = set(action.path for right in rights[rightName] if right.actions for action in right.actions)
+        actionsParents = {action.path:action for parent in parents for right in rights[parent] if right.actions for action in right.actions}
+        
+        #we will add the actions from the parents to one of the repositories of this right (the first one)
+        for action in actionsParents:
+            if not action in actions: rights[rightName][0].actions.append(actionsParents[action])
+        #finished handling this right, mark it as handled
+        handled.add(rightName)
+            
     def createEntity(self, rightRepository, rightName):
         assert isinstance(rightRepository, RepositoryRight), 'Invalid repository %s' % rightRepository
         right = Right()

@@ -80,6 +80,9 @@ class SynchronizeCategoryAccessHandler(HandlerProcessor):
         for entityId, accesses in entityAccesses.items():
             accessesFromDb = set(self.accessCategoryService.getAccesses(entityId))
             
+            #TODO: keep a record of Acls added so far to avoid adding the same acl twice or adding a different filter
+            #this can happen due to right inheritance
+            
             for accessData in accesses:
                 assert isinstance(accessData, Access), 'Invalid access data %s' % accessData
                 

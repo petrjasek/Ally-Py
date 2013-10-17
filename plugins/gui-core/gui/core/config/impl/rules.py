@@ -106,7 +106,7 @@ class RightRule(GroupRule):
     '''
     Digester rule for extracting rights from the xml configuration file.
     '''
-    #TODO: support for inheritance between rights
+    #TODO: add support for inheritance between rights
     class Repository(WithTracking):
         '''
         The right context.
@@ -114,7 +114,11 @@ class RightRule(GroupRule):
         # ---------------------------------------------------------------- Defined
         rightName = defines(str, doc='''
         @rtype: string
-        The name of the group (e.g. "Anonymous").
+        The name of the right.
+        ''')
+        rightParents = defines(list, doc='''
+        @rtype: string
+        The list of name of inherited rights.
         ''')
         description = defines(str, doc='''
         @rtype: string
@@ -125,11 +129,13 @@ class RightRule(GroupRule):
         The list of children created.
         ''')
     
-    def __init__(self, name):
+    def __init__(self, name, parents):
         '''
         @param name: the configuration attribute containing the name of the right
+        @param parent: the configuration attribute containing the name of the parent right
         ''' 
         self.name = name
+        self.parents = parents
         
     def begin(self, digester, **attributes):
         '''
@@ -139,6 +145,7 @@ class RightRule(GroupRule):
         repository = digester.arg.Repository()
         assert isinstance(repository, RightRule.Repository), 'Invalid repository %s' % repository
         repository.rightName = attributes.get(self.name)
+        if attributes.get(self.parents): repository.rightParents = attributes.get(self.parents).split(',')
         trackOn(digester, repository)
         digester.stack.append(repository)
 

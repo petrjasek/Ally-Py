@@ -23,8 +23,8 @@
 			<URL>HR/User/*</URL>
 		</Allows>
 	</Captcha>
-
-	<Right name="Requests_inspection_1" parents="Requests_inspection_2">
+	
+	<Right name="Requests_inspection_1" inherits="Requests_inspection_2">
 		<Actions>
 			<Action path="menu_2" />
 			<Action path="menu_2.request" script="/js/aaa.js">Request</Action>
@@ -44,7 +44,7 @@
 		</Description>
 	</Right>
 	
-	<Right name="Requests_inspection_2" parents="Requests_inspection_3">
+	<Right name="Requests_inspection_2" inherits="Requests_inspection_3">
 		<Actions>
 			<Action path="menu_2" />
 			<Action path="menu_2.request" script="/js/aaa.js">Request</Action>

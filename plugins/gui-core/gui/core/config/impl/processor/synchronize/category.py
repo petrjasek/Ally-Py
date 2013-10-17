@@ -119,7 +119,7 @@ class RepositoryRight(Repository):
     description = optional(str)
     # ---------------------------------------------------------------- Required
     rightName = requires(str)
-    rightParents = defines(list)
+    rightInherits = defines(list)
     actions = requires(list)
 
 # --------------------------------------------------------------------
@@ -204,7 +204,7 @@ class SynchronizeRightsHandler(HandlerProcessor):
             
         if rightName in visited: return path
         
-        parents = [parent for right in rights[rightName] if right.rightParents for parent in right.rightParents]
+        parents = [parent for right in rights[rightName] if right.rightInherits for parent in right.rightInherits]
         if not parents: return False
         
         visited.add(rightName)
@@ -222,24 +222,24 @@ class SynchronizeRightsHandler(HandlerProcessor):
         assert isinstance(handled, set), 'Invalid handled set %s' % handled
         if rightName in handled: return
         
-        parents = [parent for right in rights[rightName] if right.rightParents for parent in right.rightParents]
+        parents = [parent for right in rights[rightName] if right.rightInherits for parent in right.rightInherits]
         if not parents:
             handled.add(rightName)
             return
         
-        #handle parents
+        #handle inherits
         for parent in parents: self.handleRight(parent, rights, handled)
         
         #now add the actions from parent rights
         actions = set(action.path for right in rights[rightName] if right.actions for action in right.actions)
-        actionsParents = {action.path:action for parent in parents for right in rights[parent] if right.actions for action in right.actions}
-        accessesParents = [access for parent in parents for right in rights[parent] if right.accesses for access in right.accesses]
+        actionsInherited = {action.path:action for parent in parents for right in rights[parent] if right.actions for action in right.actions}
+        accessesInherited = [access for parent in parents for right in rights[parent] if right.accesses for access in right.accesses]
         
         #we will add the actions and accesses from the parents to one of the repositories of this right (the first one)
-        for action in actionsParents:
-            if not action in actions: rights[rightName][0].actions.append(actionsParents[action])
-        #TODO: also add accesses from the parent to the child
-        for access in accessesParents: rights[rightName][0].accesses.append(access)
+        for action in actionsInherited:
+            if not action in actions: rights[rightName][0].actions.append(actionsInherited[action])
+        #add accesses from the parent to the child
+        for access in accessesInherited: rights[rightName][0].accesses.append(access)
         
         #finished handling this right, mark it as handled
         handled.add(rightName)

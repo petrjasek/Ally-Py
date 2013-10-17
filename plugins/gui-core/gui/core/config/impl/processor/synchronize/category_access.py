@@ -12,7 +12,7 @@ from ally.container import wire
 from ally.container.ioc import injected
 from ally.container.support import setup
 from ally.design.processor.attribute import requires
-from ally.design.processor.context import Context, attributeOf
+from ally.design.processor.context import Context
 from ally.design.processor.execution import Chain
 from ally.design.processor.handler import HandlerProcessor, Handler
 from ally.support.util_context import listBFS, hasAttribute
@@ -80,8 +80,9 @@ class SynchronizeCategoryAccessHandler(HandlerProcessor):
         for entityId, accesses in entityAccesses.items():
             accessesFromDb = set(self.accessCategoryService.getAccesses(entityId))
             
-            #TODO: keep a record of Acls added so far to avoid adding the same acl twice or adding a different filter
+            #keep a record of Acls added so far to avoid adding the same acl twice or adding a different filter for a acl
             #this can happen due to right inheritance
+            addedAccesses = set()
             
             for accessData in accesses:
                 assert isinstance(accessData, Access), 'Invalid access data %s' % accessData
@@ -98,18 +99,22 @@ class SynchronizeCategoryAccessHandler(HandlerProcessor):
                 for filter in filters:
                     for url, method in urlsMethods:
                             accessId = generateId(url.replace('#', '*'), method)
+                            if accessId in addedAccesses:
+                                unusedFilters.clear() #avoid displaying unnecessary filter errors for inherited accesses
+                                continue
                             accessesFromDb.discard(accessId)
                             
                             try:
                                 self.accessCategoryService.remAcl(entityId, accessId)
                                 self.accessCategoryService.addAcl(entityId, accessId)
+                                addedAccesses.add(accessId)
                             except:
                                 log.warning('Unknown access \'%s\' for method \'%s\' defined in category \'%s\' in file \'%s\' at line \'%s\' column \'%s\' ',
                                             url, method, entityIdNameMapping.get(entityId, entityId), accessData.uri, accessData.lineNumber, accessData.colNumber)
                             else:
                                 try:
                                     if filter and self.accessCategoryService.registerFilter(entityId, accessId, filter, url):
-                                        unusedFilters.remove(filter)
+                                        unusedFilters.discard(filter)
                                 except:
                                     log.warning('Unknown filter \'%s\' in category \'%s\' in file \'%s\' at line \'%s\' column \'%s\'', 
                                                 filter, entityIdNameMapping.get(entityId, entityId), accessData.uri, accessData.lineNumber, accessData.colNumber)

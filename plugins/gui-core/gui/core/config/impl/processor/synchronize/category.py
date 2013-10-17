@@ -22,7 +22,6 @@ from ally.support.util_context import listBFS
 from security.api.right_type import IRightTypeService
 from security.api.right import IRightService, Right, RightType
 from functools import partial
-from collections import deque
 
 # --------------------------------------------------------------------
 
@@ -234,10 +233,14 @@ class SynchronizeRightsHandler(HandlerProcessor):
         #now add the actions from parent rights
         actions = set(action.path for right in rights[rightName] if right.actions for action in right.actions)
         actionsParents = {action.path:action for parent in parents for right in rights[parent] if right.actions for action in right.actions}
+        accessesParents = [access for parent in parents for right in rights[parent] if right.accesses for access in right.accesses]
         
-        #we will add the actions from the parents to one of the repositories of this right (the first one)
+        #we will add the actions and accesses from the parents to one of the repositories of this right (the first one)
         for action in actionsParents:
             if not action in actions: rights[rightName][0].actions.append(actionsParents[action])
+        #TODO: also add accesses from the parent to the child
+        for access in accessesParents: rights[rightName][0].accesses.append(access)
+        
         #finished handling this right, mark it as handled
         handled.add(rightName)
             

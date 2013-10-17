@@ -76,6 +76,7 @@
 
 		<Allows filter="authenticated">
 			<URL>ACL/Group/*/Action</URL>
+			<URL>HR/User/*</URL>
 		</Allows>
 
 		<Description>Allows for the viewing of all possible requests that can be made on the REST server, also the plugins and

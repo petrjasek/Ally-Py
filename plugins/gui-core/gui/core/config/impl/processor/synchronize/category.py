@@ -171,9 +171,12 @@ class SynchronizeRightsHandler(HandlerProcessor):
         #add id to right repositories
         for r in rightRepositories:
             r.rightId = rightIds.get(r.rightName)
+            
+        #TODO: create root role ("Admin") and add all the rights on it
     
     def doInheritance(self, repositories):
         '''
+        Will add actions and accesses from inherited to inheriting rights. 
         @param repositories: list of right repositories 
         '''
         #first we have to group the repositories by rightName
@@ -197,6 +200,9 @@ class SynchronizeRightsHandler(HandlerProcessor):
     def isCyclicInheritance(self, rightName, rights, visited=None, path=None):
         '''
         Will detect if there is cyclic inheritance for the given rights.
+        @param rightName: The right from which to start the search for cyclic inheritance
+        @param rights: mapping rightName: [list of repositories]
+        @return: False if there is no cyclic inheritance or a list containing the rights in the inheritance cycle 
         '''
         if visited is None: 
             visited = set()
@@ -218,6 +224,8 @@ class SynchronizeRightsHandler(HandlerProcessor):
     def handleRight(self, rightName, rights, handled):
         '''
         Recursively solves inheritance of actions and accesses for the right.
+        @param rightName: The right from which to start the search for cyclic inheritance
+        @param rights: mapping rightName: [list of repositories]
         ''' 
         assert isinstance(handled, set), 'Invalid handled set %s' % handled
         if rightName in handled: return

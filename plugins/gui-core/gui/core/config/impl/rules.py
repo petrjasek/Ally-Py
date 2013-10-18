@@ -115,7 +115,6 @@ class RightRule(GroupRule):
         @rtype: string
         The name of the right.
         ''')
-        #TODO: rename this to rightInherits
         rightInherits = defines(list, doc='''
         @rtype: string
         The list of name of inherited rights.

@@ -10,13 +10,14 @@ Provides utility functions for handling system packages/modules/classes.
 '''
 
 from collections import deque
-from inspect import isclass, ismodule, stack, isfunction, getsourcelines, \
-    getsourcefile, ismethod
+from inspect import isclass, ismodule, stack, getsourcelines, getsourcefile
 from os.path import dirname, relpath
 from pkgutil import iter_modules, get_importer, iter_importers, \
     iter_importer_modules
+import functools
 import re
 import sys
+import types
 
 # --------------------------------------------------------------------
 
@@ -30,25 +31,6 @@ def fullyQName(obj):
     if not isclass(obj):
         obj = obj.__class__
     return obj.__module__ + '.' + obj.__name__
-
-def classForName(name):
-    '''
-    Provides the class for the provided fully qualified name of a class.
-    
-    @param name: string
-        The fully qualified class name,
-    @return: class
-        The class of the fully qualified name.
-    '''
-    parts = name.split(".")
-    module_name = ".".join(parts[:-1])
-    class_name = parts[-1]
-    if module_name == "":
-        if class_name not in sys.modules: return __import__(class_name)
-        return sys.modules[class_name]
-    else:
-        if module_name not in sys.modules:__import__(module_name)
-        return getattr(sys.modules[module_name], class_name)
 
 def exceptionModule(e):
     '''
@@ -83,6 +65,16 @@ def exceptionModuleName(e):
         return m.__name__
     return None
 
+def updateWrapper(wrapper, wrapped):
+    '''
+    Updates a wrapper function just like @see: update_wrapper from functools, but additionaly provides the location
+    stack tracking for the wrapped function.
+    '''
+    location = locationStack(wrapper)
+    functools.update_wrapper(wrapper, wrapped)
+    try: wrapper.__wrapped_location__ = '%s%s' % (location, wrapped.__wrapped_location__)
+    except AttributeError: wrapper.__wrapped_location__ = '%s%s' % (location, locationStack(wrapped))
+
 def locationStack(located):
     '''
     Provides a stack message for the provided located element, the stack will look as being part of a exception. This is 
@@ -99,7 +91,12 @@ def locationStack(located):
         except IOError: return '\n  Generated class "%s.%s"' % (located.__module__, located.__name__)
         return '\n  File "%s", line %i' % (getsourcefile(located), line)
     else:
-        assert isfunction(located) or ismethod(located), 'Invalid function or class %s' % located
+        if hasattr(located, '__wrapped_location__'): return located.__wrapped_location__
+        
+        if isinstance(located, types.FrameType):
+            return '\n  File "%s", line %i, in %s' % (located.f_code.co_filename, located.f_lineno, located.f_code.co_name)
+        
+        assert hasattr(located, '__code__') and hasattr(located, '__name__'), 'Invalid function or class %s' % located
         return '\n  File "%s", line %i, in %s' % (located.__code__.co_filename, located.__code__.co_firstlineno,
                                                   located.__name__)
 
@@ -113,6 +110,35 @@ def isPackage(module):
     assert ismodule(module), 'Invalid module %s' % module
     return hasattr(module, '__path__')
 
+def callerFrame(level=1):
+    '''
+    Provides the caller frame.
+    
+    @param level: integer
+        The level from where to start finding the caller.
+    @return: object
+        The frame object.
+    '''
+    stacks = stack()
+    currentModule = stacks[level][1]
+    for k in range(level + 1, len(stacks)):
+        if stacks[k][1] != currentModule:
+            frame = stacks[k][0]
+            break
+    else: raise Exception('There is no other module than the current one')
+    return frame
+
+def callerName(level=1):
+    '''
+    Provides the caller function name.
+    
+    @param level: integer
+        The level from where to start finding the caller.
+    @return: string
+        The caller name, for level 0 this will actually be name of the function that is the caller .
+    '''
+    return callerFrame(level + 1).f_code.co_name
+
 def callerGlobals(level=1):
     '''
     Provides the caller globals.
@@ -122,14 +148,7 @@ def callerGlobals(level=1):
     @return: dictionary{string, object}
         The globals of the caller (based on the provided level)
     '''
-    stacks = stack()
-    currentModule = stacks[level][1]
-    for k in range(level + 1, len(stacks)):
-        if stacks[k][1] != currentModule:
-            frame = stacks[k][0]
-            break
-    else: raise Exception('There is no other module than the current one')
-    return frame.f_globals
+    return callerFrame(level + 1).f_globals
 
 def callerLocals(level=1):
     '''
@@ -140,14 +159,7 @@ def callerLocals(level=1):
     @return: dictionary{string, object}
         The locals of the caller (based on the provided level)
     '''
-    stacks = stack()
-    currentModule = stacks[level][1]
-    for k in range(level + 1, len(stacks)):
-        if stacks[k][1] != currentModule:
-            frame = stacks[k][0]
-            break
-    else: raise Exception('There is no other module than the current one')
-    return frame.f_locals
+    return callerFrame(level + 1).f_locals
 
 def pythonPath(level=1):
     '''

@@ -9,12 +9,13 @@ Created on Jun 12, 2012
 Provides the context support.
 '''
 
-from .spec import IAttribute, IResolver, Resolvers, ContextMetaClass
+from .spec import IAttribute, ContextMetaClass, CREATE_DEFINITION, IResolver
 from ally.support.util import immut
+from weakref import WeakSet
 
 # --------------------------------------------------------------------
 
-ALLOWED = {'__module__', '__doc__', '__locals__'}
+ALLOWED = {'__module__', '__qualname__', '__doc__', '__locals__'}
 # The allowed keys in the namespace.
 
 # --------------------------------------------------------------------
@@ -42,7 +43,6 @@ def definerContext(name, bases, namespace):
         if not isinstance(value, IAttribute):
             raise TypeError('Invalid attribute \'%s\' for name \'%s\'' % (value, key))
         attributes[key] = value
-    for key in attributes: namespace.pop(key)
     
     # Adding also the parent attributes.
     for base in bases:
@@ -87,6 +87,7 @@ class Context(metaclass=ContextMetaClass):
     The base context class, this class needs to be inherited by all classes that need to behave like a data context definition
     only, no objects for this contexts can be created.
     '''
+    __slots__ = ()
     __definer__ = definerContext
 
     @classmethod
@@ -114,8 +115,8 @@ class Object(metaclass=ContextMetaClass):
     The base object context class, this class needs to be inherited by all classes that need to behave like a data context that
     can have object created.
     '''
+    __slots__ = ()
     __definer__ = definerObject
-    
     __subclasshook__ = Context.__subclasshook__
     
     def __init__(self, **keyargs):
@@ -123,10 +124,10 @@ class Object(metaclass=ContextMetaClass):
         Assigned to the context as the __init__ method.
         '''
         for name, value in keyargs.items(): setattr(self, name, value)
-    
+
     def __getattr__(self, name):
         '''
-        Assigned to the context whenever the application is in not in debug mode and there is no need to perform validations.
+        Assigned to the context whenever the application is not in debug mode and there is no need to perform validations.
         '''
         if name in self.__attributes__: return None
         raise AttributeError('Unknown attribute \'%s\'' % name)
@@ -135,125 +136,94 @@ class Object(metaclass=ContextMetaClass):
         '''
         Assigned to the context as the __contains__ method.
         
-        @param attribute: tuple(string, IAttribute) or descriptor with '__name__' and '__objclass__'
+        @param attribute: IAttribute or descriptor with '__name__' and '__objclass__'
             The attribute to check if contained.
         '''
+        attribute = attributeOf(attribute)
         if attribute is None: return False
-        if not isinstance(attribute, IAttribute):
-            try: name, clazz = attribute.__name__, attribute.__objclass__
-            except AttributeError: return False
-                
-            if not isinstance(clazz, ContextMetaClass): return False
-            assert isinstance(clazz, ContextMetaClass)
-            attribute = clazz.__attributes__.get(name)
-            
-            if not isinstance(attribute, IAttribute): return False
-            assert isinstance(attribute, IAttribute)
-        
-        return attribute.isIn(self.__class__)
+        contained, uncontained = self.__class__.__dict__.get('_contained'), self.__class__.__dict__.get('_uncontained')
+        if contained and attribute in contained: return True
+        if uncontained and attribute in uncontained: return False
+        assert isinstance(attribute, IAttribute)
+        if attribute.isIn(self.__class__):
+            if contained is None:
+                contained = WeakSet()
+                setattr(self.__class__, '_contained', contained)
+            contained.add(attribute)
+            return True
+        if uncontained is None:
+            uncontained = WeakSet()
+            setattr(self.__class__, '_uncontained', uncontained)
+        uncontained.add(attribute)
+        return False
     
     def __str__(self):
         '''
         Assigned to the context as the __str__ method.
         '''
-        namesValues = ((name, getattr(self, name)) for name, attr in self.__attributes__.items() if attr in self)
-        attrs = ', '.join('%s=%s' % nameValue for nameValue in namesValues)
-        return '%s(%s)' % (self.__class__.__name__, attrs)
+        def asString(value):
+            if isinstance(value, Context): return value.__class__.__name__
+            elif isinstance(value, tuple): return '(%s)' % ','.join(asString(val) for val in value)
+            elif isinstance(value, list): return '[%s]' % ','.join(asString(val) for val in value)
+            elif isinstance(value, set): return '{%s}' % ','.join(asString(val) for val in value)
+            elif isinstance(value, dict): return '{%s}' % ','.join('%s:%s' % (asString(key), asString(val))
+                                                                   for key, val in value.items())
+            return str(value)
+        
+        return '%s(%s)' % (self.__class__.__name__, ', '.join('%s=%s' % (name, asString(getattr(self, name)))
+                                                              for name, attr in self.__attributes__.items() if attr in self))
 
 # --------------------------------------------------------------------
 
-def create(resolvers):
+def create(resolvers, *flags):
     '''
     Creates the object contexts for the provided resolvers.
     
-    @param resolvers: Resolvers
+    @param resolvers: dictionary{string: IResolver}
         The resolvers to create the context for.
+    @param flags: arguments[object]
+        Flags to be used for creating the attributes.
+    @return: dictionary{string: ContextMetaClass}
+        The created context classes.
     '''
+    assert isinstance(resolvers, dict), 'Invalid resolvers %s' % resolvers
     contexts = {}
-    for nameContext, forContext in groupResolversByContext(resolvers).items():
-        attributes = {}
-        for resolver in forContext.values(): resolver.create(attributes)
-        namespace = dict(__module__=__name__, __attributes__=attributes)
-        contexts[nameContext] = type('Object$%s%s' % (nameContext[0].upper(), nameContext[1:]), (Object,), namespace)
-
-    return contexts
-
-def createDefinition(resolvers):
-    '''
-    Creates the definition contexts for the provided resolvers.
-    
-    @param resolvers: Resolvers
-        The resolvers to create the context for.
-    '''
-    contexts = {}
-    for nameContext, forContext in groupResolversByContext(resolvers).items():
-        namespace = dict(__module__=__name__)
-        for resolver in forContext.values(): resolver.createDefinition(namespace)
-        contexts[nameContext] = type('Context%s%s' % (nameContext[0].upper(), nameContext[1:]), (Context,), namespace)
-
-    return contexts
-
-def groupResolversByContext(resolvers):
-    '''
-    Groups the resolvers from the provided resolvers repository based on context.
-    
-    @param resolvers: Resolvers
-        The resolvers to group by.
-    @return: dictionary{string: dictionary{string: IResolver}}
-        The grouped resolvers, first dictionary key is the context name and second dictionary key is the attribute name.
-    '''
-    assert isinstance(resolvers, Resolvers), 'Invalid resolvers %s' % resolvers
-    
-    resolversByContext = {}
-    for key, resolver in resolvers.iterate():
+    for name, resolver in resolvers.items():
+        assert isinstance(name, str), 'Invalid name %s' % name
         assert isinstance(resolver, IResolver), 'Invalid resolver %s' % resolver
-        nameContext, nameAttribute = key
-
-        byContext = resolversByContext.get(nameContext)
-        if byContext is None: byContext = resolversByContext[nameContext] = {}
-        byContext[nameAttribute] = resolver
+        attributes = resolver.create(*flags)
+        if not attributes: continue  # The resolver has no context to be created
         
-    return resolversByContext
+        assert isinstance(attributes, dict), 'Invalid attributes %s' % attributes
+        nameClass = '%s%s' % (name[0].upper(), name[1:])
+        
+        if CREATE_DEFINITION in flags:
+            namespace = dict(__module__=__name__)
+            namespace.update(attributes)
+            contexts[name] = type('Context$%s' % nameClass, (Context,), namespace)
+            
+        else:
+            namespace = dict(__module__=__name__, __attributes__=attributes)
+            contexts[name] = type('Object$%s' % nameClass, (Object,), namespace)
 
-def asData(context, *classes):
+    return contexts
+
+def attributeOf(descriptor):
     '''
-    Provides the data that is represented in the provided context classes.
+    Provides the @see: IAttribute for the provided descriptor or attribute.
     
-    @param context: object
-        The context object to get the data from.
-    @param classes: arguments[ContextMetaClass]
-        The context classes to construct the data based on.
+    @param descriptor: object
+        The descriptor to provide the attribute for.
+    @return: IAttribute|None
+        The attribute or None if the descriptor is invalid.
     '''
-    assert isinstance(context, Context), 'Invalid context %s' % context
-
-    common = set(context.__attributes__)
-    for clazz in classes:
-        assert isinstance(clazz, ContextMetaClass), 'Invalid context class %s' % clazz
-        common.intersection_update(clazz.__attributes__)
+    if descriptor is None: return
+    if isinstance(descriptor, IAttribute): return descriptor
+    try: name, clazz = descriptor.__name__, descriptor.__objclass__
+    except AttributeError: return
         
-    data = {}
-    for name in common:
-        if context.__attributes__[name] in context: data[name] = getattr(context, name)
-
-    return data
-
-def copy(src, dest, *classes):
-    '''
-    Copies the data from the source context to the destination context based on the provided context classes.
+    if not isinstance(clazz, ContextMetaClass): return
+    assert isinstance(clazz, ContextMetaClass)
+    attribute = clazz.__attributes__.get(name)
     
-    @param context: object
-        The context object to get the data from.
-    @param classes: arguments[ContextMetaClass]
-        The context classes to construct the data based on.
-    '''
-    assert isinstance(src, Context), 'Invalid source context %s' % src
-    assert isinstance(dest, Context), 'Invalid destination context %s' % dest
-
-    common = set(src.__attributes__)
-    common.intersection_update(dest.__attributes__)
-    for clazz in classes:
-        assert isinstance(clazz, ContextMetaClass), 'Invalid context class %s' % clazz
-        common.intersection_update(clazz.__attributes__)
-        
-    for name in common:
-        if (name, src.__attributes__[name]) in src: setattr(dest, name, getattr(src, name))
+    if isinstance(attribute, IAttribute): return attribute

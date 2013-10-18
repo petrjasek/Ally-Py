@@ -9,14 +9,11 @@ Created on Sep 13, 2012
 Provides the no cache headers support for browsers like IE.
 '''
 
-from ..ally_http.processor import headerEncodeResponse
-from .processor import assemblyResources
-from .processor_error import assemblyErrorDelivery
-from .support_ajax import updateAssemblyErrorForHTTPAjax, \
-    updateAssemblyResourcesForHTTPAjax
+from .processor import assemblyResources, updateAssemblyResources
+from .processor_error import assemblyErrorDelivery, updateAssemblyErrorDelivery
 from ally.container import ioc
 from ally.design.processor.handler import Handler
-from ally.http.impl.processor.headers.set_fixed import HeaderSetEncodeHandler
+from ally.http.impl.processor.headers.set_fixed import HeadersSetHandler
 
 # --------------------------------------------------------------------
 
@@ -37,16 +34,16 @@ def headers_no_cache() -> dict:
 
 @ioc.entity
 def headerSetNoCache() -> Handler:
-    b = HeaderSetEncodeHandler()
+    b = HeadersSetHandler()
     b.headers = headers_no_cache()
     return b
 
 # --------------------------------------------------------------------
 
-@ioc.after(updateAssemblyResourcesForHTTPAjax)
+@ioc.after(updateAssemblyResources)
 def updateAssemblyResourcesForHTTPNoCache():
-    if no_cache(): assemblyResources().add(headerSetNoCache(), after=headerEncodeResponse())
+    if no_cache(): assemblyResources().add(headerSetNoCache())
 
-@ioc.after(updateAssemblyErrorForHTTPAjax)
+@ioc.after(updateAssemblyErrorDelivery)
 def updateAssemblyErrorForHTTPNoCache():
-    if no_cache(): assemblyErrorDelivery().add(headerSetNoCache(), after=headerEncodeResponse())
+    if no_cache(): assemblyErrorDelivery().add(headerSetNoCache())

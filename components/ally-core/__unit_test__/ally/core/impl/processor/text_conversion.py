@@ -17,20 +17,20 @@ if True:
 # --------------------------------------------------------------------
 
 from ally.container import ioc
-from ally.core.impl.processor.text_conversion import ConversionSetHandler
-from ally.core.spec.resources import Normalizer, Converter
+from ally.core.impl.processor.text_conversion import ConverterResponseHandler, \
+    ConverterRequestHandler
+from ally.core.spec.resources import Converter
 from ally.design.processor.attribute import defines
 from ally.design.processor.context import Context, create
 from ally.design.processor.execution import Chain
-from ally.design.processor.spec import Resolvers
+from ally.design.processor.resolvers import resolversFor
 import unittest
 
 # --------------------------------------------------------------------
 
 class Content(Context):
-    normalizer = defines(Normalizer)
     converter = defines(Converter)
-ctx = create(Resolvers(contexts=dict(Content=Content)))
+ctx = create(resolversFor(contexts=dict(Content=Content)))
 Content = ctx['Content']
 
 # --------------------------------------------------------------------
@@ -38,21 +38,26 @@ Content = ctx['Content']
 class TestTextConversion(unittest.TestCase):
 
     def testTextConversion(self):
-        handler = ConversionSetHandler()
-        handler.normalizer = Normalizer()
-        handler.converter = Converter()
+        handlers = []
+        converter = Converter()
+        
+        handler = ConverterRequestHandler()
+        handler.converter = converter
         ioc.initialize(handler)
+        handlers.append(handler)
+        
+        handler = ConverterResponseHandler()
+        handler.converter = converter
+        ioc.initialize(handler)
+        handlers.append(handler)
 
-        requestCnt, response = Content(), Content()
-        def callProcess(chain, **keyargs): handler.process(**keyargs)
-        chain = Chain([callProcess])
-        chain.process(requestCnt=requestCnt, response=response).doAll()
+        request, response = Content(), Content()
+        def callProcess(chain, **keyargs):
+            for handler in handlers: handler.process(chain, **keyargs)
+        Chain(callProcess, False, request=request, response=response).execute()
 
-        self.assertEqual(handler.normalizer, requestCnt.normalizer)
-        self.assertEqual(handler.normalizer, response.normalizer)
-
-        self.assertEqual(handler.converter, response.converter)
-        self.assertEqual(handler.converter, response.converter)
+        self.assertEqual(converter, response.converter)
+        self.assertEqual(converter, request.converter)
 
 
 # --------------------------------------------------------------------

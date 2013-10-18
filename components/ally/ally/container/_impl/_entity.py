@@ -10,7 +10,7 @@ Provides handlers for entities.
 '''
 
 from ..error import WireError, AventError
-from ..impl.priority import Priority
+from ally.design.priority import Priority
 from collections import Iterable
 from functools import partial
 from inspect import isclass
@@ -39,7 +39,7 @@ class Initializer:
         '''
         if not isclass(entity): clazz = entity.__class__
         else: clazz = entity
-        initializer = clazz.__dict__.get('__init__')
+        initializer = getattr(clazz, '__init__')
         if isinstance(initializer, Initializer): return initializer
 
     @classmethod
@@ -51,14 +51,13 @@ class Initializer:
         initializer = Initializer.initializerFor(entity)
         if initializer is not None:
             assert isinstance(initializer, Initializer)
-            if entity.__class__ == initializer._entityClazz:
-                if entity.__dict__.get('_ally_ioc_initialized', False): return
-                args, keyargs = entity._ally_ioc_arguments
-                entity._ally_ioc_initialized = True
-                del entity._ally_ioc_arguments
-                if initializer._entityInit:
-                    initializer._entityInit(entity, *args, **keyargs)
-                    log.info('Initialized entity %s' % entity)
+            if entity.__dict__.get('_ally_ioc_initialized', False): return
+            args, keyargs = entity._ally_ioc_arguments
+            entity._ally_ioc_initialized = True
+            del entity._ally_ioc_arguments
+            if initializer._entityInit:
+                initializer._entityInit(entity, *args, **keyargs)
+                log.info('Initialized entity %s' % entity)
 
     def __init__(self, clazz):
         '''
@@ -68,7 +67,6 @@ class Initializer:
             The entity class of this entity initializer.
         '''
         assert isclass(clazz), 'Invalid entity class %s' % clazz
-        self._entityClazz = clazz
         self._entityInit = getattr(clazz, '__init__', None)
         setattr(clazz, '__init__', self)
 
@@ -76,7 +74,6 @@ class Initializer:
         '''
         @see: Callable.__call__
         '''
-        assert isinstance(entity, self._entityClazz), 'Invalid entity %s for class %s' % (entity, self._entityClazz)
         if entity.__dict__.get('_ally_ioc_initialized'): self._entityInit(entity, *args, **keyargs)
         elif entity.__dict__.get('_ally_ioc_arguments') is None: entity._ally_ioc_arguments = (args, keyargs)
         else: raise TypeError('Cannot initialize twice the entity %s' % entity)
@@ -156,10 +153,7 @@ class Wiring:
         '''
         assert isinstance(register, dict), 'Invalid register %s' % register
         wiring = register.get('__ally_wiring__')
-        if wiring is None:
-            wiring = register['__ally_wiring__'] = Wiring()
-            from ally.container.wire import validateWiring
-            if '__init__' not in register: register['__init__'] = validateWiring
+        if wiring is None: wiring = register['__ally_wiring__'] = Wiring()
         return wiring
 
     @classmethod

@@ -1,27 +1,22 @@
 '''
 Created on Jun 23, 2011
 
-@package: support plugin
+@package: support sqlalchemy
 @copyright: 2012 Sourcefabric o.p.s.
 @license: http://www.gnu.org/licenses/gpl-3.0.txt
 @author: Gabriel Nistor
 
-SQL alchemy implementation for the generic entities API.
+SQL alchemy implementation for the generic ided or named entities API.
 '''
 
-from ally.api.operator.type import TypeModel, TypeQuery
+from ally.api.operator.type import TypeModel, TypeProperty, TypeQuery
 from ally.api.type import typeFor
-from ally.exception import InputError, Ref
-from ally.internationalization import _
-from ally.support.api import entity as api
-from ally.support.api.util_service import copy
-from ally.support.sqlalchemy.session import SessionSupport
-from ally.support.sqlalchemy.util_service import buildQuery, buildLimits, handle
+from ally.support.api.util_service import modelId
 from inspect import isclass
-from sqlalchemy.exc import SQLAlchemyError, OperationalError
+from sql_alchemy.support.mapper import MappedSupport
+from sql_alchemy.support.util_service import SessionSupport, buildQuery, \
+    iterateCollection, insertModel, updateModel, deleteModel
 import logging
-from ally.support.sqlalchemy.mapper import MappedSupport
-from ally.api.extension import IterPart
 
 # --------------------------------------------------------------------
 
@@ -34,180 +29,109 @@ class EntitySupportAlchemy(SessionSupport):
     Provides support generic entity handling.
     '''
 
-    def __init__(self, Entity, QEntity=None):
+    def __init__(self, Mapped, QEntity=None, **mapping):
         '''
         Construct the entity support for the provided model class and query class.
         
-        @param Entity: class
+        @param Mapped: class
             The mapped entity model class.
         @param QEntity: class|None
             The query mapped class if there is one.
+        @param mapping: key arguments of columns
+            The column mappings provided for criteria name in case they are needed, this is only used if a QEntity is
+            provided.
         '''
-        assert isclass(Entity), 'Invalid class %s' % Entity
-        assert issubclass(Entity, api.Entity), 'Invalid entity class %s' % Entity
-        assert isinstance(Entity, MappedSupport), 'Invalid mapped class %s' % Entity
-        self.modelType = typeFor(Entity)
-        assert isinstance(self.modelType, TypeModel), 'Invalid model class %s' % Entity
-
-        self.model = self.modelType.container
-        self.Entity = Entity
+        assert isclass(Mapped), 'Invalid class %s' % Mapped
+        assert isinstance(Mapped, MappedSupport), 'Invalid mapped class %s' % Mapped
+        model = typeFor(Mapped)
+        assert isinstance(model, TypeModel), 'Invalid model class %s' % Mapped
+        assert isinstance(model.propertyId, TypeProperty), 'Invalid model property id %s' % model.propertyId
+        
+        self.Entity = model.clazz
+        self.Mapped = Mapped
+        self.MappedId = modelId(Mapped)
 
         if QEntity is not None:
             assert isclass(QEntity), 'Invalid class %s' % QEntity
-            assert issubclass(QEntity, api.QEntity), 'Invalid query entity class %s' % QEntity
-            self.queryType = typeFor(QEntity)
-            assert isinstance(self.queryType, TypeQuery), 'Invalid query class %s' % QEntity
-            self.query = self.queryType.query
-        else:
-            self.query = self.queryType = None
+            assert isinstance(typeFor(QEntity), TypeQuery), 'Invalid query entity class %s' % QEntity
+            if __debug__:
+                for name in mapping:
+                    assert name in typeFor(QEntity).properties, 'Invalid criteria name \'%s\' for %s' % (name, QEntity)
+            self._mapping = mapping
+        else: assert not mapping, 'Illegal mappings %s with no QEntity provided' % mapping
         self.QEntity = QEntity
-
-    def _getAll(self, filter=None, query=None, offset=None, limit=None, sql=None):
-        '''
-        Provides all the entities for the provided filter, with offset and limit. Also if query is known to the
-        service then also a query can be provided.
-        
-        @param filter: SQL alchemy filtering|None
-            The sql alchemy conditions to filter by.
-        @param query: query
-            The REST query object to provide filtering on.
-        @param offset: integer|None
-            The offset to fetch elements from.
-        @param limit: integer|None
-            The limit of elements to get.
-        @param sql: SQL alchemy|None
-            The sql alchemy query to use.
-        @return: list
-            The list of all filtered and limited elements.
-        '''
-        if limit == 0: return []
-        sql = sql or self.session().query(self.Entity)
-        if filter is not None: sql = sql.filter(filter)
-        if query:
-            assert self.QEntity, 'No query provided for the entity service'
-            assert self.queryType.isValid(query), 'Invalid query %s, expected %s' % (query, self.QEntity)
-            sql = buildQuery(sql, query, self.Entity)
-        sql = buildLimits(sql, offset, limit)
-        return sql.all()
-
-    def _getAllWithCount(self, filter=None, query=None, offset=None, limit=None, sql=None):
-        '''
-        Provides all the entities for the provided filter, with offset and limit and the total count. Also if query is 
-        known to the service then also a query can be provided.
-        
-        @param filter: SQL alchemy filtering|None
-            The sql alchemy conditions to filter by.
-        @param query: query
-            The REST query object to provide filtering on.
-        @param offset: integer|None
-            The offset to fetch elements from.
-        @param limit: integer|None
-            The limit of elements to get.
-        @param sql: SQL alchemy|None
-            The sql alchemy query to use.
-        @return: tuple(list, integer)
-            The list of all filtered and limited elements and the count of the total elements.
-        '''
-        sql = sql or self.session().query(self.Entity)
-        if filter is not None: sql = sql.filter(filter)
-        if query:
-            assert self.QEntity, 'No query provided for the entity service'
-            assert self.queryType.isValid(query), 'Invalid query %s, expected %s' % (query, self.QEntity)
-            sql = buildQuery(sql, query, self.Entity)
-        sqlLimit = buildLimits(sql, offset, limit)
-        if limit == 0: return (), sql.count()
-        return sqlLimit.all(), sql.count()
 
 # --------------------------------------------------------------------
 
 class EntityGetServiceAlchemy(EntitySupportAlchemy):
     '''
-    Generic implementation for @see: IEntityGetService
+    Generic implementation for @see: IEntityGetPrototype
     '''
 
-    def getById(self, id):
+    def getById(self, identifier):
         '''
-        @see: IEntityGetService.getById
+        @see: IEntityGetPrototype.getById
         '''
-        entity = self.session().query(self.Entity).get(id)
-        if not entity: raise InputError(Ref(_('Unknown id'), ref=self.Entity.Id))
-        return entity
+        return self.session().query(self.Mapped).filter(self.MappedId == identifier).one()
 
 class EntityFindServiceAlchemy(EntitySupportAlchemy):
     '''
-    Generic implementation for @see: IEntityFindService
+    Generic implementation for @see: IEntityFindPrototype
     '''
 
-    def getAll(self, offset=None, limit=None, detailed=False):
+    def getAll(self, **options):
         '''
-        @see: IEntityQueryService.getAll
+        @see: IEntityFindPrototype.getAll
         '''
-        if detailed:
-            entities, total = self._getAllWithCount(None, None, offset, limit)
-            return IterPart(entities, total, offset, limit)
-        return self._getAll(None, None, offset, limit)
+        return iterateCollection(self.session().query(self.MappedId).order_by(self.MappedId), **options)
 
 class EntityQueryServiceAlchemy(EntitySupportAlchemy):
     '''
-    Generic implementation for @see: IEntityQueryService
+    Generic implementation for @see: IEntityQueryPrototype
     '''
 
-    def getAll(self, offset=None, limit=None, detailed=False, q=None):
+    def getAll(self, q=None, **options):
         '''
-        @see: IEntityQueryService.getAll
+        @see: IEntityQueryPrototype.getAll
         '''
-        if detailed:
-            entities, total = self._getAllWithCount(None, q, offset, limit)
-            return IterPart(entities, total, offset, limit)
-        return self._getAll(None, q, offset, limit)
+        assert self.QEntity is not None, 'No query available for this service'
+        sql = self.session().query(self.MappedId)
+        if q is not None:
+            assert isinstance(q, self.QEntity), 'Invalid query %s' % q
+            sql = buildQuery(sql, q, self.Mapped, orderBy=self.MappedId, autoJoin=True, **self._mapping)
+        return iterateCollection(sql, **options)
 
 class EntityCRUDServiceAlchemy(EntitySupportAlchemy):
     '''
-    Generic implementation for @see: IEntityCRUDService
+    Generic implementation for @see: IEntityCRUDPrototype
     '''
 
     def insert(self, entity):
         '''
-        @see: IEntityCRUDService.insert
+        @see: IEntityCRUDPrototype.insert
         '''
-        assert self.modelType.isValid(entity), 'Invalid entity %s, expected %s' % (entity, self.Entity)
-        entityDb = copy(entity, self.Entity())
-        try:
-            self.session().add(entityDb)
-            self.session().flush((entityDb,))
-        except SQLAlchemyError as e: handle(e, entityDb)
-        entity.Id = entityDb.Id
-        return entityDb.Id
+        return modelId(insertModel(self.Mapped, entity))
 
     def update(self, entity):
         '''
-        @see: IEntityCRUDService.update
+        @see: IEntityCRUDPrototype.update
         '''
-        assert self.modelType.isValid(entity), 'Invalid entity %s, expected %s' % (entity, self.Entity)
-        assert isinstance(entity.Id, int), 'Invalid entity %s, with id %s' % (entity, entity.Id)
-        entityDb = self.session().query(self.Entity).get(entity.Id)
-        if not entityDb: raise InputError(Ref(_('Unknown id'), ref=self.Entity.Id))
-        try: self.session().flush((copy(entity, entityDb),))
-        except SQLAlchemyError as e: handle(e, self.Entity)
+        updateModel(self.Mapped, entity)
 
-    def delete(self, id):
+    def delete(self, identifier):
         '''
-        @see: IEntityCRUDService.delete
+        @see: IEntityCRUDPrototype.delete
         '''
-        try:
-            return self.session().query(self.Entity).filter(self.Entity.Id == id).delete() > 0
-        except OperationalError:
-            assert log.debug('Could not delete entity %s with id \'%s\'', self.Entity, id, exc_info=True) or True
-            raise InputError(Ref(_('Cannot delete because is in use'), model=self.model))
+        return deleteModel(self.Mapped, identifier)
 
 class EntityGetCRUDServiceAlchemy(EntityGetServiceAlchemy, EntityCRUDServiceAlchemy):
     '''
-    Generic implementation for @see: IEntityGetCRUDService
+    Generic implementation for @see: IEntityGetCRUDPrototype
     '''
 
 class EntityNQServiceAlchemy(EntityGetServiceAlchemy, EntityFindServiceAlchemy, EntityCRUDServiceAlchemy):
     '''
-    Generic implementation for @see: IEntityService
+    Generic implementation for @see: IEntityNQPrototype
     '''
 
     def __init__(self, Entity):
@@ -218,6 +142,6 @@ class EntityNQServiceAlchemy(EntityGetServiceAlchemy, EntityFindServiceAlchemy, 
 
 class EntityServiceAlchemy(EntityGetServiceAlchemy, EntityQueryServiceAlchemy, EntityCRUDServiceAlchemy):
     '''
-    Generic implementation for @see: IEntityService
+    Generic implementation for @see: IEntityPrototype
     '''
 

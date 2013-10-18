@@ -13,9 +13,9 @@ from .. import type_legacy as numbers
 from ..support.util import Uninstantiable, Singletone
 from ..type_legacy import Iterable
 from .model import Content
+from abc import ABCMeta
 from datetime import datetime, date, time
 from inspect import isclass
-from abc import ABCMeta
 import abc
 
 # --------------------------------------------------------------------
@@ -30,8 +30,6 @@ class Type(metaclass=abc.ABCMeta):
     The class that represents the API types used for mapping data.
     '''
 
-    __slots__ = ('__weakref__', 'isPrimitive', 'isContainable')
-
     def __init__(self, isPrimitive=False, isContainable=True):
         '''
         Initializes the type setting the primitive aspect of the type.
@@ -40,7 +38,7 @@ class Type(metaclass=abc.ABCMeta):
             If true than this type is considered of a primitive nature, meaning that is an boolean, integer,
             string, float ... .
         @param isContainable: boolean
-            If true than this type is containable in types like List and Count.
+            If true than this type is containable in types like List or Iter.
         '''
         assert isinstance(isPrimitive, bool), 'Invalid is primitive flag %s' % isPrimitive
         assert isinstance(isContainable, bool), 'Invalid is containable flag %s' % isContainable
@@ -90,13 +88,11 @@ class TypeNone(Singletone, Type):
     Provides the type that matches None.
     '''
 
-    __slots__ = ()
-
     def __init__(self):
         '''
         @see: Type.__init__
         '''
-        Type.__init__(self, False, False)
+        super().__init__(False, False)
 
     def isOf(self, type):
         '''
@@ -133,8 +129,6 @@ class TypeClass(Type):
     The class that represents the API types used for mapping data.
     '''
 
-    __slots__ = ('clazz',)
-
     def __init__(self, clazz, isPrimitive=False, isContainable=True):
         '''
         Initializes the type setting the primitive aspect of the type.
@@ -144,7 +138,7 @@ class TypeClass(Type):
             The class represented by the type.
         '''
         assert isclass(clazz), 'Invalid class %s' % clazz
-        Type.__init__(self, isPrimitive, isContainable)
+        super().__init__(isPrimitive, isContainable)
 
         self.clazz = clazz
 
@@ -166,7 +160,9 @@ class TypeClass(Type):
         Checks if the provided object instance is represented by this API type.
         
         @param obj: object
-                The object instance to check.
+            The object instance to check.
+        @return: boolean
+            True if the object is of this type, False otherwise.
         '''
         return isinstance(obj, self.clazz)
 
@@ -180,7 +176,7 @@ class TypeClass(Type):
         '''
         @see: Type.__eq__
         '''
-        if isinstance(other, self.__class__): return self.clazz == other.clazz
+        if other.__class__ == self.__class__: return self.clazz == other.clazz
         return False
 
     def __str__(self):
@@ -189,79 +185,32 @@ class TypeClass(Type):
         '''
         return '%s' % self.clazz.__name__
 
-class TypePercentage(Singletone, TypeClass):
-    '''
-    Provides the type for percentage values.
-    '''
-
-    __slots__ = ()
-
-    def __init__(self):
-        '''
-        Constructs the percentage type.
-        @see: TypeClass.__init__
-        '''
-        TypeClass.__init__(self, float, True)
-
 # --------------------------------------------------------------------
 # Specific types tagging creating known value that extend normal types
-
-#TODO: check if needed for automatic translation or not.
-class TypeTranslated(Singletone, TypeClass):
-    '''
-    Provides the string type that contains as a value a message that should be translated.
-    '''
-
-    __slots__ = ()
-
-    def __init__(self):
-        '''
-        Constructs the translated type.
-        @see: TypeClass.__init__
-        '''
-        TypeClass.__init__(self, str, True, True)
 
 class TypeReference(Singletone, TypeClass):
     '''
     Provides the type representing a reference path.
     '''
 
-    __slots__ = ()
-
     def __init__(self):
         '''
         Constructs the reference path type.
         @see: TypeClass.__init__
         '''
-        TypeClass.__init__(self, str, True, True)
-
-class TypeLocale(Singletone, TypeClass):
-    '''
-    Provides the type representing the user requested language for presentation.
-    '''
-
-    __slots__ = ()
-
-    def __init__(self):
-        '''
-        Constructs the front language type.
-        @see: TypeClass.__init__
-        '''
-        TypeClass.__init__(self, str, False, True)
+        super().__init__(str, True, True)
 
 class TypeScheme(Singletone, TypeClass):
     '''
     Provides the type representing the used scheme.
     '''
 
-    __slots__ = ()
-
     def __init__(self):
         '''
         Constructs the schema type.
         @see: TypeClass.__init__
         '''
-        TypeClass.__init__(self, str, False, False)
+        super().__init__(str, False, False)
 
 # --------------------------------------------------------------------
 
@@ -272,8 +221,6 @@ class Iter(TypeClass):
     Since the values in an iterator can only be retrieved once than this type when validating the iterator it will
     not be able to validate also the elements.
     '''
-
-    __slots__ = ('itemType',)
 
     def __init__(self, itemType):
         '''
@@ -287,7 +234,7 @@ class Iter(TypeClass):
         assert isinstance(itemType, Type), 'Invalid item type %s' % itemType
         assert itemType.isContainable, 'Invalid item type %s because is not containable' % itemType
         self.itemType = itemType
-        TypeClass.__init__(self, Iterable, False, False)
+        super().__init__(Iterable, False, False)
 
     def isOf(self, type):
         '''
@@ -322,14 +269,12 @@ class List(Iter):
     Unlike the iterator type the list type also validates the contained elements.
     '''
 
-    __slots__ = ()
-
     def __init__(self, itemType):
         '''
         Constructs the list type for the provided type.
         @see: Iter.__init__
         '''
-        Iter.__init__(self, itemType)
+        super().__init__(itemType)
         self.clazz = list
         self.isPrimitive = self.itemType.isPrimitive
 
@@ -339,15 +284,57 @@ class List(Iter):
         '''
         if isinstance(obj, (tuple, list)): return all(map(self.itemType.isValid, obj))
         return False
+    
+class Dict(TypeClass):
+    '''
+    Maps a dictionary of key value pairs.
+    You need to specify the key type and value type.
+    '''
 
+    def __init__(self, keyType, valueType):
+        '''
+        Constructs the dictionary type for the provided key and value type.
+        @see: TypeClass.__init__
+        
+        @param keyType: Type|class
+            The key type of the dictionary.
+        @param valueType: Type|class
+            The value type of the dictionary.
+        '''
+        keyType, valueType = typeFor(keyType), typeFor(valueType)
+        assert isinstance(keyType, Type), 'Invalid key type %s' % keyType
+        assert isinstance(valueType, Type), 'Invalid value type %s' % valueType
+        assert keyType.isContainable, 'Invalid key type %s because is not containable' % keyType
+        assert valueType.isContainable, 'Invalid value type %s because is not containable' % valueType
+        self.keyType = keyType
+        self.valueType = valueType
+        super().__init__(dict, keyType.isPrimitive and valueType.isPrimitive, False)
+
+    def __hash__(self):
+        '''
+        @see: Type.__hash__
+        '''
+        return hash((self.keyType, self.valueType))
+
+    def __eq__(self, other):
+        '''
+        @see: Type.__eq__
+        '''
+        if isinstance(other, self.__class__):
+            return self.keyType == other.keyType and self.valueType == other.valueType
+        return False
+
+    def __str__(self):
+        '''
+        @see: Type.__str__
+        '''
+        return '%s[%s: %s]' % (self.__class__.__name__, self.keyType, self.valueType)
 # --------------------------------------------------------------------
 
 class Input:
     '''
     Provides an input entry for a call, this is used for keeping the name and also the type of a call parameter.
     '''
-
-    __slots__ = ('name', 'type', 'hasDefault', 'default')
 
     def __init__(self, name, type, hasDefault=False, default=None):
         '''
@@ -364,6 +351,8 @@ class Input:
         '''
         assert isinstance(name, str), 'Invalid name %s' % name
         assert isinstance(type, Type), 'Invalid type %s' % type
+        assert isinstance(hasDefault, bool), 'Invalid has default flag %s' % hasDefault
+        
         self.name = name
         self.type = type
         self.hasDefault = hasDefault
@@ -378,7 +367,14 @@ class Input:
         return False
 
     def __str__(self):
-        return '%s=%s[%s:%s]' % (self.name, self.type, self.hasDefault, self.default)
+        st = []
+        st.append(self.name)
+        st.append(':')
+        st.append(str(self.type))
+        if self.hasDefault:
+            st.append('=')
+            st.append(str(self.default))
+        return ''.join(st)
 
 # --------------------------------------------------------------------
 
@@ -408,13 +404,6 @@ class Number(Uninstantiable, float):
     Only used as a class, do not create an instance.
     '''
 _classType[Number] = _classType[numbers.Number] = _classType[float] = TypeClass(numbers.Number, True)
-
-class Percentage(Uninstantiable, float):
-    '''
-    Maps the percentage numbers.
-    Only used as a class, do not create an instance.
-    '''
-_classType[Percentage] = TypePercentage()
 
 class String(Uninstantiable, str):
     '''
@@ -447,14 +436,6 @@ _classType[DateTime] = _classType[datetime] = TypeClass(datetime, True)
 # --------------------------------------------------------------------
 # Specific types tagging creating known value that extend normal types
 
-#TODO: check if needed for automatic translation or not.
-class Translated(Uninstantiable, str):
-    '''
-    Maps the type representing the translated messages.
-    Only used as a class, do not create an instance.
-    '''
-_classType[Translated] = TypeTranslated()
-
 class Reference(Uninstantiable, str):
     '''
     Maps the type representing the reference path.
@@ -464,13 +445,6 @@ _classType[Reference] = TypeReference()
 
 # Provides the request raw content type.
 _classType[Content] = TypeClass(Content, False, False)
-
-class Locale(Uninstantiable, str):
-    '''
-    Maps the type representing the user requested locale for presentation.
-    Only used as a class, do not create an instance.
-    '''
-_classType[Locale] = TypeLocale()
 
 class Scheme(Uninstantiable, str):
     '''
@@ -498,7 +472,6 @@ class TypeSupport(metaclass=TypeSupportMeta):
     '''
     Class that provides the support for containing types.
     '''
-    __slots__ = ('_ally_type',)
 
     def __init__(self, type):
         '''
@@ -508,7 +481,7 @@ class TypeSupport(metaclass=TypeSupportMeta):
             The type of the support.
         '''
         assert isinstance(type, Type), 'Invalid type %s' % type
-        self._ally_type = type # This specified the detected type by using 'typeFor'
+        self._ally_type = type  # This specified the detected type by using 'typeFor'
 
 def typeFor(obj):
     '''

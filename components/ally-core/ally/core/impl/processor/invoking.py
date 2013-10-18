@@ -10,16 +10,16 @@ Provides the invoking handler.
 '''
 
 from ally.api.config import GET, INSERT, UPDATE, DELETE
-from ally.api.operator.type import TypeModelProperty
+from ally.api.error import InputError
 from ally.api.type import Input
+from ally.core.error import DevelError
 from ally.core.spec.codes import INPUT_ERROR, INSERT_ERROR, INSERT_SUCCESS, \
-    UPDATE_SUCCESS, UPDATE_ERROR, DELETE_SUCCESS, DELETE_ERROR
-from ally.core.spec.resources import Invoker
-from ally.core.spec.transform.render import Object, List, Value
+    UPDATE_SUCCESS, UPDATE_ERROR, DELETE_SUCCESS, DELETE_ERROR, Coded
 from ally.design.processor.attribute import requires, defines
 from ally.design.processor.context import Context
-from ally.design.processor.handler import HandlerProcessorProceed
-from ally.exception import DevelError, InputError, Ref
+from ally.design.processor.handler import HandlerProcessor
+from ally.support.api.util_service import isModelId
+from ally.support.util_spec import IDo
 import logging
 
 # --------------------------------------------------------------------
@@ -28,42 +28,52 @@ log = logging.getLogger(__name__)
 
 # --------------------------------------------------------------------
 
+class Invoker(Context):
+    '''
+    The invoker context.
+    '''
+    # ---------------------------------------------------------------- Required
+    method = requires(int)
+    inputs = requires(tuple)
+    namedArguments = requires(set)
+    location = requires(str)
+    doInvoke = requires(IDo)
+        
 class Request(Context):
     '''
     The request context.
     '''
     # ---------------------------------------------------------------- Required
-    invoker = requires(Invoker)
+    invoker = requires(Context)
     arguments = requires(dict)
 
-class Response(Context):
+class Response(Coded):
     '''
     The response context.
     '''
     # ---------------------------------------------------------------- Defined
-    code = defines(str)
-    isSuccess = defines(bool)
-    errorDetails = defines(Object)
     obj = defines(object, doc='''
     @rtype: object
     The response object.
     ''')
+    errorInput = defines(InputError, doc='''
+    @rtype: InputError
+    The input error that occurred while invoking.
+    ''')
 
 # --------------------------------------------------------------------
 
-class InvokingHandler(HandlerProcessorProceed):
+class InvokingHandler(HandlerProcessor):
     '''
     Implementation for a processor that makes the actual call to the request method corresponding invoke. The invoking will
     use all the obtained arguments from the previous processors and perform specific actions based on the requested method.
-    In GET case it will provide to the request the invoke returned object as to be rendered to the response, in DELETE case
-    it will stop the execution chain and send as a response a success code.
     '''
 
     def __init__(self):
         '''
         Construct the handler.
         '''
-        super().__init__()
+        super().__init__(Invoker=Invoker)
 
         self.invokeCallBack = {
                                GET: self.afterGet,
@@ -72,9 +82,9 @@ class InvokingHandler(HandlerProcessorProceed):
                                DELETE: self.afterDelete
                                }
 
-    def process(self, request:Request, response:Response, **keyargs):
+    def process(self, chain, request:Request, response:Response, **keyargs):
         '''
-        @see: HandlerProcessorProceed.process
+        @see: HandlerProcessor.process
         
         Invoke the request invoker.
         '''
@@ -82,69 +92,46 @@ class InvokingHandler(HandlerProcessorProceed):
         assert isinstance(response, Response), 'Invalid response %s' % response
         if response.isSuccess is False: return  # Skip in case the response is in error
 
-        assert isinstance(request.invoker, Invoker), 'Invalid invoker %s' % request.invoker
-
-        callBack = self.invokeCallBack.get(request.invoker.method)
-        assert callBack is not None, \
-        'Method cannot be processed for invoker \'%s\', something is wrong in the setups' % request.invoker.name
-        assert isinstance(request.arguments, dict), 'Invalid arguments %s' % request.arguments
-
-        arguments = []
-        for inp in request.invoker.inputs:
+        invoker = request.invoker
+        assert isinstance(invoker, Invoker), 'Invalid invoker %s' % invoker
+        if invoker.doInvoke is None: return  # No invoke to process
+        
+        assert isinstance(invoker.doInvoke, IDo), 'Invalid invoker invoke %s' % invoker.doInvoke
+        callBack = self.invokeCallBack.get(invoker.method)
+        assert callBack is not None, 'Cannot process invoker, at:%s' % invoker.location
+        
+        if request.arguments is None: arguments = {}
+        else: arguments = dict(request.arguments)
+        
+        args, keyargs = [], {}
+        for inp in invoker.inputs:
             assert isinstance(inp, Input), 'Invalid input %s' % inp
-            if inp.name in request.arguments: arguments.append(request.arguments[inp.name])
-            elif inp.hasDefault: arguments.append(inp.default)
+            
+            isKeyArg = invoker.namedArguments and inp.name in invoker.namedArguments
+            
+            if inp.name in arguments: value = arguments[inp.name]
+            elif isKeyArg:
+                if inp.hasDefault: keyargs[inp.name] = inp.default
+                continue
+            elif inp.hasDefault:
+                args.append(inp.default)
+                continue
             else:
-                raise DevelError('No value for mandatory input \'%s\' for invoker \'%s\'' % (inp.name, request.invoker.name))
+                raise DevelError('No value for mandatory input \'%s\', at:%s' % (inp.name, invoker.location))
+            
+            if isKeyArg: keyargs[inp.name] = value
+            else: args.append(value)
         try:
-            value = request.invoker.invoke(*arguments)
-            assert log.debug('Successful on calling invoker \'%s\' with values %s', request.invoker,
-                             tuple(arguments)) or True
+            value = invoker.doInvoke(*args, **keyargs)
+            assert log.debug('Successful on calling with arguments %s and key arguments %s, at:%s', invoker,
+                             args, keyargs, invoker.location) or True
 
-            callBack(request.invoker, value, response)
+            callBack(invoker, value, response)
         except InputError as e:
             assert isinstance(e, InputError)
-            response.code, response.isSuccess = INPUT_ERROR
-            response.errorDetails = self.processInputError(e)
+            INPUT_ERROR.set(response)
+            response.errorInput = e
             assert log.debug('User input exception: %s', e, exc_info=True) or True
-
-    def processInputError(self, e):
-        '''
-        Process the input error into an error object.
-        
-        @return: Object
-            The object containing the details of the input error.
-        '''
-        assert isinstance(e, InputError), 'Invalid input error %s' % e
-
-        messages, names, models, properties = [], [], {}, {}
-        for msg in e.message:
-            assert isinstance(msg, Ref)
-            if not msg.model:
-                messages.append(Value('message', msg.message))
-            elif not msg.property:
-                messagesModel = models.get(msg.model)
-                if not messagesModel: messagesModel = models[msg.model] = []
-                messagesModel.append(Value('message', msg.message))
-                if msg.model not in names: names.append(msg.model)
-            else:
-                propertiesModel = properties.get(msg.model)
-                if not propertiesModel: propertiesModel = properties[msg.model] = []
-                propertiesModel.append(Value(msg.property, msg.message))
-                if msg.model not in names: names.append(msg.model)
-
-        errors = []
-        if messages: errors.append(List('error', *messages))
-        for name in names:
-            messagesModel, propertiesModel = models.get(name), properties.get(name)
-
-            props = []
-            if messagesModel: props.append(List('error', *messagesModel))
-            if propertiesModel: props.extend(propertiesModel)
-
-            errors.append(Object(name, *props))
-
-        return Object('model', *errors)
 
     # ----------------------------------------------------------------
 
@@ -184,17 +171,16 @@ class InvokingHandler(HandlerProcessorProceed):
         assert isinstance(response, Response), 'Invalid response %s' % response
         assert invoker.output.isValid(value), 'Invalid return value \'%s\' for invoker %s' % (value, invoker)
 
-        if isinstance(invoker.output, TypeModelProperty) and \
-        invoker.output.container.propertyId == invoker.output.property:
+        if isModelId(invoker.output):
             if value is not None:
                 response.obj = value
             else:
-                response.code, response.isSuccess = INSERT_ERROR
+                INSERT_ERROR.set(response)
                 assert log.debug('Cannot insert resource') or True
                 return
         else:
             response.obj = value
-        response.code, response.isSuccess = INSERT_SUCCESS
+        INSERT_SUCCESS.set(response)
 
     def afterUpdate(self, invoker, value, response):
         '''
@@ -214,18 +200,18 @@ class InvokingHandler(HandlerProcessorProceed):
         assert invoker.output.isValid(value), 'Invalid return value \'%s\' for invoker %s' % (value, invoker)
 
         if invoker.output.isOf(None):
-            response.code, response.isSuccess = UPDATE_SUCCESS
+            UPDATE_SUCCESS.set(response)
             assert log.debug('Successful updated resource') or True
         elif invoker.output.isOf(bool):
             if value == True:
-                response.code, response.isSuccess = UPDATE_SUCCESS
+                UPDATE_SUCCESS.set(response)
                 assert log.debug('Successful updated resource') or True
             else:
-                response.code, response.isSuccess = UPDATE_ERROR
+                UPDATE_ERROR.set(response)
                 assert log.debug('Cannot update resource') or True
         else:
             # If an entity is returned than we will render that.
-            response.code, response.isSuccess = UPDATE_SUCCESS
+            UPDATE_SUCCESS.set(response)
             response.obj = value
 
     def afterDelete(self, invoker, value, response):
@@ -247,12 +233,12 @@ class InvokingHandler(HandlerProcessorProceed):
 
         if invoker.output.isOf(bool):
             if value == True:
-                response.code, response.isSuccess = DELETE_SUCCESS
+                DELETE_SUCCESS.set(response)
                 assert log.debug('Successfully deleted resource') or True
             else:
-                response.code, response.isSuccess = DELETE_ERROR
+                DELETE_ERROR.set(response)
                 assert log.debug('Cannot deleted resource') or True
         else:
             # If an entity is returned than we will render that.
-            response.code, response.isSuccess = DELETE_SUCCESS
+            DELETE_SUCCESS.set(response)
             response.obj = value

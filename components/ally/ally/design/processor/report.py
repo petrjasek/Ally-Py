@@ -9,7 +9,26 @@ Created on Feb 18, 2013
 Module containing report implementations.
 '''
 
-from .spec import IReport, Resolvers, IResolver
+from .resolvers import reportOn
+from .spec import IReport, LIST_UNUSED
+
+# --------------------------------------------------------------------
+
+class ReportNone(IReport):
+    '''
+    Implementation for @see: IReport that reports nothing.
+    '''
+        
+    def open(self, name):
+        '''
+        @see: IReport.open
+        '''
+        return self
+        
+    def add(self, resolvers):
+        '''
+        @see: IReport.add
+        '''
 
 # --------------------------------------------------------------------
 
@@ -17,30 +36,32 @@ class ReportUnused(IReport):
     '''
     Implementation for @see: IReport that reports the unused attributes resolvers.
     '''
-    __slots__ = ('_reports', '_resolvers')
+    
+    ident = '  '
+    # The ident to use in the report.
     
     def __init__(self):
         '''
         Construct the report.
         '''
-        self._reports = {}
-        self._resolvers = []
+        self.reports = {}
+        self.resolvers = {}
         
     def open(self, name):
         '''
         @see: IReport.open
         '''
         assert isinstance(name, str), 'Invalid name %s' % name
-        report = self._reports.get(name)
-        if not report: report = self._reports[name] = ReportUnused()
+        report = self.reports.get(name)
+        if not report: report = self.reports[name] = ReportUnused()
         return report
         
     def add(self, resolvers):
         '''
         @see: IReport.add
         '''
-        assert isinstance(resolvers, Resolvers), 'Invalid resolvers %s' % resolvers
-        self._resolvers.append(resolvers)
+        assert isinstance(resolvers, dict), 'Invalid resolvers %s' % resolvers
+        self.resolvers.update(resolvers)
         
     def report(self):
         '''
@@ -49,21 +70,45 @@ class ReportUnused(IReport):
         @return: list[string]
             The list of string lines.
         '''
-        st, reported = [], set()
-        for resolvers in self._resolvers:
-            assert isinstance(resolvers, Resolvers)
-            for key, resolver in resolvers.iterate():
-                assert isinstance(resolver, IResolver)
-                if not resolver.isUsed():
-                    if key not in reported:
-                        reported.add(key)
-                        st.append(('%s.%s for %s' % (key + (resolver,))).strip())
-        if st: st.insert(0, 'Unused attributes:')
-            
-        for name, report in self._reports.items():
+        data = self.process(set())
+        if data:
+            message, stack = data
+            assert isinstance(stack, list), 'Invalid stack %s' % stack
+            if len(stack) > 1:
+                return 'Unused attributes in %s\n%s\n, found in\n%s' % (stack[0], message, '\n'.join(stack[1:]))
+            elif stack:
+                return 'Unused attributes in %s\n%s' % (stack[0], message)
+            return message
+
+    # ----------------------------------------------------------------
+    
+    def process(self, reported):
+        '''
+        Process the report.
+        '''
+        assert isinstance(reported, set), 'Invalid reported names %s' % reported
+        
+        datas = []
+        for name, report in self.reports.items():
             assert isinstance(report, ReportUnused)
-            lines = report.report()
-            if lines:
-                st.append('Report on %s:' % name)
-                st.extend('\t%s' % line for line in lines)
-        return st
+            if name in reported: continue
+            data = report.process(reported)
+            if data:
+                reported.add(name)
+                _message, stack = data
+                assert isinstance(stack, list), 'Invalid stack %s' % stack
+                stack.append(name)
+                datas.append(data)
+        
+        messages = reportOn([], self.resolvers, LIST_UNUSED)
+
+        if messages or len(datas) > 1:
+            for message, stack in datas:
+                if len(stack) > 1:
+                    messages.append('Unused attributes in %s\n%s\n, found in\n%s' % (stack[0], message, '\n'.join(stack[1:])))
+                else:
+                    messages.append('Unused attributes in %s\n%s' % (stack[0], message))
+                    
+            return '\n'.join(messages), []
+        elif datas:
+            return datas[0]

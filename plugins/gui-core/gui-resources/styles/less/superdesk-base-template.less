@@ -75,11 +75,26 @@ body {
 
 .navbar-fixed-top {
 	position:fixed !important; 
+	.navbar-inner {
+		height: 40px;
+	}
 	.container {
 		margin-left: 20px;
 		margin-right: 20px;
 		width:auto;
 	}
+
+	.loader { 
+		display: none; 
+		width: 80px;
+		div { 
+			margin-top:11px; 
+    		color: #777;
+	    	margin-top: 11px;
+    	}
+	}
+
+
 }
 
 .main-background-container {
@@ -101,6 +116,50 @@ body {
   		right: 0 !important;
   	}
   }
+}
+@media screen and (max-width: 979px) {
+	.navbar-fixed-top {
+	  .navbar-inner {
+	  	.container-fluid {
+	  		.nav-collapse.in {
+	  			height: auto !important;
+	  			background: #272727;
+				position: absolute;
+				top: 40px;
+				width: 300px;
+				right: 20px;
+				.nav {
+					a.dropdown-toggle {
+						display: block;
+					}
+					> li {
+						border-bottom:1px solid #353535;
+				        border-top: 1px solid #272727; //fake border - same as bg
+				        .box-shadow(inset 0 -1px 0px 0px #1b1b1b);
+				        &:hover > a {
+				        	background-color: #111;
+				        }
+						&.dropdown {
+							.dropdown-menu {
+								background: none;
+							}
+						}
+					}
+					.dropdown-menu {
+						background: #272727;
+						margin: 0;
+						margin-bottom: 10px;
+						padding: 0 10px;
+						li, li a {
+							font-weight: normal !important;
+							max-width: none;
+						}
+					}
+				}
+	  		}
+	  	}
+	  }
+	}
 }
 @media screen and (max-width: 1180px) {
 	.main-background-container {
@@ -125,12 +184,17 @@ body {
 	}
 }
 
+
 .subnav {
   top:@topspace;
   height:@subnav-height !important;
   background: rgba(245,245,245,0.90);
   .box-sizing(border-box);
   border: 1px solid #e5e5e5;
+  .subnav-title {
+    font-size: 20px;
+	float: left;
+  }
   &.subnav-level2 {
     	top:@subnav-height+@topspace;
     	height:@subnav-level2 !important;
@@ -264,12 +328,36 @@ body {
 	font-size:16px;
 }
 
-
+.tab-background-container {
+	position: absolute;
+	left: 0;
+	right: 0;
+	bottom:0;
+	
+	.tab-content {
+		display: block;
+		position: absolute;
+		top:45px; //content-topnav is 45px high
+		left:20px; right: 0px; bottom:0px;
+		padding-right: 20px;
+		width: auto !important;
+		overflow-y: auto;
+		overflow-x: hidden;
+		padding-bottom: 20px;  
+	}
+}
 
 .article-list .main-content-container {
 	padding: @main-content-padding;
 	padding-top: @subnav-height + @subnav-level2 + @main-content-padding;
 }
+
+
+.users .tab-background-container {
+	top: @subnav-height+@topspace;
+}
+
+
 
 
 

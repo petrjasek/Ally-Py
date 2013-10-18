@@ -14,16 +14,16 @@ from ally.design.processor.assembly import Assembly
 from ally.design.processor.attribute import requires, defines
 from ally.design.processor.context import Context
 from ally.design.processor.execution import Processing, Chain
-from ally.design.processor.handler import HandlerBranchingProceed
 from ally.design.processor.processor import Using
 from ally.gateway.http.impl.processor import respository
 from ally.gateway.http.spec.gateway import IRepository
 from ally.http.spec.codes import isSuccess, INVALID_AUTHORIZATION
 from ally.http.spec.server import HTTP, RequestHTTP, RequestContentHTTP, \
-    ResponseHTTP, ResponseContentHTTP, HTTP_POST, IDecoderHeader
+    ResponseHTTP, ResponseContentHTTP, HTTP_POST
 from ally.support.util_io import IInputStream
 from collections import Iterable
 from io import BytesIO
+from urllib.parse import quote_plus
 
 # --------------------------------------------------------------------
 
@@ -169,10 +169,11 @@ class GatewayCaptchaValidationHandler(HandlerBranchingProceed):
         request.uri = self.uriVerify
         request.parameters = []
         
-        message = self.message % dict(key=self.privateKey, clientIP=clientIP, challenge=challenge, resolve=resolve)
+        message = self.message % dict(key=quote_plus(self.privateKey, safe=''), clientIP=quote_plus(clientIP, safe=''), challenge=quote_plus(challenge, safe=''), resolve=quote_plus(resolve, safe=''))
         message = message.encode(encoding='ascii')
         requestCnt.source = (message,)
         request.headers['Content-Length'] = str(len(message))
+        request.headers['Content-type'] = 'application/x-www-form-urlencoded'
         # TODO: It should be like after integration with refactored: requestCnt.length = len(requestCnt.source)
         
         chain = Chain(processing)

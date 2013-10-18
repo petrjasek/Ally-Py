@@ -9,8 +9,13 @@ Created on Jan 12, 2012
 Provides support functions for the container.
 '''
 
-from ..support.util_sys import callerLocals, callerGlobals
-from ._impl._aop import AOPResources
+from collections import Iterable
+from functools import partial
+from inspect import isclass, ismodule, getsource, isfunction, ismethod
+
+from ally.design.priority import Priority, PRIORITY_NORMAL, sortByPriorities
+
+from ..support.util_sys import callerLocals
 from ._impl._assembly import Assembly
 from ._impl._call import CallEntity, CallConfig, CallEventControlled
 from ._impl._setup import register, SetupConfig, SetupStart, SetupFunction
@@ -19,15 +24,14 @@ from ._impl._support import SetupEntityListen, SetupEntityListenAfterBinding, \
 from .error import SetupError
 from .event import ITrigger, createEvents
 from .impl.config import Config
-from .impl.priority import sortByPriorities
-from .ioc import PRIORITY_LAST
 from .wire import createWirings
-from collections import Iterable
-from functools import partial
-from inspect import isclass, ismodule, getsource, isfunction, ismethod
+
 
 # --------------------------------------------------------------------
+PRIORITY_LOAD_ENTITIES = Priority('Load all entities', after=PRIORITY_NORMAL)
+# The priority for @see: loadAllEntities.
 
+# --------------------------------------------------------------------
 def nameEntity(target, location=None):
     '''
     Provides the setup names to be used setup modules based on a setup target and name.
@@ -107,7 +111,7 @@ def notCreated():
     '''
     Function that just raises a SetupError for when an expected entity created by 'createEntitySetup' is not present. 
     '''
-    raise SetupError('No entity created for this name by \'createEntitySetup\' function')
+    raise SetupError('No entity created for this by \'createEntitySetup\' function')
 
 def createEntitySetup(*classes, module=None, wire=True, dispatch=True, nameEntity=nameEntity, nameInEntity=nameInEntity):
     '''
@@ -142,7 +146,7 @@ def createEntitySetup(*classes, module=None, wire=True, dispatch=True, nameEntit
     assert callable(nameEntity), 'Invalid entity name formatter %s' % nameEntity
     
     wireClasses = []
-    for clazz in classesFrom(classes):
+    for clazz in classesFrom(classes, mandatory=False):
         try: types, _name = clazz.__ally_setup__
         except AttributeError: continue
         
@@ -154,7 +158,7 @@ def createEntitySetup(*classes, module=None, wire=True, dispatch=True, nameEntit
 
 # --------------------------------------------------------------------
 
-def listenToEntities(*classes, listeners=None, beforeBinding=True, module=None, all=False):
+def listenToEntities(*classes, listeners=None, beforeBinding=False, module=None, all=False):
     '''
     Listens for entities defined in the provided module that are of the provided classes. The listening is done at the 
     moment of the entity creation so the listen is not dependent of the declared entity return type.
@@ -223,7 +227,7 @@ def loadAllEntities(*classes, module=None):
         group = registry['__name__']
 
     loader = partial(loadAll, group + '.', classesFrom(classes))
-    return register(SetupStart(loader, PRIORITY_LAST, name='loader_%s' % id(loader)), registry)
+    return register(SetupStart(loader, PRIORITY_LOAD_ENTITIES, name='loader_%s' % id(loader)), registry)
 
 def include(module, inModule=None):
     '''
@@ -245,30 +249,6 @@ def include(module, inModule=None):
 
 # --------------------------------------------------------------------
 # Functions available in setup functions calls.
-
-def entities():
-    '''
-    !Attention this function is only available in an open assembly if the assembly is not provided @see: ioc.open!
-    Provides all the entities references found in the current assembly wrapped in a AOP class.
-    
-    @return: AOP
-        The resource AOP.
-    '''
-    return AOPResources({name:name for name, call in Assembly.current().calls.items() if isinstance(call, CallEntity)})
-
-def entitiesLocal():
-    '''
-    !Attention this function is only available in an open assembly if the assembly is not provided @see: ioc.open!
-    Provides all the entities references for the module from where the call is made found in the current assembly.
-    
-    @return: AOP
-        The resource AOP.
-    '''
-    registry = callerGlobals()
-    assert '__name__' in registry, 'The entities local call needs to be made from a setup module function'
-    rsc = AOPResources({name:name for name, call in Assembly.current().calls.items() if isinstance(call, CallEntity)})
-    rsc.filter(registry['__name__'] + '.**')
-    return rsc
 
 def entitiesFor(clazz, assembly=None):
     '''
@@ -359,9 +339,10 @@ def eventsFor(*triggers, source=None):
     @param source: Assembly|Iterable(tuple(string, callable))|None
         The source to provide the events for, it can be an assembly in which case the assembly calls are used as the source
         or it can be an iterable providing tuples of name and call. If None then the current assembly calls are used.
-    @return: Iterable(tuple(Callable, string, ITrigger))
+    @return: Iterable(tuple(callable, string, list[ITrigger]))
         An iterator that yields tuples having on the first position the call will return True for a successful event execution,
-        False otherwise, on the second position the event name and on the last position the trigger.
+        False otherwise, on the second position the event name and on the last position the triggers associated with the call
+        containing at least one of the provided triggers.
     '''
     assert triggers, 'At least one trigger is required'
     if source is None: source = Assembly.current()
@@ -379,10 +360,19 @@ def eventsFor(*triggers, source=None):
         for trigger in call.triggers:
             assert isinstance(trigger, ITrigger), 'Invalid trigger %s' % trigger
             if trigger.isTriggered(triggers):
-                calls.append((call, name, trigger))
-    sortByPriorities(calls, priority=lambda item: item[0].priority, reverse=True)
+                calls.append((call, name, list(call.triggers)))
+                break
+    sortByPriorities(calls, priority=lambda item: item[0].priority)
     return calls
 
+def performEventsFor(*triggers, source=None):
+    '''
+    Executes all the events for the provided triggers.
+    
+    @see: eventsFor
+    '''
+    for call, *_other in eventsFor(*triggers, source=source): call()
+    
 # --------------------------------------------------------------------
 
 def force(setup, value, assembly=None):
@@ -406,7 +396,7 @@ def force(setup, value, assembly=None):
     try:
         call = assembly.fetchForName(setup.name)
         assert isinstance(call, CallConfig), 'Invalid call %s' % call
-        call.value = value
+        call.setValue(value, False)
     finally: Assembly.stack.pop()
     
 def persist(setup, value, assembly=None):
@@ -425,7 +415,14 @@ def persist(setup, value, assembly=None):
     assembly = assembly or Assembly.current()
     assert isinstance(assembly, Assembly), 'Invalid assembly %s' % assembly
     
-    config = assembly.configurations.get(setup.name)
-    assert isinstance(config, Config), 'Invalid configuration %s for the assembly' % setup.name
-    config.value = value
+    Assembly.stack.append(assembly)
+    try:
+        call = assembly.fetchForName(setup.name)
+        assert isinstance(call, CallConfig), 'Invalid call %s' % call
+        config = call.config()
+        assert isinstance(config, Config), 'Invalid config %s' % config
+        config.value = value
+        config.isCommented = False
+        
+    finally: Assembly.stack.pop()
     

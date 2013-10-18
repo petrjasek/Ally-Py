@@ -27,7 +27,7 @@ setup(
 
     # metadata for upload to PyPI
     author='Gabriel Nistor',
-    author_email='mugur.rus@sourcefabric.org, gabriel.nistor@sourcefabric.org',
+    author_email='gabriel.nistor@sourcefabric.org',
     description='Ally framework - gateway service',
     long_description='The gateway service of the Ally framework',
     license='GPL v3',

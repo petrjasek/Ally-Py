@@ -10,26 +10,23 @@ Provides the IoC (Inversion of Control or dependency injection) services. Attent
 single thread at one time.
 '''
 
+from functools import partial, update_wrapper
+from inspect import isclass, ismodule, getfullargspec, isfunction, cleandoc
+import logging
+from pydoc import getdoc
+
+from ally.design.priority import Priority, PRIORITY_NORMAL  # @UnusedImport
+
 from ..support.util_sys import callerLocals
 from ._impl._entity import Initializer
 from ._impl._setup import SetupEntity, SetupSource, SetupConfig, SetupFunction, \
     SetupEvent, SetupEventReplace, SetupSourceReplace, SetupStart, SetupEventCancel, \
-    register, SetupConfigReplace, setupsOf
+    register, setupsOf
 from .error import SetupError
-from .impl.priority import Priority
-from functools import partial, update_wrapper
-from inspect import isclass, ismodule, getfullargspec, isfunction, cleandoc
-import logging
+
 
 # --------------------------------------------------------------------
-
 log = logging.getLogger(__name__)
-
-PRIORITY_FINAL = Priority()
-PRIORITY_LAST = Priority(PRIORITY_FINAL)
-PRIORITY_NORMAL = Priority(PRIORITY_LAST)
-PRIORITY_FIRST = Priority(PRIORITY_NORMAL)
-PRIORITY_TOP = Priority(PRIORITY_FIRST)
 
 # --------------------------------------------------------------------
 
@@ -93,11 +90,13 @@ def doc(setup, doc):
     @param doc: string
         The documentation to update with, automatically the provided documentation will start on a new line.
     '''
-    assert isinstance(setup, (SetupConfig, SetupConfigReplace)), 'Invalid configuration setup %s' % setup
     assert isinstance(doc, str), 'Invalid documentation %s' % doc
+    if isinstance(setup, SetupSourceReplace):
+        assert isinstance(setup, SetupSourceReplace)
+        setup = setup.target
+    assert isinstance(setup, SetupConfig), 'Invalid configuration setup %s' % setup
     
-    if isinstance(setup, SetupConfigReplace): setup = setup.target
-    if setup.documentation is not None: setup.documentation += '\n%s' % cleandoc(doc)
+    if setup.__doc__ is not None: setup.__doc__ += '\n%s' % cleandoc(doc)
 
 def before(*setups, auto=True):
     '''
@@ -130,7 +129,7 @@ def after(*setups, auto=True):
         The setup function(s) to listen to.
     @param auto: boolean
         In some cases the event is not called (for instance externally provided configurations) this means is auto managed
-        by the container, if placed on False the event is guaranteed to be called regardless of what the container option.
+        by the container, if placed on False the event is guaranteed to be called regardless of the container option.
     '''
     if __debug__:
         for setup in setups: assert isinstance(setup, SetupFunction), 'Invalid setup function %s' % setup
@@ -154,10 +153,14 @@ def replace(setup):
     assert isinstance(setup, SetupFunction), 'Invalid setup function %s' % setup
     def decorator(function):
         hasArg, hasType, type = processWithOneArg(function)
+        
         if isinstance(setup, SetupConfig):
-            if hasArg: raise SetupError('No argument expected for function %s, when replacing a configuration' % function)
-            if hasType: raise SetupError('No return type expected for function %s, when replacing a configuration' % function)
-            return update_wrapper(register(SetupConfigReplace(function, setup), callerLocals()), function)
+            # Updating the replaced configuration documentation.
+            assert isinstance(setup, SetupConfig)
+            documentation = getdoc(function)
+            if documentation:
+                if setup.__doc__: setup.__doc__ += '\n%s' % documentation
+                else: setup.__doc__ = documentation
         
         if isinstance(setup, SetupEvent):
             if hasArg: raise SetupError('No argument expected for function %s, when replacing an event' % function)
@@ -209,8 +212,11 @@ def initialize(entity):
     
     @param entity: object
         The entity to initialize.
+    @return: object
+        The provided entity after initialize.
     '''
     if entity is not None: Initializer.initialize(entity)
+    return entity
 
 def entityOf(identifier, module=None):
     '''

@@ -9,23 +9,68 @@ Created on Feb 11, 2013
 Contains the classes used in the execution of processors.
 '''
 
-from .spec import ContextMetaClass
+from .spec import ContextMetaClass, isNameForClass
+from ally.support.util_sys import locationStack
 from collections import Iterable, deque
+import itertools
 import logging
 
 # --------------------------------------------------------------------
 
 log = logging.getLogger(__name__)
 
+CONSUMED = 'chain consumed'  # Flag indicating if the chain is consumed.
+CANCELED = 'chain canceled'  # Flag indicating if the chain is canceled.
+EXCEPTION = 'exception in chain'  # Flag indicating if the chain is in exception.
+FLAGS_STATUS = frozenset((CONSUMED, CANCELED, EXCEPTION))  # All the status flags.
+
+FILL_CLASSES = 'fill in chain classes' 
+# Flag indicating if the chain should fill in the classes, is done only if the context name start with a capital letter
+# then the class is provided as a value
+FILL_VALUES = 'fill in chain values' 
+# Flag indicating if the chain should fill in the values, is done only if the context names starts with a lower case
+# then an instance is created for the class and used as a value.
+FILL_ALL = 'fill all in chain'  # Flag indicating if the chain should fill in the values and classes.
+FLAGS_FILL = frozenset((FILL_CLASSES, FILL_VALUES, FILL_ALL))  # All the fill flags.
+
 # --------------------------------------------------------------------
+
+class Abort(Exception):
+    '''
+    Known exception that triggers a controlled abort of the execution.
+    '''
+    
+    def __init__(self, *reasons):
+        '''
+        Creates the abort exception.
         
+        @param reasons: argument[object]
+            The abort reasons.
+        '''
+        super().__init__()
+        self.reasons = list(reasons)
+        
+    def add(self, *reasons):
+        '''
+        Adds new reasons for the abort.
+        
+        @param reasons: argument[object]
+            The abort reasons.
+        @return: self
+            The same exception instance for rerasing.
+        '''
+        assert reasons, 'At least a reason is required'
+        self.reasons.extend(reasons)
+        return self
+
+# --------------------------------------------------------------------
+
 class Processing:
     '''
     Container for processor's, provides chains for their execution.
     !!! Attention, never ever use a processing in multiple threads, only one thread is allowed to execute 
     a processing at one time.
     '''
-    __slots__ = ('ctx', '_calls')
 
     class Ctx:
         '''
@@ -50,6 +95,7 @@ class Processing:
         assert isinstance(calls, Iterable), 'Invalid calls %s' % calls
         
         self._calls = list(calls)
+        assert self._calls, 'At least one call is required for processing'
         if __debug__:
             for call in self._calls: assert callable(call), 'Invalid call %s' % call
                 
@@ -87,30 +133,54 @@ class Processing:
         self.ctx.__dict__.update(contexts)
         return self
     
-    def fillIn(self, **keyargs):
+    def execute(self, *flags, **keyargs):
         '''
-        Updates the provided arguments with the rest of the contexts that this processing has. The fill in process is done
-        when a context name is not present in the provided arguments, the value added is being as follows:
-            - if the context name start with a capital letter then the class is provided as a value
-            - if the context names starts with a lower case then an instance is created for the class and used as a value.
+        Executes the processing in a chain with the provided arguments.
         
+        @param flags: arguments[string]
+            The flags to associate the execution with.
         @param keyargs: key arguments
-            The key arguments to be filled in.
-        @return: dictionary{string: object}
-            The fill in key arguments.
+            The key arguments that will be processed.
+        @return: object|tuple(boolean, object)
+            The chain processed arguments, if any status flag is provided it will return the execution status
+            and the processed arguments
         '''
-        for name, clazz in self.contexts:
-            if name not in keyargs:
-                if name[:1].lower() == name[:1]: keyargs[name] = clazz()
-                else: keyargs[name] = clazz
-        return keyargs
+        chain = Chain(self, *flags, **keyargs)
+        if not FLAGS_STATUS.isdisjoint(flags):
+            ret = chain.execute(*flags)
+            return ret, chain.arg
+        chain.execute()
+        return chain.arg
+    
+    def wingIn(self, chain, reuse=False, **keyargs):
+        '''
+        Wings this processor into the provided chain.
+        @see: Chain.wing
+        
+        @param chain: Chain
+            The chain to wing in.
+        @param reuse: boolean
+            Flag indicating that the winged in chain should reuse the arguments from the winging chain that are not provided
+            as key arguments.
+        @param keyargs: key arguments
+            The key arguments that will be processed by the winged chain.
+        @return: Chain
+            The winged chain.
+        '''
+        assert isinstance(chain, Chain), 'Invalid chain %s' % chain
+        assert isinstance(reuse, bool), 'Invalid reuse flag %s' % reuse
+        if reuse:
+            for name, value in chain.keyargs:
+                if name not in keyargs: keyargs[name] = value
+        return chain.wing(Chain(self, False, **keyargs))
 
-class Chain:
+# --------------------------------------------------------------------
+
+class Execution:
     '''
-    A chain that contains a list of processors (callables) that are executed one by one. Each processor will have
-    the duty to proceed with the processing if is the case by calling the chain.
+    A execution that contains a list of processors (callables) that are executed one by one.
     '''
-    __slots__ = ('arg', '_calls', '_callBacks', '_callBacksErrors', '_consumed', '_proceed')
+    __slots__ = ('arg', '_calls', '_status')
 
     class Arg:
         '''
@@ -119,124 +189,55 @@ class Chain:
         if __debug__:
             def __setattr__(self, key, value):
                 assert isinstance(key, str), 'Invalid argument name %s' % key
-                assert not key.startswith('_'), 'The argument name \'%s\' cannot start with an _' % key
+                assert not key.startswith('__'), 'The argument name \'%s\' cannot start with an \'__\'' % key
                 object.__setattr__(self, key, value)
 
-    def __init__(self, processing):
+    def __init__(self, processing, arg=None):
         '''
-        Initializes the chain with the processing to be executed.
+        Initializes the execution with the processing to be executed.
         
-        @param processing: Processing|Iterable[callable]
+        @param processing: Processing|Iterable(callable)|callable
             The processing to be handled by the chain. Attention the order in which the processors are provided
             is critical since one processor is responsible for delegating to the next.
+        @param arg: object
+            The argument object that are passed to the processors.
         '''
+        self._calls = deque()
+        self.arg = Execution.Arg() if arg is None else arg
+        self._status = None
+
         if isinstance(processing, Processing):
             assert isinstance(processing, Processing)
-            processing = processing.calls
-        assert isinstance(processing, Iterable), 'Invalid processing %s' % processing
-        self._calls = deque(processing)
+            self._calls.extend(processing.calls)
+        elif isinstance(processing, Iterable): self._calls.extend(processing)
+        else: self._calls.append(processing)
+        
+        assert self._calls, 'Nothing to execute'
         if __debug__:
             for call in self._calls: assert callable(call), 'Invalid processor call %s' % call
-        self.arg = Chain.Arg()
-        self._callBacks = deque()
-        self._callBacksErrors = deque()
-        self._consumed = False
 
-    def proceed(self):
+    keyargs = property(lambda self: self.arg.__dict__.items(), doc='''
+    @rtype: Iterable(tuple(string, object))
+    The iterable containing key: value pairs of the key arguments.
+    ''')
+    
+    def process(self, *args, **keyargs):
         '''
-        Indicates to the chain that it should proceed with the chain execution after a processor has returned. 
-        The proceed is available only when the chain is in execution. The execution is continued with the same
-        arguments.
+        Called in order to register the arguments to be processed.
         
-        @return: this chain
-            This chain for chaining purposes.
-        '''
-        assert not self._consumed, 'Chain is consumed cannot proceed'
-        self._proceed = True
-        return self
-
-    def process(self, **keyargs):
-        '''
-        Called in order to execute the next processors in the chain. This method registers the chain proceed
-        execution but in order to actually execute you need to call the *do* or *doAll* method.
-        
+        @param args: arguments[Execution.Arg|dictionary{string: object}]
         @param keyargs: key arguments
-            The key arguments that are passed on to the next processors.
-        @return: this chain
-            This chain for chaining purposes.
+            The key arguments to update the processed arguments with.
+        @return: this execution
+            This execution for chaining purposes.
         '''
-        assert not self._consumed, 'Chain is consumed cannot process'
-        self.arg.__dict__.clear()
-        for key, value in keyargs.items(): setattr(self.arg, key, value)
-        self._proceed = True
+        assert self._status is None, 'Execution cannot process'
+        for arg in itertools.chain(args, (keyargs,)):
+            if isinstance(arg, Execution.Arg): arg = arg.__dict__
+            assert isinstance(arg, dict), 'Invalid argument %s' % arg
+            for key, value in arg.items(): setattr(self.arg, key, value)
         return self
     
-    def update(self, **keyargs):
-        '''
-        Used to update the key arguments of the processing and also mark the chain for proceeding. A *process* method
-        needs to be executed first.
-
-        @param keyargs: key arguments
-            The key arguments that need to be updated and passed on to the next processors.
-        @return: this chain
-            This chain for chaining purposes.
-        '''
-        assert not self._consumed, 'Chain is consumed cannot update'
-        for key, value in keyargs.items(): setattr(self.arg, key, value)
-        self._proceed = True
-        return self
-        
-    def branch(self, processing):
-        '''
-        Branches the chain to a different processing and automatically marks the chain for proceeding.
-        If the key arguments are not updated they must be compatible from the previous processing.
-        
-        @param processing: Processing|Iterable[callable]
-            The processing to be handled by the chain. Attention the order in which the processors are provided
-            is critical since one processor is responsible for delegating to the next.
-        @return: this chain
-            This chain for chaining purposes.
-        '''
-        if isinstance(processing, Processing):
-            assert isinstance(processing, Processing)
-            processing = processing.calls
-        assert isinstance(processing, Iterable), 'Invalid processing %s' % processing
-        self._calls.clear()
-        self._calls.extend(processing)
-        self._proceed = True
-        return self
-    
-    def callBack(self, callBack):
-        '''
-        Add a call back to the chain that will be called after the chain is completed.
-        Also marks the chain as proceeding.
-        
-        @param callBack: callable(*keyargs)
-            The call back.
-        @return: this chain
-            This chain for chaining purposes.
-        '''
-        assert not self._consumed, 'Chain is consumed cannot add call back'
-        self._callBacks.append(callBack)
-        self._proceed = True
-        return self
-        
-    def callBackError(self, callBack):
-        '''
-        Add a call back to the chain that will be called if an error occurs. In the received key arguments there will
-        be also the error that occurred and the trace back of the error. If there is at least one error call back in 
-        the chain the exception that will occur in the chain will not be propagated. Also marks the chain as proceeding.
-        
-        @param callBack: callable(*keyargs)
-            The call back.
-        @return: this chain
-            This chain for chaining purposes.
-        '''
-        assert not self._consumed, 'Chain is consumed cannot add call back error'
-        self._callBacksErrors.append(callBack)
-        self._proceed = True
-        return self
-        
     def do(self):
         '''
         Called in order to do the next chain element. A *process* method needs to be executed first.
@@ -244,48 +245,280 @@ class Chain:
         @return: boolean
             True if the chain has performed the execution of the next element, False if there is no more to be executed.
         '''
-        assert not self._consumed, 'Chain is consumed cannot do anymore'
-        assert self._calls, 'Nothing to execute'
-        assert self._proceed, 'Cannot proceed if no process is called'
+        while self._calls and isinstance(self._calls[0], Execution):
+            if self._calls[0].do(): return True
+            self._calls.popleft()
         
-        call = self._calls.popleft()
-        assert log.debug('Processing %s', call) or True
-        self._proceed = False
-        try: call(self, **self.arg.__dict__)
-        except:
-            if self._callBacksErrors:
-                self._proceed = False
-                while self._callBacksErrors: self._callBacksErrors.pop()()
-            else: raise
-                
-        assert log.debug('Processing finalized \'%s\'', call) or True
-        if self._proceed:
-            assert log.debug('Proceed signal received, continue execution') or True
-            if self._calls: return True
-            assert log.debug('Processing finalized by consuming') or True
-            self._consumed = True
-        else:
-            self._calls.clear()
-        while self._callBacks: self._callBacks.pop()()
-        return False
-        
-    def doAll(self):
-        '''
-        Do all the chain elements. A *process* method needs to be executed first.
+        if self._calls and self._status is None:
+            call = self._calls.popleft()
+            assert log.debug('Processing %s', call) or True
+            try: call(self, **self.arg.__dict__)
+            except Exception as e:
+                if isinstance(e, TypeError) and 'arguments' in str(e):
+                    raise TypeError('A problem occurred while invoking with arguments %s, at:%s' % 
+                                    (', '.join(self.arg.__dict__), locationStack(call)))
 
-        @return: this chain
-            This chain for chaining purposes.
+                self._status = EXCEPTION
+                if self._handleError(e): return True
+                raise
+            assert log.debug('Processing finalized \'%s\'', call) or True
+            
+        if self._status is None:
+            if self._calls: return True
+            self._status = CONSUMED
+        if self._handleFinalization(): return True
+        return False
+    
+    def execute(self, *flags):
+        '''
+        Executes the remaining processes using and returns True for the provided flags, otherwise return False.
+        
+        @param flags: arguments[string]
+            Flags dictating when this method should return True.
+        @return: boolean
+            False if if one of the provided flags matches the execution, True otherwise.
         '''
         while True:
             if not self.do(): break
-        return self
-
-    def isConsumed(self):
+            
+        if flags and self._status in flags: return True
+        return False
+    
+    # ----------------------------------------------------------------
+    
+    def _handleError(self, exception):
         '''
-        Checks if the chain is consumed.
+        Handles the error that occurred while executing.
+        !!! For internal use only.
+        
+        @param exception: Exception
+            The exception that occurred.
+        @return: boolean
+            True if the error was handled and the error is not required to be propagated, False otherwise.
+        '''
+        return False
+    
+    def _handleFinalization(self):
+        '''
+        Handles the finalization for execution.
+        !!! For internal use only.
         
         @return: boolean
-            True if all processors from the chain have been executed, False if a processor from the chain has stopped
-            the execution of the other processors.
+            True if the finalization was handled and the chain should continue execution.
         '''
-        return self._consumed
+        return False
+        
+class Chain(Execution):
+    '''
+    A chain that contains a list of processors (callables) that are executed one by one.
+    '''
+    __slots__ = ('_errors', '_finalizers')
+
+    def __init__(self, processing, *fill, **keyargs):
+        '''
+        Initializes the chain with the processing to be executed.
+        @see: Execution.__init__
+        
+        @param fill: arguments[string]
+            The fill in flags indicating the chain fill in. The fill in 
+            process is done when a context name is not present in the provided arguments, the value added is being as follows:
+                - if the context name start with a capital letter then the class is provided as a value
+                - if the context names starts with a lower case then an instance is created for the class and used as a value.
+        @param keyargs: key arguments
+            The key arguments that will be processed.
+        '''
+        super().__init__(processing, arg=keyargs.pop('_arg', None))
+        self._errors = []
+        self._finalizers = []
+        
+        if fill:
+            assert isinstance(processing, Processing), 'Invalid processing %s for fill in' % processing
+            fillClasses, fillValues = FILL_CLASSES in fill, FILL_VALUES in fill
+            if FILL_ALL in fill: fillClasses = fillValues = True
+            for name, clazz in processing.contexts:
+                if name not in keyargs and not name in self.arg.__dict__:
+                    if isNameForClass(name):
+                        if fillClasses: keyargs[name] = clazz
+                    elif fillValues: keyargs[name] = clazz()
+        
+        if keyargs: self.process(**keyargs)
+    
+    def wing(self, chain):
+        '''
+        Adds a wing chain to be processed in this chain and automatically the chain will execute the wing as being part
+        of this chain.
+        !!! Attention if multiple wings are added in one go, then the last wing added will be the first executed.
+        
+        @param chain: Chain
+            The chain to wing.
+        @return: Chain
+            The same wing chain.
+        '''
+        assert isinstance(chain, Chain), 'Invalid chain %s' % chain
+        assert self._status is None, 'Execution cannot wing'
+        assert chain._status is None, 'Execution cannot wing to %s' % chain
+        self._calls.appendleft(chain)
+        return chain
+    
+    def branch(self, processing):
+        '''
+        Create a branching chain that uses the same arguments as this chain and automatically the chain will execute the
+        branching as being part of this chain.
+        !!! Attention if multiple branches are added in one go, then the last branch added will be the first executed.
+        
+        @param processing: Processing|Iterable(callable)|callable
+            The processing to be handled by the chain. Attention the order in which the processors are provided
+            is critical since one processor is responsible for delegating to the next.
+        @return: Chain
+            The branching chain.
+        '''
+        assert self._status is None, 'Execution cannot branch'
+        bchain = Chain(processing, False, _arg=self.arg)
+        self._calls.appendleft(bchain)
+        return bchain
+    
+    def route(self, processing):
+        '''
+        Route this chain on the provided processing, this means that any processing from this chain that has not
+        been done they will be ignored.
+        
+        @param processing: Processing|Iterable(callable)|callable
+            The processing to be handled by the chain. Attention the order in which the processors are provided
+            is critical since one processor is responsible for delegating to the next.
+        @return: this chain
+            This chain for chaining purposes.
+        '''
+        assert self._status is None, 'Execution cannot route'
+        self._calls.clear()
+        
+        if isinstance(processing, Processing):
+            assert isinstance(processing, Processing)
+            self._calls.extend(processing.calls)
+        elif isinstance(processing, Iterable): self._calls.extend(processing)
+        else: self._calls.append(processing)
+        
+        assert self._calls, 'Nothing to execute'
+        if __debug__:
+            for call in self._calls: assert callable(call), 'Invalid processor call %s' % call
+            
+        return self
+     
+    def cancel(self):
+        '''
+        Cancels the execution of this chain.
+        '''
+        if self._status is None:
+            self._calls.clear()
+            self._status = CANCELED
+        
+    def onError(self, processing):
+        '''
+        Register for chain error the provided processing calls. The error processing will be called every time an error
+        occurs in this chain processing.
+        
+        @param processing: Processing|Iterable(callable)|callable
+            The processing to be handled at the chain finalization. Attention the order in which the processors are provided
+            is critical since one processor is responsible for delegating to the next.
+        '''
+        assert self._status is None, 'Execution cannot be altered'
+        if isinstance(processing, Processing):
+            assert isinstance(processing, Processing)
+            self._errors.extend(processing.calls)
+        elif isinstance(processing, Iterable): self._errors.extend(processing)
+        else: self._errors.append(processing)
+        if __debug__:
+            for call in self._errors: assert callable(call), 'Invalid processor call %s' % call
+       
+    def onFinalize(self, processing):
+        '''
+        Register for chain finalization the provided processing calls. The finalization will be called only once when
+        the chain is considered done.
+        
+        @param processing: Processing|Iterable(callable)|callable
+            The processing to be handled at the chain finalization. Attention the order in which the processors are provided
+            is critical since one processor is responsible for delegating to the next.
+        '''
+        assert self._status is None, 'Execution cannot be altered'
+        if isinstance(processing, Processing):
+            assert isinstance(processing, Processing)
+            self._finalizers.extend(processing.calls)
+        elif isinstance(processing, Iterable): self._finalizers.extend(processing)
+        else: self._finalizers.append(processing)
+        if __debug__:
+            for call in self._finalizers: assert callable(call), 'Invalid processor call %s' % call
+            
+    # ----------------------------------------------------------------
+    
+    def _handleError(self, exception):
+        '''
+        @see: Execution._handleError
+        '''
+        if not self._errors: return False
+        assert log.debug('Started error chain') or True
+        error = Error(self, exception)
+        error.execute()
+        if not error.isSuppressed:
+            self._calls.clear()
+            if self._handleFinalization(): self.execute()
+            raise error.exception
+        return True
+    
+    def _handleFinalization(self):
+        '''
+        @see: Execution._handleFinalization
+        '''
+        if not self._finalizers: return False
+        assert log.debug('Started finalization chain') or True
+        self._finalizers.reverse()  # We need to reverse in order to start the finalization with the last registered.
+        self._calls.appendleft(Execution(self._finalizers, self.arg))
+        self._finalizers = None
+        return True
+        
+class Error(Execution):
+    '''
+    A execution that contains a list of processors (callables) that are executed one by one that targets and error processing.
+    '''
+    __slots__ = ('chain', 'exception', '_retrying', '_suppressed')
+    
+    def __init__(self, chain, exception):
+        '''
+        Initializes the error execution with the processing to be executed.
+        
+        @param chain: Chain
+            The chain that has the error. 
+        @param exception: Exception
+            The exception that generated the error.
+        '''
+        assert isinstance(chain, Chain), 'Invalid chain %s' % chain
+        assert isinstance(exception, Exception), 'Invalid exception %s' % exception
+        super().__init__(reversed(chain._errors), chain.arg)
+        
+        self.chain = chain
+        self.exception = exception
+        self._suppressed = False
+        self._retrying = False
+    
+    isSuppressed = property(lambda self: self._suppressed, doc='''
+    @rtype: boolean
+    True if the error should be suppressed.
+    ''')
+    isRetrying = property(lambda self: self._retrying, doc='''
+    @rtype: boolean
+    True if the error chained will retry execution.
+    ''')
+    
+    def suppress(self):
+        '''
+        Suppress the exception so it should not be propagated.
+        '''
+        self._suppressed = True
+        
+    def retry(self):
+        '''
+        Retries to execute the chain where it left of after an exception occurred.
+        '''
+        if not self._retrying:
+            self._suppressed = True
+            self._retrying = True
+            self.chain._status = None
+            

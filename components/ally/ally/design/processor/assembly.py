@@ -1,7 +1,7 @@
 '''
 Created on Feb 11, 2013
 
-@package: ally base
+@package: ally
 @copyright: 2012 Sourcefabric o.p.s.
 @license: http://www.gnu.org/licenses/gpl-3.0.txt
 @author: Gabriel Nistor
@@ -11,16 +11,16 @@ Contains the assembly support.
 
 from .context import create
 from .execution import Processing
-from .spec import IProcessor, AssemblyError, Resolvers
-from abc import ABCMeta
-from ally.design.processor.report import ReportUnused
+from .resolvers import resolversFor, checkIf, solve, reportFor
+from .spec import IProcessor, AssemblyError, LIST_UNAVAILABLE
+from abc import ABCMeta  # @UnusedImport
+from ally.design.processor.report import ReportUnused, ReportNone
 from collections import Iterable
 import logging
 
 # --------------------------------------------------------------------
 
 log = logging.getLogger(__name__)
-ABCMeta = ABCMeta  # Just to avoid the warning
 
 # --------------------------------------------------------------------
 
@@ -112,33 +112,49 @@ class Assembly(Container):
             except ValueError: raise AssemblyError('Invalid processor %s to be removed' % processor)
             del self.processors[index]
 
+    def createWith(self, contexts=None, report=None):
+        '''
+        Create a processing based on all the processors in the assembly.
+        
+        @param contexts: dictionary{string: ContextMetaClass}
+            The contexts to create with.
+        @return: Processing
+            A processing created based on the current structure of the assembly.
+        '''
+        if contexts is None: contexts = {}
+        if report is None: report = ReportNone()
+        sources, current, extensions, calls = resolversFor(contexts), {}, {}, []
+        for processor in self.processors:
+            assert isinstance(processor, IProcessor), 'Invalid processor %s' % processor
+            processor.register(sources, current, extensions, calls, report)
+        for processor in self.processors:
+            processor.finalized(sources, current, extensions, report)
+        
+        solve(current, sources)
+        if checkIf(current, LIST_UNAVAILABLE):
+            raise AssemblyError('Assembly \'%s\' has unavailable attributes:\n%s' % 
+                                (self.name, reportFor(current, LIST_UNAVAILABLE)))
+        solve(current, extensions)
+        processing = Processing(calls, create(current))
+        reportAss = report.open('assembly \'%s\'' % self.name)
+        reportAss.add(current)
+
+        return processing
+    
     def create(self, **contexts):
         '''
         Create a processing based on all the processors in the assembly.
         
         @param contexts: key arguments of ContextMetaClass
             Key arguments that have as a value the context classes that the processing chain will be used with.
-        @return: Processing|tuple of two
-            processing: Processing
+        @return: Processing
             A processing created based on the current structure of the assembly.
-            report: string
-            A text containing the report for the processing creation
         '''
         report = ReportUnused()
-        calls, sources, resolvers, extensions = [], Resolvers(True, contexts), Resolvers(), Resolvers()
-        for processor in self.processors:
-            assert isinstance(processor, IProcessor), 'Invalid processor %s' % processor
-            processor.register(sources, resolvers, extensions, calls, report)
-            
-        resolvers.solve(sources)
-        resolvers.validate()
-        resolvers.solve(extensions)
-        processing = Processing(calls, create(resolvers))
-        reportAss = report.open('Assembly \'%s\'' % self.name)
-        reportAss.add(resolvers)
+        processing = self.createWith(contexts=contexts, report=report)
         
-        lines = report.report()
-        if lines: log.info('\n%s\n' % '\n'.join(lines))
+        message = report.report()
+        if message: log.info('\n%s\n' % message)
         else: log.info('Nothing to report for \'%s\', everything fits nicely', self.name)
         return processing
 

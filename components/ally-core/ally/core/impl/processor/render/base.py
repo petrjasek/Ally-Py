@@ -10,12 +10,12 @@ Provides the text base encoder processor handler.
 '''
 
 from ally.container.ioc import injected
-from ally.design.processor.attribute import requires, defines
+from ally.design.processor.attribute import requires, defines, definesIf
 from ally.design.processor.context import Context
 from ally.design.processor.execution import Chain
 from ally.design.processor.handler import HandlerProcessor
+from ally.support.util_io import IInputStream
 from collections import Callable
-from functools import partial
 import abc
 import logging
 
@@ -30,18 +30,33 @@ class Response(Context):
     The response context.
     '''
     # ---------------------------------------------------------------- Defined
-    renderFactory = defines(Callable, doc='''
-    @rtype: callable(IOutputStream) -> IRender
-    The renderer factory to be used for the response.
+    renderFactory = definesIf(Callable, doc='''
+    @rtype: callable(Content, markers=None) -> IRender
+    The renderer factory to be used for the response content, it receives as the first argument the content to render in
+    and as the second argument is an optional one and provides the markers to be used in the rendering indexing, if not
+    provided then no indexing will occur. 
     ''')
+    
+class Content(Context):
+    '''
+    The content context.
+    '''
+    # ---------------------------------------------------------------- Defined
+    source = defines(IInputStream)
+    length = defines(int)
+    indexes = definesIf(list, doc='''
+    @rtype: list[Index]
+    The indexes list.
+    ''')
+    # ---------------------------------------------------------------- Required
+    charSet = requires(str)
 
-class ResponseContent(Context):
+class ResponseContent(Content):
     '''
     The response content context.
     '''
     # ---------------------------------------------------------------- Required
     type = requires(str)
-    charSet = requires(str)
 
 # --------------------------------------------------------------------
 
@@ -53,17 +68,17 @@ class RenderBaseHandler(HandlerProcessor):
 
     contentTypes = dict
     # The dictionary{string:string} containing as a key the content types specific for this encoder and as a value
-    # the content type to set on the response, if None will use the key for the content type response. 
+    # the content type to set on the response, if None will use the key for the content type response.
 
-    def __init__(self):
+    def __init__(self, **contexts):
         assert isinstance(self.contentTypes, dict), 'Invalid content types %s' % self.contentTypes
-        super().__init__()
+        super().__init__(**contexts)
 
     def process(self, chain, response:Response, responseCnt:ResponseContent, **keyargs):
         '''
         @see: HandlerProcessor.process
         
-        Encode the ressponse object.
+        Create the renderer factory, returns True if the render factory has been succesfulyy assigned for this renderer.
         '''
         assert isinstance(chain, Chain), 'Invalid processors chain %s' % chain
         assert isinstance(response, Response), 'Invalid response %s' % response
@@ -78,21 +93,19 @@ class RenderBaseHandler(HandlerProcessor):
                 assert log.debug('Normalized content type \'%s\' to \'%s\'', responseCnt.type, contentType) or True
                 responseCnt.type = contentType
 
-            response.renderFactory = partial(self.renderFactory, responseCnt.charSet)
-            return  # We need to stop the chain if we have been able to provide the encoding
-        chain.proceed()
+            if Response.renderFactory in response: response.renderFactory = self.renderFactory
+            chain.cancel()  # We need to stop the chain if we have been able to provide the encoding
+            return True
 
     # ----------------------------------------------------------------
 
     @abc.abstractclassmethod
-    def renderFactory(self, charSet, output):
+    def renderFactory(self, content):
         '''
-        Factory method used for creating a renderer.
+        Factory method used for creating a renderer for the provided content.
         
-        @param charSet: string
-            The character set to be used by the created factory.
-        @param output: IOutputStream
-            The output stream to be used by the renderer.
+        @param content: Content
+            The content to render in.
         @return: IRender
-            The renderer.
+            The renderer for the content.
         '''

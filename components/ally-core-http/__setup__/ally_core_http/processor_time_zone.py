@@ -9,9 +9,10 @@ Created on Sep 14, 2012
 Provides the configurations for the time zone conversion processor.
 '''
 
-from ..ally_core.processor import conversion
+from ..ally_core.processor import converterContent
 from ..ally_core_http.processor import assemblyResources, \
     updateAssemblyResources
+from .processor import headersCustom
 from ally.container import ioc
 from ally.design.processor.handler import Handler
 import logging
@@ -22,13 +23,10 @@ log = logging.getLogger(__name__)
 
 # --------------------------------------------------------------------
 
-try: import pytz
+try: import pytz  # @UnusedImport
 except ImportError: log.info('No pytz library available, no time zone conversion available')
 else:
-    pytz = pytz  # Just to avoid the import warning
-    # ----------------------------------------------------------------
-
-    from ally.core.http.impl.processor.time_zone import TimeZoneHandler
+    from ally.core.http.impl.processor.time_zone import TimeZoneConverterHandler, TIME_ZONE, CONTENT_TIME_ZONE
     
     # --------------------------------------------------------------------
     
@@ -49,14 +47,20 @@ else:
     # --------------------------------------------------------------------
     
     @ioc.entity
-    def timeZone() -> Handler:
-        b = TimeZoneHandler()
+    def converterTimeZone() -> Handler:
+        b = TimeZoneConverterHandler()
         b.baseTimeZone = base_time_zone()
         b.defaultTimeZone = default_time_zone()
         return b
     
     # --------------------------------------------------------------------
     
+    @ioc.before(headersCustom)
+    def updateHeadersCustomForTimeZone():
+        headersCustom().add(TIME_ZONE.name)
+        headersCustom().add(CONTENT_TIME_ZONE.name)
+    
     @ioc.after(updateAssemblyResources)
     def updateAssemblyResourcesForTimeZone():
-        assemblyResources().add(timeZone(), after=conversion())
+        assemblyResources().add(converterTimeZone(), after=converterContent())
+    

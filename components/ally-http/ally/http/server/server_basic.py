@@ -12,11 +12,11 @@ thread serving requests one at a time).
 
 from ally.container.ioc import injected
 from ally.design.processor.assembly import Assembly
-from ally.design.processor.execution import Processing, Chain
+from ally.design.processor.execution import Processing, FILL_ALL
 from ally.http.spec.server import RequestHTTP, ResponseHTTP, RequestContentHTTP, \
     ResponseContentHTTP, HTTP_GET, HTTP_POST, HTTP_PUT, HTTP_DELETE, HTTP_OPTIONS, \
     HTTP
-from ally.support.util_io import readGenerator, IInputStream
+from ally.support.util_io import readGenerator, IInputStream, keepOpen
 from http.server import HTTPServer, BaseHTTPRequestHandler
 from urllib.parse import urlparse, parse_qsl
 import logging
@@ -73,38 +73,36 @@ class RequestHandler(BaseHTTPRequestHandler):
         request, requestCnt = proc.ctx.request(), proc.ctx.requestCnt()
         assert isinstance(request, RequestHTTP), 'Invalid request %s' % request
         assert isinstance(requestCnt, RequestContentHTTP), 'Invalid request content %s' % requestCnt
-
+        
         if RequestHTTP.clientIP in request: request.clientIP = self.client_address[0]
         url = urlparse(self.path)
         request.scheme, request.method = HTTP, method.upper()
-        request.headers = dict(self.headers)
         request.uri = url.path.lstrip('/')
-        request.parameters = parse_qsl(url.query, True, False)
+        if RequestHTTP.headers in request: request.headers = dict(self.headers)
+        if RequestHTTP.parameters in request: request.parameters = parse_qsl(url.query, True, False)
         
-        requestCnt.source = self.rfile
+        if RequestContentHTTP.source in requestCnt: requestCnt.source = keepOpen(self.rfile)
 
-        chain = Chain(proc)
-        chain.process(**proc.fillIn(request=request, requestCnt=requestCnt,
-                                    response=proc.ctx.response(), responseCnt=proc.ctx.responseCnt())).doAll()
-
-        response, responseCnt = chain.arg.response, chain.arg.responseCnt
+        arg = proc.execute(FILL_ALL, request=request, requestCnt=requestCnt)
+        response, responseCnt = arg.response, arg.responseCnt
         assert isinstance(response, ResponseHTTP), 'Invalid response %s' % response
         assert isinstance(responseCnt, ResponseContentHTTP), 'Invalid response content %s' % responseCnt
-
-        if ResponseHTTP.headers in response and response.headers is not None:
-            for name, value in response.headers.items(): self.send_header(name, value)
-
+        
         assert isinstance(response.status, int), 'Invalid response status code %s' % response.status
         if ResponseHTTP.text in response and response.text: text = response.text
         elif ResponseHTTP.code in response and response.code: text = response.code
         else: text = None
         self.send_response(response.status, text)
+        
+        if ResponseHTTP.headers in response and response.headers is not None:
+            for name, value in response.headers.items(): self.send_header(name, value)
+
         self.end_headers()
 
         if ResponseContentHTTP.source in responseCnt and responseCnt.source is not None:
             if isinstance(responseCnt.source, IInputStream): source = readGenerator(responseCnt.source)
             else: source = responseCnt.source
-
+            
             for bytes in source: self.wfile.write(bytes)
 
     # ----------------------------------------------------------------

@@ -9,49 +9,44 @@ Created on Feb 8, 2013
 Provides the gateway repository selector processor.
 '''
 
-from ally.container.ioc import injected
 from ally.design.processor.attribute import requires, defines
 from ally.design.processor.context import Context
-from ally.design.processor.handler import HandlerProcessorProceed
+from ally.design.processor.handler import HandlerProcessor
 from ally.gateway.http.spec.gateway import IRepository
-from ally.http.spec.codes import PATH_NOT_FOUND, METHOD_NOT_AVAILABLE
+from ally.http.spec.codes import PATH_NOT_FOUND, METHOD_NOT_AVAILABLE, CodedHTTP
+from ally.http.spec.headers import HeadersRequire
 
 # --------------------------------------------------------------------
 
-class Request(Context):
+class Request(HeadersRequire):
     '''
     The request context.
     '''
     # ---------------------------------------------------------------- Required
     method = requires(str)
-    headers = requires(dict)
     uri = requires(str)
     repository = requires(IRepository)
     # ---------------------------------------------------------------- Defined
     match = defines(Context)
     
-class Response(Context):
+class Response(CodedHTTP):
     '''
     Context for response. 
     '''
     # ---------------------------------------------------------------- Defined
-    code = defines(str)
-    status = defines(int)
-    isSuccess = defines(bool)
-    allows = defines(list)
+    allows = defines(set)
 
 # --------------------------------------------------------------------
 
-@injected
-class GatewaySelectorHandler(HandlerProcessorProceed):
+class GatewaySelectorHandler(HandlerProcessor):
     '''
     Implementation for a handler that provides the gateway repository selector. This handler will pick the appropriate gateway
     for processing.
     '''
 
-    def process(self, request:Request, response:Response, **keyargs):
+    def process(self, chain, request:Request, response:Response, **keyargs):
         '''
-        @see: HandlerProcessorProceed.process
+        @see: HandlerProcessor.process
         
         Provides the gateway selection.
         '''
@@ -64,10 +59,10 @@ class GatewaySelectorHandler(HandlerProcessorProceed):
         if not request.match:
             allows = request.repository.allowsFor(request.headers, request.uri)
             if allows:
-                response.code, response.status, response.isSuccess = METHOD_NOT_AVAILABLE
-                if response.allows is None: response.allows = list(allows)
-                else: response.allows.extend(allows)
+                METHOD_NOT_AVAILABLE.set(response)
+                if response.allows is None: response.allows = allows
+                else: response.allows.update(allows)
                 request.match = request.repository.find(request.method, request.headers, request.uri, METHOD_NOT_AVAILABLE.status)
             else:
-                response.code, response.status, response.isSuccess = PATH_NOT_FOUND
+                PATH_NOT_FOUND.set(response)
                 request.match = request.repository.find(request.method, request.headers, request.uri, PATH_NOT_FOUND.status)

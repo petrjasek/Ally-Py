@@ -25,19 +25,27 @@ requirejs.config
 		'concat': config.cjs('concat'),		
 		'newgizmo': config.cjs('newgizmo'),
         'backbone': config.cjs('backbone'),
+        'codebird': config.cjs('codebird'),
         'moment': config.cjs('moment'),
         'router': config.cjs('router'),
         'vendor': config.cjs('vendor'),
         'angular': 'http://ajax.googleapis.com/ajax/libs/angularjs/1.0.7/angular',
-        'angular-resource': 'http://code.angularjs.org/1.0.7/angular-resource'
+        'angular-resource': 'http://code.angularjs.org/1.0.7/angular-resource',
+        'facebook-connect': 'https://connect.facebook.net/en_US/all',
+        'angular-bootstrap': config.cjs('ui-bootstrap-tpls-0.4.0.min')
 	},
     shim: {
         'vendor/backbone': {
             deps: ['vendor/underscore', 'jquery'],
             exports: 'Backbone'
         },
+		'vendor/codebird-js/codebird': {
+			deps: ['vendor/codebird-js/sha1'],
+			exports: 'Codebird'
+		},
         'angular': {exports: 'angular'},
-        'angular-resource': {deps: ['angular']}
+        'angular-resource': {deps: ['angular']},
+        'angular-bootstrap': {deps: ['angular', 'bootstrap']}
     }
 });
 
@@ -54,7 +62,13 @@ require(['concat', 'backbone'], function(){
 	], 
 	function(MenuView, authView, $, superdesk, Action, router)
 	{
-	    $(authView).on('logout login', function(){ Action.clearCache(); });
+	    $(authView).on('logout login', function() {
+            Action.clearCache();
+        });
+
+        $(authView).on('login', function() {
+            router.reload();
+        });
 
         // initialize menu before auth because we have some events bound to auth there
         var menu = new MenuView({ el: $('#navbar-top') });

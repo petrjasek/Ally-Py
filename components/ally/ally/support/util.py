@@ -9,15 +9,11 @@ Created on Jun 9, 2011
 Provides implementations that provide general behavior or functionality.
 '''
 
-from collections import Iterable, Iterator, namedtuple
-from inspect import isclass, isfunction
+from collections import Iterable, Iterator, namedtuple, deque
+from inspect import isclass
 from weakref import WeakKeyDictionary
-import sys
-
-# --------------------------------------------------------------------
-
-# Flag indicating that the python version is 3k or more.
-IS_PY3K = int(sys.version[:1]) >= 3
+import re
+from io import StringIO
 
 # --------------------------------------------------------------------
 
@@ -96,7 +92,7 @@ class Referencer:
             The reference tuple.
         '''
         function = getattr(self._ally_referencer_class, name)
-        if not isfunction(function): raise AttributeError('Invalid function name \'%s\'' % name)
+        if not callable(function): raise AttributeError('Invalid function name \'%s\'' % name)
         return self._ally_referencer_class, name
 
 def ref(clazz):
@@ -166,7 +162,7 @@ def iterRefClass(refsClass):
 class immut(dict):
     '''The immutable dictionary class'''
 
-    __slots__ = ('__hash__value')
+    __slots__ = ('__hash__value',)
 
     def __new__(cls, *args, **keyargs):
         if not (args or keyargs):
@@ -186,6 +182,33 @@ class immut(dict):
         except AttributeError: self.__hash__value = hash(tuple(p for p in self.items()))
         return self.__hash__value
 
+class FlagSet(set):
+    '''
+    Extension of a set that provides easy management for string flags.
+    '''
+    __slots__ = ()
+    
+    def __init__(self, flags):
+        super().__init__(flags)
+        if __debug__:
+            for flag in self: assert isinstance(flag, str), 'Invalid flag %s' % flag
+                
+    def checkOnce(self, flag):
+        '''
+        Checks if the provided flag is in this flag set after the check the flag will get removed.
+        
+        @param flag: string
+            The flag to check.
+        @return: boolean
+            True if the flag was contained, False otherwise.
+        '''
+        assert isinstance(flag, str), 'Invalid flag %s' % flag
+        try: self.remove(flag)
+        except KeyError: return False
+        return True
+
+# --------------------------------------------------------------------
+
 def firstOf(coll):
     '''
     Provides the first element from the provided collection.
@@ -197,6 +220,23 @@ def firstOf(coll):
     coll = iter(coll)
     return next(coll)
 
+def firstCheck(iterator):
+    '''
+    Checks the first element from the provided iterator. It will return a tuple containing as the first value a boolean
+    with False if the element is not the first element in the provided iterator and True if is the first one. On the last
+    position of the tuple it will return the actual value provided by the iterator.
+    
+    @param iterator: Iterator(object)
+        The iterator to wrap for the first element check.
+    @return: Iterator(tuple(boolean, object))
+        A tuple containing as the first value a boolean with False if the element is not the first element in the
+        provided iterator and True if is the first one
+    '''
+    first = True
+    for item in iterator:
+        yield first, item
+        first = False
+            
 def lastCheck(iterator):
     '''
     Checks the last element from the provided iterator. It will return a tuple containing as the first value a boolean
@@ -250,3 +290,196 @@ def firstLastCheck(iterator):
             stop = True
             yield isFirst, True, item
         isFirst = False
+
+# --------------------------------------------------------------------
+
+def intToString(number, numerals='0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ'):
+    '''
+    Converts an integer to a string using the provided numerals.
+    
+    @param number: integer
+        The number to convert.
+    @param numerals: string
+        The numerals to use in the conversion.
+    @return: string
+        The converted number.
+    '''
+    assert isinstance(number, int), 'Invalid number %s' % number
+    assert number >= 0, 'Only positive numbers are allowed %s' % number
+    assert isinstance(numerals, str), 'Invalid numerals %s' % numerals
+    assert len(numerals) > 2, 'At least two numerals are required'
+    base = len(numerals)
+
+    if number == 0: return numerals[0]
+
+    result = []
+    while number:
+        result.append(numerals[int(number % base)])
+        number = int(number / base)
+    result.reverse()
+
+    return ''.join(result)
+
+def modifyFirst(value, upper=False):
+    '''
+    Modifies the first letter to an upper or lower letter.
+    
+    @param value: string
+        The value to convert.
+    @param upper: boolean
+        If true converts the letter to upper, otherwise to a lower one.
+    @return: string
+        The converted value.
+    '''
+    assert isinstance(value, str), 'Invalid value %s' % value
+    assert value, 'At least one letter is required'
+    if upper: return '%s%s' % (value[0].upper(), value[1:])
+    return '%s%s' % (value[0].lower(), value[1:])
+
+def toUnderscore(value):
+    '''
+    Converts from a camel case string to an underscore one.
+    
+    @param value: string
+        The value to convert.
+    @return: string
+        The converted value.
+    '''
+    return re.sub('([a-z0-9])([A-Z])', r'\1_\2', re.sub('(.)([A-Z][a-z]+)', r'\1_\2', value)).lower()
+
+class TextTable:
+    '''
+    Provides the text table rendering.
+    '''
+    
+    def __init__(self, *headers):
+        '''
+        Construct the text table.
+        
+        @param headers: arguments[string]
+            The headers of the table.
+        '''
+        assert headers, 'At least one header is required'
+        
+        self._headers = headers
+        self._sizes = []
+        self._rows = []
+        self._processing = deque()
+        
+        for header in headers:
+            assert isinstance(header, str), 'Invalid header %s' % header
+            self._sizes.append(len(header) + 2)
+            
+    def add(self, *row):
+        '''
+        Adds a new row to the table.
+        
+        @param row: arguments[string]
+            The row items.
+        '''
+        assert row, 'At least one row item is required'
+        
+        isFirst = True
+        self._processing.append(row)
+        while self._processing:
+            row = self._processing.popleft()
+            if len(row) == 1:
+                item = row[0]
+                assert isinstance(item, str), 'Invalid item %s' % item
+                
+                if isFirst:
+                    lines = item.split('\n')
+                    if len(lines) > 1:
+                        self._processing.extend((line,) for line in lines)
+                        continue
+                    
+                litem, total = self._len(item), sum(self._sizes)
+                if litem > total:
+                    gain = int(litem / len(self._sizes))
+                    for k in range(len(self._sizes)): self._sizes[k] += gain
+                    self._sizes[-1] += litem - (len(self._sizes) * gain)
+                
+            else:
+                if isFirst:
+                    extended = [list(row)]
+                    for k, item in enumerate(row):
+                        assert isinstance(item, str), 'Invalid item %s' % item 
+                        lines = item.split('\n')
+                        if len(lines) > 1:
+                            for j, line in enumerate(lines):
+                                while len(extended) <= j: extended.append([''] * len(self._sizes))
+                                extended[j][k] = line
+                    if len(extended) > 1:
+                        self._processing.extend(extended)
+                        continue
+
+                for k, item in enumerate(row):
+                    assert isinstance(item, str), 'Invalid item %s' % item
+                
+                    self._sizes[k] = max(self._sizes[k], self._len(item))
+                
+            self._rows.append((bool(self._processing), row))
+            isFirst = False
+            
+    def render(self, out=None):
+        '''
+        Renders the table into the provided output, if not output is provided it will return the rendered table.
+        '''
+        if out is None:
+            out = StringIO()
+            ret = True
+        else: ret = False
+        
+        self._line(out)
+        out.write('\n')
+        self._row(out, (('{: ^%s}' % (self._sizes[k] - 1)).format(header) for k, header in enumerate(self._headers)))
+        out.write('\n')
+        self._line(out, line='=')
+        out.write('\n')
+        for hasNext, row in self._rows:
+            if len(row) == 1: self._item(out, row[0])
+            else: self._row(out, row)
+            out.write('\n')
+            if not hasNext:
+                self._line(out)
+                out.write('\n')
+                
+        if ret: return out.getvalue()
+        
+    # ----------------------------------------------------------------
+    
+    def _len(self, item):
+        '''
+        Provides the item length.
+        '''
+        return max(len(line) for line in item.split('\n')) + 2
+    
+    def _line(self, out, line='-', intersetion='+'):
+        '''
+        Renders a line.
+        '''
+        for size in self._sizes:
+            out.write(intersetion)
+            out.write(line * size)
+        out.write(intersetion)
+        
+    def _row(self, out, row, vertical='|', ident=' '):
+        '''
+        Renders the row values.
+        '''
+        out.write(vertical)
+        for k, item in enumerate(row):
+            out.write(ident)
+            out.write(item)
+            out.write(ident * (self._sizes[k] - len(item) - 1))
+            out.write(vertical)
+    
+    def _item(self, out, item, vertical='|', ident=' '):
+        '''
+        Renders the row values.
+        '''
+        out.write(vertical)
+        out.write(ident)
+        out.write(item)
+        out.write(ident * (sum(self._sizes) - len(item) - 2 + len(self._sizes)))
+        out.write(vertical)

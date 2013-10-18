@@ -17,6 +17,7 @@ class IContained(metaclass=abc.ABCMeta):
     '''
     Provides the contained descriptor specification. This needs to be handled.
     '''
+    __slots__ = ()
 
     @abc.abstractclassmethod
     def __contained__(self, obj):
@@ -40,6 +41,7 @@ class IGet(metaclass=abc.ABCMeta):
     '''
     Provides the get descriptor specification. This is automatically handled by the python language.
     '''
+    __slots__ = ()
 
     @abc.abstractclassmethod
     def __get__(self, obj, clazz=None):
@@ -64,6 +66,7 @@ class ISet(metaclass=abc.ABCMeta):
     '''
     Provides the set descriptor specification. This is automatically handled by the python language.
     '''
+    __slots__ = ()
 
     @abc.abstractclassmethod
     def __set__(self, obj, value):
@@ -86,6 +89,7 @@ class IDelete(metaclass=abc.ABCMeta):
     '''
     Provides the delete descriptor specification. This is automatically handled by the python language.
     '''
+    __slots__ = ()
 
     @abc.abstractclassmethod
     def __delete__(self, obj):
@@ -100,4 +104,25 @@ class IDelete(metaclass=abc.ABCMeta):
     def __subclasshook__(cls, C):
         if cls is IDelete:
             if any('__delete__' in B.__dict__ for B in C.__mro__): return True
+        return NotImplemented
+
+# --------------------------------------------------------------------
+
+class IDo(metaclass=abc.ABCMeta):
+    '''
+    Provides the do call specification. This is automatically handled by the python language.
+    '''
+    __slots__ = ()
+
+    @abc.abstractclassmethod
+    def __call__(self, *args, **kwds):
+        '''
+        Perform some action.
+        '''
+
+    @classmethod
+    def __subclasshook__(cls, C):
+        if cls is IDo:
+            if any("__call__" in B.__dict__ for B in C.__mro__):
+                return True
         return NotImplemented

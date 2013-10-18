@@ -10,14 +10,14 @@ Provides the rendering processing.
 '''
 
 from ally.container.ioc import injected
+from ally.core.impl.processor.base import ErrorResponse, addError
 from ally.core.spec.codes import ENCODING_UNKNOWN
 from ally.design.processor.assembly import Assembly
 from ally.design.processor.attribute import defines, optional
+from ally.design.processor.branch import Branch
 from ally.design.processor.context import Context
-from ally.design.processor.execution import Chain, Processing
-from ally.design.processor.handler import HandlerBranchingProceed
-from ally.design.processor.processor import Included
-from ally.exception import DevelError
+from ally.design.processor.execution import Chain, Processing, CONSUMED
+from ally.design.processor.handler import HandlerBranching
 import codecs
 import itertools
 
@@ -30,15 +30,6 @@ class Request(Context):
     # ---------------------------------------------------------------- Optional
     accTypes = optional(list)
     accCharSets = optional(list)
-
-class Response(Context):
-    '''
-    The response context.
-    '''
-    # ---------------------------------------------------------------- Defined
-    code = defines(str)
-    isSuccess = defines(bool)
-    text = defines(str)
 
 class ResponseContent(Context):
     '''
@@ -57,7 +48,7 @@ class ResponseContent(Context):
 # --------------------------------------------------------------------
 
 @injected
-class RenderingHandler(HandlerBranchingProceed):
+class RenderingHandler(HandlerBranching):
     '''
     Implementation for a processor that provides the support for creating the renderer. If a processor is successful
     in the render creation process it has to stop the chain execution.
@@ -76,17 +67,17 @@ class RenderingHandler(HandlerBranchingProceed):
         assert isinstance(self.contentTypeDefaults, (list, tuple)), \
         'Invalid default content type %s' % self.contentTypeDefaults
         assert isinstance(self.charSetDefault, str), 'Invalid default character set %s' % self.charSetDefault
-        super().__init__(Included(self.renderingAssembly))
+        super().__init__(Branch(self.renderingAssembly).included())
 
-    def process(self, rendering, request:Request, response:Response, responseCnt:ResponseContent, **keyargs):
+    def process(self, chain, processing, request:Request, response:ErrorResponse, responseCnt:ResponseContent, **keyargs):
         '''
-        @see: HandlerBranchingProceed.process
+        @see: HandlerBranching.process
         
         Create the render for the response object.
         '''
-        assert isinstance(rendering, Processing), 'Invalid processing %s' % rendering
+        assert isinstance(chain, Chain), 'Invalid chain %s' % chain
+        assert isinstance(processing, Processing), 'Invalid processing %s' % processing
         assert isinstance(request, Request), 'Invalid request %s' % request
-        assert isinstance(response, Response), 'Invalid response %s' % response
         assert isinstance(responseCnt, ResponseContent), 'Invalid response content %s' % responseCnt
         
         # Resolving the character set
@@ -106,12 +97,10 @@ class RenderingHandler(HandlerBranchingProceed):
 
         resolved = False
         if responseCnt.type:
-            renderChain = Chain(rendering)
-            renderChain.process(request=request, response=response, responseCnt=responseCnt, **keyargs)
-            if renderChain.doAll().isConsumed():
+            if chain.branch(processing).execute(CONSUMED):
                 if response.isSuccess is not False:
-                    response.code, response.isSuccess = ENCODING_UNKNOWN
-                    response.text = 'Content type \'%s\' not supported for rendering' % responseCnt.type
+                    ENCODING_UNKNOWN.set(response)
+                    addError(response, 'Content type \'%(type)s\' not supported for rendering', type=responseCnt.type)
             else: resolved = True
 
         if not resolved:
@@ -121,9 +110,9 @@ class RenderingHandler(HandlerBranchingProceed):
             else: contentTypes = self.contentTypeDefaults
             for contentType in contentTypes:
                 responseCnt.type = contentType
-                renderChain = Chain(rendering)
-                renderChain.process(request=request, response=response, responseCnt=responseCnt, **keyargs)
-                if not renderChain.doAll().isConsumed(): break
+                if not chain.branch(processing).execute(CONSUMED): break
             else:
-                raise DevelError('There is no renderer available, this is more likely a setup issues since the '
-                                 'default content types should have resolved the renderer')
+                ENCODING_UNKNOWN.set(response)
+                addError(response,
+                         'There is no renderer available',
+                         'This is more likely a setup issues since the default content types should have resolved the renderer')

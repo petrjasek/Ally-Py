@@ -10,7 +10,12 @@ Contains the handlers support.
 '''
 
 from .assembly import Container
-from .processor import Contextual, Brancher
+from .branch import Routing
+from .context import Context
+from .execution import Chain
+from .processor import Composite, Contextual, Brancher, Renamer
+from .resolvers import resolverFor
+from .spec import ContextMetaClass, IProcessor, IResolver
 import abc
 
 # --------------------------------------------------------------------
@@ -34,11 +39,14 @@ class HandlerProcessor(Handler):
     A handler that contains a processor derived on the contextual 'process' function.
     '''
 
-    def __init__(self):
+    def __init__(self, **contexts):
         '''
         Construct the handler with the processor automatically created from the 'process' function.
+        
+        @param contexts: key arguments
+            Additional context that are not used in the contextual function but they are required in assembly.
         '''
-        super().__init__(Contextual(self.process, proceed=False))
+        super().__init__(push(Contextual(self.process), **contexts))
 
     @abc.abstractclassmethod
     def process(self, chain, **keyargs):
@@ -48,23 +56,31 @@ class HandlerProcessor(Handler):
         @param chain: Chain
             The processing chain.
         '''
-
-class HandlerProcessorProceed(Handler):
+        
+class HandlerComposite(Handler):
     '''
-    A handler that contains a processor derived on the contextual 'process' function and automatically proceeds the chain.
+    A handler that contains a processor derived on the contextual 'process' function and allows other processors to be
+    added.
     '''
 
-    def __init__(self):
+    def __init__(self, *processors, **contexts):
         '''
         Construct the handler with the processor automatically created from the 'process' function.
+        
+        @param processors: arguments[IProcessor]
+            Additional processors to be incorporated into the handler.
+        @param contexts: key arguments
+            Additional context that are not used in the contextual function but they are required in assembly.
         '''
-        super().__init__(Contextual(self.process, proceed=True))
+        super().__init__(Composite(push(Contextual(self.process), **contexts), *processors))
 
     @abc.abstractclassmethod
-    def process(self, **keyargs):
+    def process(self, chain, **keyargs):
         '''
-        The contextual process function used by the handler, this process will not require a chain and will always
-        proceed with the execution.
+        The contextual process function used by the handler.
+        
+        @param chain: Chain
+            The processing chain.
         '''
         
 # --------------------------------------------------------------------
@@ -75,7 +91,7 @@ class HandlerBranching(Handler):
     processors containers based on the setup provided at construction.
     '''
 
-    def __init__(self, *branches):
+    def __init__(self, *branches, **contexts):
         '''
         Construct the handler with the processor automatically created from the 'process' function and the including or 
         branching based on the provided processors containers.
@@ -83,8 +99,10 @@ class HandlerBranching(Handler):
         @param branches: arguments[IBranch]
             The branches used in branching, attention the order provided for setups will be reflected in the provided 
             processing order.
+        @param contexts: key arguments
+            Additional context that are not used in the contextual function but they are required in assembly.
         '''
-        super().__init__(Brancher(self.process, *branches, proceed=False))
+        super().__init__(push(Brancher(self.process, *branches), **contexts))
 
     @abc.abstractclassmethod
     def process(self, chain, *processings, **keyargs):
@@ -96,31 +114,89 @@ class HandlerBranching(Handler):
         @param processings: arguments[Processing]
             The processings to use for branching, in the order the initial branches setups have been provided.
         '''
-        
-class HandlerBranchingProceed(Handler):
+
+# --------------------------------------------------------------------
+
+class RenamerHandler(Handler):
     '''
-    A handler that contains a processor derived on the contextual 'process' function that also provides branching
-    and automatically proceeds the chain.
+    Handler renamer that wraps a container or a processor with the purpose of renaming contexts.
     '''
     
-    def __init__(self, *branches):
+    def __init__(self, target, *mapping):
         '''
-        Construct the handler with the processor automatically created from the 'process' function and the including or 
-        branching based on the provided processors containers.
+        Construct the handler renamer.
         
-        @param branches: arguments[IBranch]
-            The branches used in branching, attention the order provided for setups will be reflected in the provided 
-            processing order.
+        @param target: Container|Processor
+            Restructures the provided target.
+        @param mapping: arguments[tuple(string, string)]
+            The mappings that the renamer needs to make, also the context to be passed along without renaming need to
+            be provided as simple names, attention the order in which the context mappings are provided is crucial, examples:
+                ('request', 'solicitation')
+                    The wrapped processor will receive as the 'request' context the 'solicitation' context.
+                ('request', 'solicitation'), ('request', 'response')
+                    The wrapped processor will receive as the 'request' context the 'solicitation' and 'response' context.
+                ('solicitation', 'request'), ('response', 'request')
+                    The wrapped processor will receive as the 'solicitation' and 'response' context the 'request' context.
         '''
-        super().__init__(Brancher(self.process, *branches, proceed=True))
+        if isinstance(target, Container):
+            assert isinstance(target, Container)
+            assert len(target.processors) == 1, 'Container %s, is required to have only one processor' % target
+            processor = target.processors[0]
+        assert isinstance(processor, IProcessor), 'Invalid processor %s' % processor
+        super().__init__(Renamer(processor, *mapping))
 
-
-    @abc.abstractclassmethod
-    def process(self, *processings, **keyargs):
+class RoutingHandler(HandlerBranching):
+    '''
+    Implementation for a handler that provides routing to a designated container.
+    '''
+    
+    def __init__(self, target):
+        super().__init__(Routing(target))
+            
+    def process(self, chain, processing, **keyargs):
         '''
-        The contextual process function used by the handler, this process will not require a chain and will always
-        proceed with the execution.
+        @see: HandlerBranching.process
         
-        @param processings: arguments[Processing]
-            The processings to use for branching, in the order the initial branches setups have been provided.
+        Process the routing.
         '''
+        assert isinstance(chain, Chain), 'Invalid chain %s' % chain
+        chain.route(processing)
+
+# --------------------------------------------------------------------
+
+def push(container, **contexts):
+    '''
+    Pushes into the processor the additional provided contexts.
+    
+    @param container: Container|Contextual
+        The processor to push the context in.
+    @param contexts: key arguments of ContextMetaClass|IResolver}
+        The context classes to push.
+    @return: Container|Contextual
+        The same container.
+    '''
+    if isinstance(container, Contextual): processor = container
+    elif isinstance(container, Container):
+        assert isinstance(container, Container)
+        assert len(container.processors) == 1, 'Container %s, is required to have only one processor' % container
+        processor = container.processors[0]
+    assert isinstance(processor, Contextual), 'Invalid processor %s' % processor
+    for name, context in contexts.items():
+        assert isinstance(name, str), 'Invalid name %s' % name
+        if isinstance(context, tuple):
+            assert context, 'At least one context class is required'
+            multiple = context
+            context = None
+            for clazz in multiple:
+                assert clazz is not Context, 'Context class is an invalid class'
+                assert isinstance(clazz, (ContextMetaClass, IResolver)), 'Invalid context class %s' % context
+                if context is None:
+                    if isinstance(clazz, IResolver): context = clazz
+                    else: context = resolverFor(clazz)
+                else: context = context.solve(clazz if isinstance(clazz, IResolver) else resolverFor(clazz))
+        else: context = context if isinstance(context, IResolver) else resolverFor(context)
+        
+        assert isinstance(context, IResolver), 'Invalid context resolver %s' % context
+        if name in processor.contexts: processor.contexts[name] = context.solve(processor.contexts[name])
+        else: processor.contexts[name] = context
+    return container

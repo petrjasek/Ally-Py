@@ -1,23 +1,24 @@
 '''
 Created on Sep 14, 2012
 
-@package ally utilities
-@copyright 2012 Sourcefabric o.p.s.
-@license http: // www.gnu.org / licenses / gpl - 3.0.txt
+@package: ally base
+@copyright: 2011 Sourcefabric o.p.s.
+@license: http://www.gnu.org/licenses/gpl-3.0.txt
 @author: Mugur Rus
 
 Contains ZIP utils
 '''
-
+# TODO: Gabriel: see if this module still makes sense
 from os.path import join, isdir
-from ally.support.util_io import synchronizeURIToDir
-from ally.zip.util_zip import getZipFilePath, validateInZipPath, ZIPSEP
 from platform import system, machine, system_alias, release, version, \
     linux_distribution
 from zipfile import ZipFile
 
-# --------------------------------------------------------------------
+from ally.support.util_io import synchronizeURIToDir
+from ally.zip.util_zip import getZipFilePath, validateInZipPath, ZIPSEP
 
+
+# --------------------------------------------------------------------
 SYSTEM_ALL = 'all'
 MACHINE_ALL = 'all'
 

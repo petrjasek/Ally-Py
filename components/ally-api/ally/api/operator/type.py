@@ -9,199 +9,40 @@ Created on Mar 13, 2012
 Provides the operator types.
 '''
 
-from ..type import Type
-from .container import Model, Container, Query, Criteria
-from ally.api.operator.container import Service
-from ally.api.type import TypeClass, typeFor
-from inspect import isclass
-
-# --------------------------------------------------------------------
-
-class TypeContainer(TypeClass):
-    '''
-    Provides the type for the properties container.
-    '''
-    __slots__ = ('container',)
-
-    def __init__(self, clazz, container):
-        '''
-        Constructs the container type for the provided container.
-        @see: TypeClass.__init__
-        
-        @param clazz: class
-            The class associated with the container.
-        @param container: Container
-            The container that this type is constructed on.
-        '''
-        assert isinstance(container, Container), 'Invalid container provided %s' % container
-        super().__init__(clazz, False, True)
-        self.container = container
-        
-    def parents(self):
-        '''
-        Provides a list of container types for the inherited container classes.
-
-        @return: list[TypeContainer]
-            The inherited type containers in the inherited order.
-        '''
-        parents = []
-        for parent in self.clazz.__bases__:
-            parentType = typeFor(parent)
-            if isinstance(parentType, self.__class__): parents.append(parentType)
-        return parents
-
-    def propertyTypes(self):
-        '''
-        Provides the properties types of the container.
-        
-        @return: list[TypeProperty]
-            The properties types.
-        '''
-        return tuple(self.propertyTypeFor(name) for name in self.container.properties)
-
-    def propertyTypeFor(self, name):
-        '''
-        Provides the type property for the provided name.
-        
-        @param name: string
-            The name of the type property to provide.
-        @return: TypeProperty
-            The type property for the provided name.
-        '''
-        return typeFor(getattr(self.clazz, name))
-
-class TypeModel(TypeContainer):
-    '''
-    Provides the type for the model.
-    '''
-    __slots__ = ()
-
-    def __init__(self, clazz, container):
-        '''
-        Constructs the model type for the provided model.
-        @see: Type.__init__
-        
-            The model class associated with the model.
-        @param container: Model
-            The model that this type is constructed on.
-        @param baseClass: class
-            The base model class, a super type of the for class that needs to be considered valid for this model.
-            This is used whenever a model is mapped to also validate classes that are API standard.
-        '''
-        assert isinstance(container, Model), 'Invalid model provided %s' % container
-        super().__init__(clazz, container)
-
-    def hasId(self):
-        '''
-        Checks if it the model has a property id.
-        
-        @return: boolean
-            True if there is a property id type.
-        '''
-        return self.container.propertyId is not None
-    
-    def propertyTypeId(self):
-        '''
-        Provides the type property id.
-        '''
-        assert self.container.propertyId is not None, 'The model %s has no property id' % self.container
-        return self.propertyTypeFor(self.container.propertyId)
-
-class TypeCriteria(TypeContainer):
-    '''
-    Provides the type for the criteria.
-    '''
-    __slots__ = ()
-
-    def __init__(self, clazz, container):
-        '''
-        Constructs the criteria type for the provided criteria.
-        @see: Type.__init__
-        
-        @param clazz: class
-            The model class associated with the model.
-        @param container: Criteria
-            The criteria that this type is constructed on.
-        '''
-        assert isinstance(container, Criteria), 'Invalid criteria provided %s' % container
-        super().__init__(clazz, container)
-
-class TypeQuery(TypeClass):
-    '''
-    Provides the type for the query.
-    '''
-    __slots__ = ('query', 'owner')
-
-    def __init__(self, clazz, query, owner):
-        '''
-        Constructs the query type for the provided query.
-        @see: TypeClass.__init__
-        
-        @param clazz: class
-            The class associated with the query.
-        @param query: Query
-            The query that this type is constructed on.
-        @param owner: TypeModel
-            The type model that is this type query is owned by.
-        '''
-        assert isinstance(query, Query), 'Invalid query %s' % query
-        assert isinstance(owner, TypeModel), 'Invalid owner %s' % owner
-        super().__init__(clazz, False, False)
-
-        self.query = query
-        self.owner = owner
-
-    def criteriaEntryTypes(self):
-        '''
-        Provides the criteria entry types for the query.
-        
-        @return: list[TypeCriteriaEntry]
-            The criteria entry types.
-        '''
-        return tuple(self.criteriaEntryTypeFor(name) for name in self.query.criterias)
-
-    def criteriaEntryTypeFor(self, name):
-        '''
-        Provides the criteria entry type for the provided name.
-        
-        @param name: string
-            The name of the type property to provide.
-        @return: TypeCriteriaEntry
-            The criteria entry type for the name.
-        '''
-        return typeFor(getattr(self.clazz, name))
+from ..type import Type, typeFor, TypeClass
+from ally.api.type import Input
+from collections import OrderedDict
+from inspect import ismethod, isclass
 
 # --------------------------------------------------------------------
 
 class TypeProperty(Type):
     '''
-    This type is used to wrap a container property as types.
+    The property type definition.
     '''
-    __slots__ = ('parent', 'property', 'container', 'type')
 
-    def __init__(self, parent, property, type=None):
+    def __init__(self, parent, name, type, isContainable=True):
         '''
         Constructs the property type for the provided property name and parent container type.
         @see: Type.__init__
         
         @param parent: TypeContainer
             The container of the property type.
-        @param property: string
+        @param name: string
             The property name that this type represents.
         @param type: Type|None
-            container.
+            The type to associate with the property type, if not provided then the container property type is used.
+        @param isContainable: boolean
+            If true than this type is containable in types like List and Iter.
         '''
         assert isinstance(parent, TypeContainer), 'Invalid container type %s' % parent
-        assert isinstance(property, str), 'Invalid property %s' % property
-        assert property in parent.container.properties, \
-        'Property %s is not contained in container %s' % (property, parent.container)
-        assert type is None or isinstance(type, Type), 'Invalid type %s' % type
+        assert isinstance(name, str), 'Invalid property name %s' % name
+        assert isinstance(type, Type), 'Invalid type %s' % type
+        super().__init__(False, isContainable)
 
         self.parent = parent
-        self.property = property
-        self.container = parent.container
-        self.type = type or self.container.properties[property]
-        super().__init__(False, True)
+        self.name = name
+        self.type = type
 
     def isOf(self, type):
         '''
@@ -214,98 +55,18 @@ class TypeProperty(Type):
         @see: Type.isValid
         '''
         return self.type.isValid(obj)
-
-    def __hash__(self):
+    
+    def rebase(self, parent):
         '''
-        @see: Type.__hash__
-        '''
-        return hash((self.parent, self.property))
-
-    def __eq__(self, other):
-        '''
-        @see: Type.__eq__
-        '''
-        if isinstance(other, self.__class__):
-            return self.parent == other.parent and self.property == other.property
-        return False
-
-    def __str__(self):
-        '''
-        @see: Type.__str__
-        '''
-        return '%s.%s' % (self.parent, self.property)
-
-class TypeModelProperty(TypeProperty):
-    '''
-    This type is used to wrap a model property as types.
-    '''
-
-    def __init__(self, parent, property, type=None):
-        '''
-        Constructs the property type for the provided property name and parent container type.
-        @see: TypeProperty.__init__
+        Create a new type property based on this property but having as a parent the provided parent container.
         
-        @param parent: TypeModel
-            The model of the property type.
-        '''
-        assert isinstance(parent, TypeModel), 'Invalid model type %s' % parent
-        super().__init__(parent, property, type)
-
-class TypeCriteriaEntry(TypeClass):
-    '''
-    This type is used to wrap a query criteria as types.
-    '''
-    __slots__ = ('parent', 'name', 'criteriaType', 'criteria')
-
-    def __init__(self, parent, name):
-        '''
-        Constructs the criteria type for the provided criteria name and parent query type.
-        @see: TypeClass.__init__
-        
-        @param parent: TypeQuery
-            The query type of the criteria type.
-        @param name: string
-            The criteria name represented by the type.
-        '''
-        assert isinstance(parent, TypeQuery), 'Invalid query type %s' % parent
-        assert isinstance(name, str), 'Invalid name %s' % name
-        assert name in parent.query.criterias, \
-        'Criteria %s is not contained in query %s' % (name, parent.query)
-
-        self.parent = parent
-        self.name = name
-        self.criteriaType = typeFor(parent.query.criterias[name])
-        assert isinstance(self.criteriaType, TypeCriteria), 'Invalid criteria class %s' % self.criteriaClass
-        self.criteria = self.criteriaType.container
-        super().__init__(self.criteriaType.clazz, False, False)
-        
-    def isOf(self, type):
-        '''
-        @see: TypeClass.isOf
-        '''
-        if isclass(type) and (issubclass(type, self.clazz) or issubclass(self.clazz, type)): return True
-        if self == typeFor(type): return True
-        return False
-
-    def propertyTypes(self):
-        '''
-        Provides the criteria entry properties types.
-        
-        @return: list[TypeProperty]
-            The criteria entry types.
-        '''
-        return self.criteriaType.propertyTypes()
-
-    def propertyTypeFor(self, name):
-        '''
-        Provides the criteria entry type for the provided name.
-        
-        @param name: string
-            The name of the type property to provide.
+        @param parent: TypeContainer
+            The container of the property type.
         @return: TypeProperty
-            The criteria entry type for the name.
+            The new rebased type property.
         '''
-        return self.criteriaType.propertyTypeFor(name)
+        assert isinstance(parent, TypeContainer), 'Invalid container type %s' % parent
+        return TypeProperty(parent, self.name, self.type, isContainable=self.isContainable)
 
     def __hash__(self):
         '''
@@ -317,7 +78,7 @@ class TypeCriteriaEntry(TypeClass):
         '''
         @see: Type.__eq__
         '''
-        if isinstance(other, self.__class__):
+        if other.__class__ == self.__class__:
             return self.parent == other.parent and self.name == other.name
         return False
 
@@ -327,26 +88,157 @@ class TypeCriteriaEntry(TypeClass):
         '''
         return '%s.%s' % (self.parent, self.name)
 
-# --------------------------------------------------------------------
-
-class TypeService(TypeClass):
+class TypePropertyContainer(TypeProperty):
     '''
-    Provides the type for the service.
+    The property type definition that is targeting another container but the actual represented value is not of container type.
     '''
-    __slots__ = ('service',)
 
-    def __init__(self, clazz, service):
+    def __init__(self, parent, name, type, container, isContainable=True):
         '''
-        Constructs the service type for the provided service.
+        Constructs the property type that is targeting a container.
+        @see: TypeProperty.__init__
+        
+        @param container: TypeContainer
+            The container represented by the property type.
+        '''
+        assert isinstance(container, TypeContainer), 'Invalid container type %s' % container
+        super().__init__(parent, name, type, isContainable)
+
+        self.container = container
+        
+    def rebase(self, parent):
+        '''
+        @see: TypeProperty.rebase
+        '''
+        assert isinstance(parent, TypeContainer), 'Invalid container type %s' % parent
+        return TypePropertyContainer(parent, self.name, self.type, self.container, isContainable=self.isContainable)
+    
+    def __hash__(self):
+        '''
+        @see: Type.__hash__
+        '''
+        return hash((self.parent, self.name))
+    
+    def __eq__(self, other):
+        '''
+        @see: Type.__eq__
+        '''
+        if other.__class__ == self.__class__:
+            return self.parent == other.parent and self.name == other.name and self.container == other.container
+        return False
+
+class TypeContainer(TypeClass):
+    '''
+    Provides the type for the properties container.
+    '''
+
+    def __init__(self, clazz, isContainable=True):
+        '''
+        Constructs the container type.
         @see: TypeClass.__init__
         
-        @param service: Service
-            The service that this type is constructed on.
+        @param clazz: class
+            The class associated with the container.
+        @param isContainable: boolean
+            If true than this type is containable in types like List and Iter.
+        @ivar properties: dictionary{string, TypeProperty}
+            A dictionary containing as a key the property name and as a value the property type that
+            are associated with the container.
         '''
-        assert isinstance(service, Service), 'Invalid service provided %s' % service
-        super().__init__(clazz, False, False)
+        super().__init__(clazz, False, isContainable)
+        
+        self.properties = {}
 
-        self.service = service
+# --------------------------------------------------------------------
+
+class TypeModel(TypeContainer):
+    '''
+    Provides the type for the model.
+    '''
+
+    def __init__(self, clazz, name):
+        '''
+        Constructs the model type.
+        @see: TypeContainer.__init__
+        
+        @param name: string
+            The name of the model.
+        @ivar propertyId: TypeProperty|None
+            The type model property id of the model if one is available.
+        @ivar hints: dictionary{string, object}
+            The hints associated with the model.
+        '''
+        assert isinstance(name, str) and name, 'Invalid model name %s' % name
+        super().__init__(clazz)
+        
+        self.name = name
+        self.propertyId = None
+        self.hints = {}
+
+class TypeAlias(TypeModel):
+    '''
+    Provides the alias type for the model.
+    '''
+    
+    def __init__(self, model, name):
+        '''
+        Constructs the model type.
+        @see: TypeModel.__init__
+        
+        @param model: TypeModel
+            The aliased model.
+        @param name: string
+            The name of the alias.
+        '''
+        assert isinstance(model, TypeModel), 'Invalid model %s' % model
+        super().__init__(model.clazz, name)
+        
+        self.model = model
+        
+        if model.propertyId:
+            assert isinstance(model.propertyId, TypeProperty), 'Invalid property id %s' % model.propertyId
+            self.propertyId = model.propertyId.rebase(self)
+        for name, prop in model.properties.items():
+            assert isinstance(prop, TypeProperty), 'Invalid property %s' % prop
+            self.properties[name] = prop.rebase(self)
+        self.hints.update(model.hints)
+
+# --------------------------------------------------------------------
+
+class TypeCriteria(TypeContainer):
+    '''
+    Provides the type for the criteria.
+    '''
+
+    def __init__(self, clazz):
+        '''
+        Constructs the criteria type.
+        @see: TypeContainer.__init__
+        
+        @ivar main: dictionary{string, TypeProperty}
+            The main properties for the criteria, the main is used whenever a value is set directly on the 
+            criteria. The main properties properties and have compatible types.
+        '''
+        super().__init__(clazz, isContainable=False)
+        self.main = {}
+
+class TypeQuery(TypeContainer):
+    '''
+    Provides the type for the query.
+    '''
+
+    def __init__(self, clazz, target):
+        '''
+        Constructs the query type.
+        @see: TypeContainer.__init__
+        
+        @param target: TypeModel
+            The type model that is this type query is owned by.
+        '''
+        assert isinstance(target, TypeModel), 'Invalid target model %s' % target
+        super().__init__(clazz, isContainable=False)
+
+        self.target = target
 
 # --------------------------------------------------------------------
 
@@ -354,16 +246,202 @@ class TypeExtension(TypeContainer):
     '''
     Provides the type for the extensions.
     '''
-    __slots__ = ()
 
-    def __init__(self, clazz, container):
+    def __init__(self, clazz):
         '''
-        Constructs the extension type for the provided container.
+        Constructs the extension type.
+        @see: TypeContainer.__init__
+        '''
+        super().__init__(clazz, isContainable=False)
+        
+# --------------------------------------------------------------------
+
+class TypeOption(TypeContainer):
+    '''
+    Provides the type for the option.
+    '''
+
+    def __init__(self, clazz):
+        '''
+        Constructs the option type.
+        @see: TypeContainer.__init__
+        '''
+        super().__init__(clazz, isContainable=False)
+        
+# --------------------------------------------------------------------
+
+class TypeInput(Type):
+    '''
+    Provides the type for the service call input.
+    '''
+
+    def __init__(self, parent, input):
+        '''
+        Constructs the service call input type.
         @see: Type.__init__
         
-        @param clazz: class
-            The model class associated with the model.
-        @param container: Container
-            The container that this extension is constructed on.
+        @param parent: TypeCall
+            The parent call type.
+        @param input: Input
+            The input for input type.
         '''
-        super().__init__(clazz, container)
+        assert isinstance(parent, TypeCall), 'Invalid parent %s' % parent
+        assert isinstance(input, Input), 'Invalid input %s' % input
+        super().__init__(False, False)
+
+        self.parent = parent
+        self.input = input
+
+    def isOf(self, type):
+        '''
+        @see: Type.isOf
+        '''
+        return self == typeFor(type)
+
+    def isValid(self, obj):
+        '''
+        @see: Type.isValid
+        '''
+        return self.input.type.isValid(obj)
+
+    def __hash__(self):
+        '''
+        @see: Type.__hash__
+        '''
+        return hash((self.parent, self.input))
+
+    def __eq__(self, other):
+        '''
+        @see: Type.__eq__
+        '''
+        if isinstance(other, self.__class__): return self.parent == other.parent and self.input == other.input
+        return False
+
+    def __str__(self):
+        '''
+        @see: Type.__str__
+        '''
+        return '%s.%s' % (self.parent, self.input.name)
+    
+class TypeCall(Type):
+    '''
+    Provides the type for the service call. This class will basically contain all the types that are involved in
+    input and output from the call.
+    '''
+
+    def __init__(self, parent, definer, name, method, inputs, output, hints=None):
+        '''
+        Constructs the service call type.
+        @see: Type.__init__
+        
+        @param parent: TypeService
+            The parent service type.
+        @param definer: class
+            The class where the call is actually defined.
+        @param name: string
+            The name of the function represented by the call.
+        @param method: integer
+            The method of the call, can be one of GET, INSERT, UPDATE or DELETE constants in this module.
+        @param inputs: list[Input]|tuple(Input)
+            A list containing all the Input's of the call.
+        @param output: Type
+            The output type for the service call.
+        @param hints: dictionary{string: object}|None
+            The hints associated with the call.
+        '''
+        assert isinstance(parent, TypeService), 'Invalid parent %s' % parent
+        assert isclass(definer), 'Invalid definer class %s' % definer
+        assert isinstance(name, str) and name.strip(), 'Provide a valid name'
+        assert isinstance(method, int), 'Invalid method %s' % method
+        assert isinstance(inputs, (list, tuple)), 'Invalid inputs %s, needs to be a list' % inputs
+        assert isinstance(output, Type), 'Invalid output type %s' % output
+        super().__init__(False, False)
+
+        self.parent = parent
+        self.definer = definer
+        self.name = name
+        self.method = method
+        self.output = output
+        
+        self.inputs = OrderedDict()
+        for inp in inputs:
+            assert isinstance(inp, Input), 'Not an input %s' % input
+            self.inputs[inp.name] = TypeInput(self, inp)
+            
+        if hints is None: self.hints = {}
+        else: 
+            assert isinstance(hints, dict), 'Invalid hints %s' % hints
+            if __debug__:
+                for hintn in hints: assert isinstance(hintn, str), 'Invalid hint name %s' % hintn
+            self.hints = dict(hints)
+
+    def isOf(self, type):
+        '''
+        @see: Type.isOf
+        '''
+        return self == typeFor(type)
+
+    def isValid(self, obj):
+        '''
+        @see: Type.isValid
+        '''
+        if not ismethod(obj): return False
+        return isinstance(obj.__self__, self.parent.clazz)
+
+    def __hash__(self):
+        '''
+        @see: Type.__hash__
+        '''
+        return hash((self.parent, self.call.name))
+
+    def __eq__(self, other):
+        '''
+        @see: Type.__eq__
+        '''
+        if isinstance(other, self.__class__): return self.parent == other.parent and self.call.name == other.call.name
+        return False
+
+    def __str__(self):
+        '''
+        @see: Type.__str__
+        '''
+        return '%s.%s(%s)->%s' % (self.parent, self.name,
+                                  ', '.join(str(typ.input) for typ in self.inputs.values()), self.output)
+    
+class TypeService(TypeClass):
+    '''
+    Provides the type for the service.
+    '''
+
+    def __init__(self, clazz):
+        '''
+        Constructs the service type for the provided service.
+        @see: TypeClass.__init__
+        
+        @ivar calls: dictionary{string: TypeCall}
+            The type calls of the service.
+        '''
+        super().__init__(clazz, False, False)
+        
+        self.calls = {}
+
+# --------------------------------------------------------------------
+
+def typePropFor(obj, prop):
+    '''
+    Provides the property type of the container object.
+    
+    @param obj: object|class
+        The class or container object to extract the type.
+    @param prop: string
+        The property name to extract the type for.
+    @return: TypeProperty|None
+        The obtained property type or None if there is not type.
+    '''
+    assert isinstance(prop, str), 'Invalid property %s' % prop
+    if isclass(obj): clazz = obj
+    else: clazz = obj.__class__
+    container = typeFor(clazz)
+    if isinstance(container, TypeContainer):
+        assert isinstance(container, TypeContainer)
+        return container.properties.get(prop)

@@ -9,102 +9,80 @@ Created on May 26, 2011
 General specifications for the entities API that poses an integer Id identifier.
 '''
 
-from ally.api.config import model, query, service, call, LIMIT_DEFAULT
+from ally.api.config import prototype
+from ally.api.option import SliceAndTotal # @UnusedImport
 from ally.api.type import Iter
+from ally.support.api.util_service import modelId
+import abc # @UnusedImport
 
 # --------------------------------------------------------------------
 
-@model(id='Id')
-class Entity:
+class IEntityGetPrototype(metaclass=abc.ABCMeta):
     '''
-    Provides the basic container for an entity that has a Id identifier.
-    '''
-    Id = int
-
-# --------------------------------------------------------------------
-
-@query(Entity)
-class QEntity:
-    '''
-    Provides the basic query for an entity.
+    Provides the basic entity prototype service. This means locate by id.
     '''
 
-# --------------------------------------------------------------------
-
-# The Entity model will be replaced by the specific model when the API will be inherited.
-@service
-class IEntityGetService:
-    '''
-    Provides the basic entity service. This means locate by id.
-    '''
-
-    @call
-    def getById(self, id:Entity.Id) -> Entity:
+    @prototype
+    def getById(self, identifier:lambda p:p.Entity) -> lambda p:p.Entity:
         '''
-        Provides the entity based on the id.
+        Provides the entity based on the identifier.
         
-        @param id: integer
+        @param identifier: object
             The id of the entity to find.
-        @raise InputError: If the id is not valid. 
         '''
 
-@service
-class IEntityFindService:
+class IEntityFindPrototype(metaclass=abc.ABCMeta):
     '''
-    Provides the basic entity find service.
+    Provides the basic entity find prototype service.
     '''
 
-    @call
-    def getAll(self, offset:int=None, limit:int=LIMIT_DEFAULT, detailed:bool=True) -> Iter(Entity):
+    @prototype
+    def getAll(self, **options:SliceAndTotal) -> lambda p:Iter(modelId(p.Entity)):
         '''
-        Provides the entities.
+        Provides the entities identifiers.
         
-        @param offset: integer
-            The offset to retrieve the entities from.
-        @param limit: integer
-            The limit of entities to retrieve.
-        @param detailed: boolean
-            If true will present the total count, limit and offset for the partially returned collection.
+        @param options: @see: SliceAndTotal
+            The options to fetch the entities with.
+        @return: Iterable(object)
+            The iterable with the entities identifiers.
         '''
 
-@service
-class IEntityQueryService:
+class IEntityQueryPrototype(metaclass=abc.ABCMeta):
+    '''
+    Provides the entity find prototype service based on a query.
+    '''
 
-    @call
-    def getAll(self, offset:int=None, limit:int=LIMIT_DEFAULT, detailed:bool=True, q:QEntity=None) -> Iter(Entity):
+    @prototype
+    def getAll(self, q:lambda p:p.QEntity=None, **options:SliceAndTotal) -> lambda p:Iter(modelId(p.Entity)):
         '''
-        Provides the entities searched by the provided query.
+        Provides the entities identifiers searched by the provided query.
         
-        @param offset: integer
-            The offset to retrieve the entities from.
-        @param limit: integer
-            The limit of entities to retrieve.
-        @param detailed: boolean
-            If true will present the total count, limit and offset for the partially returned collection.
-        @param q: QEntity
+        @param q: Query|None
             The query to search by.
+        @param options: @see: SliceAndTotal
+            The options to fetch the entities with.
+        @return: Iterable(object)
+            The iterable with the entities identifiers.
         '''
 
-@service
-class IEntityCRUDService:
+class IEntityCRUDPrototype(metaclass=abc.ABCMeta):
     '''
-    Provides the entity the CRUD services.
+    Provides the entity the CRUD prototype services.
     '''
 
-    @call
-    def insert(self, entity:Entity) -> Entity.Id:
+    @prototype
+    def insert(self, entity:lambda p:p.Entity) -> lambda p:modelId(p.Entity):
         '''
-        Insert the entity, also the entity will have automatically assigned the Id to it.
+        Insert the entity.
         
         @param entity: Entity
             The entity to be inserted.
-        
-        @return: The id assigned to the entity
-        @raise InputError: If the entity is not valid. 
+        @return: object
+            The identifier of the entity
         '''
 
-    @call
-    def update(self, entity:Entity):
+    @prototype
+    def update(self, entity:lambda p:p.Entity):
         '''
         Update the entity.
         
@@ -112,31 +90,28 @@ class IEntityCRUDService:
             The entity to be updated.
         '''
 
-    @call
-    def delete(self, id:Entity.Id) -> bool:
+    @prototype
+    def delete(self, identifier:lambda p:p.Entity) -> bool:
         '''
-        Delete the entity for the provided id.
+        Delete the entity for the provided identifier.
         
-        @param id: integer
-            The id of the entity to be deleted.
-            
-        @return: True if the delete is successful, false otherwise.
+        @param identifier: object
+            The identifier of the entity to be deleted.
+        @return: boolean
+            True if the delete is successful, false otherwise.
         '''
 
-@service
-class IEntityGetCRUDService(IEntityGetService, IEntityCRUDService):
+class IEntityGetCRUDPrototype(IEntityGetPrototype, IEntityCRUDPrototype):
     '''
-    Provides the get and CRUD.
-    '''
-
-@service
-class IEntityNQService(IEntityGetService, IEntityFindService, IEntityCRUDService):
-    '''
-    Provides the find without querying, CRUD and query entity services.
+    Provides the get and CRUD prototype service.
     '''
 
-@service
-class IEntityService(IEntityGetService, IEntityQueryService, IEntityCRUDService):
+class IEntityNQPrototype(IEntityGetPrototype, IEntityFindPrototype, IEntityCRUDPrototype):
     '''
-    Provides the find, CRUD and query entity services.
+    Provides the find without querying, CRUD and query entity prototype services.
+    '''
+
+class IEntityPrototype(IEntityGetPrototype, IEntityQueryPrototype, IEntityCRUDPrototype):
+    '''
+    Provides the find, CRUD and query entity prototype services.
     '''

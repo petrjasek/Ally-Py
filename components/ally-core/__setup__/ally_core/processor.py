@@ -9,53 +9,43 @@ Created on Nov 24, 2011
 Provides the configurations for the processors used in handling the request.
 '''
 
-from .encoder_decoder import renderingAssembly, assemblyParsing
+from .decode import assemblyDecodeContentExport
+from .definition import errors
+from .encode import assemblyEncodeExport
+from .parsing_rendering import assemblyRendering, assemblyParsing, \
+    blocksDefinitions
 from ally.container import ioc
-from ally.core.impl.processor.arguments import ArgumentsPrepareHandler, \
-    ArgumentsBuildHandler
+from ally.core.impl.processor.block_indexing import BlockIndexingHandler
 from ally.core.impl.processor.content import ContentHandler
-from ally.core.impl.processor.decoder import CreateDecoderHandler
-from ally.core.impl.processor.encoder import CreateEncoderHandler
+from ally.core.impl.processor.conversion_content import ConverterContentHandler
+from ally.core.impl.processor.error_definition import ErrorDefinitionHandler
+from ally.core.impl.processor.error_input import ErrorInputHandler
 from ally.core.impl.processor.invoking import InvokingHandler
 from ally.core.impl.processor.parsing import ParsingHandler
 from ally.core.impl.processor.render_encoder import RenderEncoderHandler
 from ally.core.impl.processor.rendering import RenderingHandler
-from ally.core.impl.processor.text_conversion import ConversionSetHandler
-from ally.core.spec.resources import Normalizer, Converter
+from ally.core.spec.resources import Converter
 from ally.design.processor.handler import Handler
 
 # --------------------------------------------------------------------
 # Creating the processors used in handling the request
 
 @ioc.config
-def default_language():
+def default_language() -> str:
     '''The default language to use in case none is provided in the request'''
     return 'en'
 
 @ioc.config
-def default_characterset() -> str:
+def default_charset() -> str:
     '''The default character set to use if none is provided in the request'''
     return 'UTF-8'
 
 @ioc.config
-def explain_detailed_error():
+def explain_detailed_error() -> bool:
     '''If True will provide as an error response a detailed response containing info about where the problem originated'''
     return True
 
-@ioc.config
-def allow_chuncked_response():
-    '''Flag indicating that a chuncked transfer is allowed, more or less if this is false a length is a must'''
-    return False
-
-@ioc.config
-def chunck_size():
-    '''The buffer size used in the generator returned chuncks'''
-    return 4096
-
 # --------------------------------------------------------------------
-
-@ioc.entity
-def normalizer() -> Normalizer: return Normalizer()
 
 @ioc.entity
 def converter() -> Converter: return Converter()
@@ -63,32 +53,23 @@ def converter() -> Converter: return Converter()
 # --------------------------------------------------------------------
 
 @ioc.entity
-def argumentsPrepare() -> Handler: return ArgumentsPrepareHandler()
-
-@ioc.entity
-def renderer() -> Handler:
+def rendering() -> Handler:
     b = RenderingHandler()
-    b.charSetDefault = default_characterset()
-    b.renderingAssembly = renderingAssembly()
+    b.charSetDefault = default_charset()
+    b.renderingAssembly = assemblyRendering()
     return b
 
 @ioc.entity
-def conversion() -> Handler:
-    b = ConversionSetHandler()
-    b.normalizer = normalizer()
+def converterContent() -> Handler:
+    b = ConverterContentHandler()
     b.converter = converter()
     return b
 
 @ioc.entity
-def createDecoder() -> Handler: return CreateDecoderHandler()
-
-@ioc.entity
-def createEncoder() -> Handler: return CreateEncoderHandler()
-
-@ioc.entity
-def parser() -> Handler:
+def parsing() -> Handler:
     b = ParsingHandler()
-    b.charSetDefault = default_characterset()
+    b.charSetDefault = default_charset()
+    b.decodeExportAssembly = assemblyDecodeContentExport()
     b.parsingAssembly = assemblyParsing()
     return b
 
@@ -96,15 +77,27 @@ def parser() -> Handler:
 def content() -> Handler: return ContentHandler()
 
 @ioc.entity
-def argumentsBuild() -> Handler: return ArgumentsBuildHandler()
+def invoking() -> Handler: return InvokingHandler()
 
 @ioc.entity
-def invoking() -> Handler: return InvokingHandler()
+def errorInput() -> Handler: return ErrorInputHandler()
 
 @ioc.entity
 def renderEncoder() -> Handler:
     b = RenderEncoderHandler()
-    b.allowChunked = allow_chuncked_response()
-    b.bufferSize = chunck_size()
+    b.encodeExportAssembly = assemblyEncodeExport()
     return b
 
+@ioc.entity
+def errorDefinition() -> Handler:
+    b = ErrorDefinitionHandler()
+    b.errors = errors()
+    return b
+
+# --------------------------------------------------------------------
+
+@ioc.entity
+def blockIndexing() -> Handler:
+    b = BlockIndexingHandler()
+    b.definitions = blocksDefinitions()
+    return b

@@ -14,6 +14,11 @@ from .processor import assemblyContent
 from ally.container import ioc
 from ally.design.processor.handler import Handler
 from ally.http.impl.processor.router_by_path import RoutingByPathHandler
+import logging
+
+# --------------------------------------------------------------------
+
+log = logging.getLogger(__name__)
 
 # --------------------------------------------------------------------
 
@@ -23,9 +28,11 @@ def server_provide_content():
     return True
 
 @ioc.config
-def server_pattern_content():
-    ''' The pattern used for matching the rest content paths in HTTP URL's'''
-    return '^content(?:/|(?=\\.)|$)(.*)'
+def root_uri_content():
+    '''
+    The pattern used for matching the content paths in HTTP URL's
+    '''
+    return 'content'
 
 # --------------------------------------------------------------------
 
@@ -33,10 +40,15 @@ def server_pattern_content():
 def contentRouter() -> Handler:
     b = RoutingByPathHandler()
     b.assembly = assemblyContent()
-    b.pattern = server_pattern_content()
+    b.rootURI = root_uri_content()
     return b
-    
-@ioc.before(updateAssemblyServer)
+
+# We need to make sure that if the CDM is deployed with the gateway that the CDM has priority over the gateway.
+updateBefore = [updateAssemblyServer]
+try: from ..ally_gateway.server import updateAssemblyServerForGatewayExternal
+except ImportError: log.info('No gateway service to register with')
+else: updateBefore.append(updateAssemblyServerForGatewayExternal)
+@ioc.before(*updateBefore)
 def updateAssemblyServerForContent():
-    if server_provide_content():
-        assemblyServer().add(contentRouter())
+    if server_provide_content(): assemblyServer().add(contentRouter())
+del updateBefore  # Cleaning up

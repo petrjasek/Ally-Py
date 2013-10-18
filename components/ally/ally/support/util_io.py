@@ -13,15 +13,16 @@ from ally.zip.util_zip import normOSPath, getZipFilePath, ZIPSEP
 from collections import Iterable
 from datetime import datetime
 from genericpath import isdir, exists
+from io import StringIO, BytesIO
 from os import stat, makedirs
 from os.path import isfile, normpath, join, dirname
 from shutil import copy, move
+from stat import S_IEXEC
+from tempfile import TemporaryDirectory
 from zipfile import ZipFile, ZipInfo
 import abc
 import os
-from tempfile import TemporaryDirectory
-from stat import S_IEXEC
-from io import StringIO
+import io
 
 # --------------------------------------------------------------------
 
@@ -89,74 +90,102 @@ class IClosable(metaclass=abc.ABCMeta):
         if cls is IClosable:
             if any('close' in B.__dict__ for B in C.__mro__): return True
         return NotImplemented
+    
+class ITeller(metaclass=abc.ABCMeta):
+    '''
+    Used for the streams that provide a tell method.
+    '''
+    __slots__ = ()
+
+    @abc.abstractclassmethod
+    def tell(self):
+        '''
+        Provides the stream offset position.
+        
+        @return: integer
+            The stream offset.
+        '''
+
+    @classmethod
+    def __subclasshook__(cls, C):
+        if cls is ITeller:
+            if any('tell' in B.__dict__ for B in C.__mro__): return True
+        return NotImplemented
 
 # --------------------------------------------------------------------
 
-class ReplaceInFile:
+class IInputStreamClosable(IInputStream, IClosable):
     '''
-    Provides the file read replacing.
+    Stream specification that also is closable.
     '''
+    __slots__ = ()
+    
+    @classmethod
+    def __subclasshook__(cls, C):
+        if cls is IInputStreamClosable:
+            if (any('read' in B.__dict__ for B in C.__mro__) and
+                any('close' in B.__dict__ for B in C.__mro__)): return True
+        return NotImplemented
 
-    __slots__ = ['_fileObj', '_replacements', '_maxKey', '_leftOver']
+class IInputStreamTeller(IInputStream, ITeller):
+    '''
+    Stream specification that also tells the stream offset.
+    '''
+    __slots__ = ()
+    
+    @classmethod
+    def __subclasshook__(cls, C):
+        if cls is IInputStreamTeller:
+            if (any('read' in B.__dict__ for B in C.__mro__) and
+                any('tell' in B.__dict__ for B in C.__mro__)): return True
+        return NotImplemented
+    
+class IInputStreamCT(IInputStream, IClosable, ITeller):
+    '''
+    Stream specification that also is closable and tells the stream offset.
+    '''
+    __slots__ = ()
+    
+    @classmethod
+    def __subclasshook__(cls, C):
+        if cls is IInputStreamCT:
+            if (any('read' in B.__dict__ for B in C.__mro__) and
+                any('close' in B.__dict__ for B in C.__mro__) and
+                any('tell' in B.__dict__ for B in C.__mro__)): return True
+        return NotImplemented
+    
+# --------------------------------------------------------------------
 
-    def __init__(self, fileObj, replacements):
-        '''
-        Creates a proxy for the provided file object that will replace in the provided file content based on the data
-        provided in the replacements map.
+def keepOpen(stream):
+    '''
+    Keeps opened a stream, basically blocks the close calls.
+    
+    @param stream: IInputStream
+        The stream to keep open.
+    @return: IInputStream
+        The stream wrapper that prevent closing.
+    '''
+    assert isinstance(stream, IInputStream), 'Invalid stream %s' % stream
+    if not isinstance(stream, IClosable): return stream
+    return KeepOpen(stream)
 
-        @param fileObj: a file like object with a 'read' method
-            The file object to wrap and have the content changed.
-        @param replacements: dictionary{string|bytes, string|bytes}
-            A dictionary containing as a key the data that needs to be changed and as a value the data to change with.
-        @return: Proxy
-            The proxy created for the file that will handle the data replacing.
-        '''
-        assert fileObj, 'A file object is required %s' % fileObj
-        assert isinstance(fileObj, IInputStream), 'Invalid file object %s does not have a read method' % fileObj
-        assert isinstance(replacements, dict), 'Invalid replacements %s' % replacements
-        if __debug__:
-            for key, value in replacements.items():
-                assert isinstance(key, (str, bytes)), 'Invalid key %s' % key
-                assert isinstance(value, (str, bytes)), 'Invalid value %s' % value
-        self._fileObj = fileObj
-        self._replacements = replacements
-
-        self._maxKey = len(max(replacements.keys(), key=lambda v: len(v)))
-        self._leftOver = None
-
-    def read(self, count=None):
-        '''
-        Perform the data read.
-        '''
-        if count is None: data = self._fileObj.read()
-        else: data = self._fileObj.read(count)
-
-        if not data:
-            if self._leftOver:
-                data = self._leftOver
-                self._leftOver = None
-            else: return data
-
-        toIndex = None
-        if self._leftOver:
-            toIndex = len(data)
-            data = self._leftOver + data
-        else:
-            extra = self._fileObj.read(self._maxKey - 1)
-            if extra:
-                toIndex = len(data)
-                data = data + extra
-
-        for key, value in self._replacements.items(): data = data.replace(key, value)
-
-        if toIndex:
-            self._leftOver = data[toIndex:]
-            data = data[:toIndex]
-
-        return data
-
-    def __getattr__(self, name): return getattr(self._fileObj, name)
-
+def tellPosition(stream):
+    '''
+    Provides a stream that keeps track of the number of bytes that are read from the stream.
+    
+    @param stream: IInputStream
+        The stream to keep track for.
+    @return: IInputStreamTeller
+        The stream that provides the tell method.
+    '''
+    assert isinstance(stream, IInputStream), 'Invalid stream %s' % stream
+    if isinstance(stream, ITeller):
+        assert isinstance(stream, ITeller)
+        try: stream.tell()
+        except io.UnsupportedOperation: pass  # Event if tell is available the action itself is not possible.
+        else: return stream
+    return TellPosition(stream)
+    
 def pipe(srcFileObj, dstFileObj, bufferSize=1024):
     '''
     Copy the content from a source file to a destination file
@@ -186,16 +215,15 @@ def readGenerator(fileObj, bufferSize=1024):
         The buffer size used for returning data chunks.
     '''
     assert isinstance(fileObj, IInputStream), 'Invalid file object %s' % fileObj
-    assert isinstance(fileObj, IClosable), 'Invalid file object %s' % fileObj
     assert isinstance(bufferSize, int), 'Invalid buffer size %s' % bufferSize
 
-    with fileObj:
+    try:
         while True:
             buffer = fileObj.read(bufferSize)
-            if not buffer:
-                fileObj.close()
-                break
+            if not buffer: break
             yield buffer
+    finally:
+        if isinstance(fileObj, IClosable): fileObj.close()
 
 def writeGenerator(generator, fileObj):
     '''
@@ -213,7 +241,6 @@ def writeGenerator(generator, fileObj):
     assert isinstance(fileObj, IClosable), 'Invalid file object %s' % fileObj
 
     for bytes in generator: fileObj.write(bytes)
-    fileObj.close()
     return fileObj
 
 def convertToBytes(iterable, charSet, encodingError):
@@ -233,7 +260,8 @@ def convertToBytes(iterable, charSet, encodingError):
     for value in iterable:
         assert isinstance(value, str), 'Invalid value %s received' % value
         yield value.encode(encoding=charSet, errors=encodingError)
-
+        
+# TODO: Gabriel: In the future this will become absollete when using the setup distutils proper packaging.
 def openURI(path, byteMode=True):
     '''
     Returns a read file object for the given path.
@@ -254,6 +282,7 @@ def openURI(path, byteMode=True):
         else: return StringIO(f.read().decode())
     raise IOError('Invalid file path %s' % path)
 
+# TODO: Gabriel: In the future this will become absollete when using the setup distutils proper packaging.
 def timestampURI(path):
     '''
     Returns the last modified time stamp for the given path.
@@ -269,6 +298,7 @@ def timestampURI(path):
     zipFilePath, _inZipPath = getZipFilePath(path)
     return datetime.fromtimestamp(stat(zipFilePath).st_mtime)
 
+# TODO: Gabriel: In the future this will become absollete when using the setup distutils proper packaging.
 def synchronizeURIToDir(path, dirPath):
     '''
     Publishes the entire contents from the URI path to the provided directory path.
@@ -322,26 +352,212 @@ def synchronizeURIToDir(path, dirPath):
             copy(src, dest)
             if file.endswith('.exe'): os.chmod(dest, stat(dest).st_mode | S_IEXEC)
 
-class KeepOpen:
+class KeepOpen(IInputStreamClosable):
     '''
-    Keeps opened a file object, basically blocks the close calls.
+    Keeps opened a stream, basically blocks the close calls.
     '''
-    __slots__ = ['_fileObj']
+    __slots__ = ('_stream',)
 
-    def __init__(self, fileObj):
+    def __init__(self, stream):
         '''
-        Construct the keep open file object proxy.
+        Construct the keep open stream.
 
-        @param fileObj: file
-            A file type object to keep open.
+        @param stream: IInputStreamClosable
+            A stream to keep open.
         '''
-        assert fileObj, 'A file object is required %s' % fileObj
-        self._fileObj = fileObj
+        assert isinstance(stream, IInputStreamClosable), 'Invalid stream %s' % stream
+        self._stream = stream
+        
+    def read(self, nbytes=None):
+        '''
+        @see: IInputStreamClosable.read
+        '''
+        return self._stream.read(nbytes)
 
     def close(self):
         '''
+        @see: IInputStreamClosable.close
         Block the close action.
         '''
+        
+class TellPosition(IInputStreamCT):
+    '''
+    Provides a stream that keeps track of the number of bytes that are read from the stream.
+    '''
+    __slots__ = ('_stream', '_offset')
 
-    def __getattr__(self, name): return getattr(self._fileObj, name)
+    def __init__(self, stream):
+        '''
+        Construct the tell position stream.
 
+        @param stream: IInputStream
+            The stream to keep track of.
+        '''
+        assert isinstance(stream, IInputStream), 'Invalid stream %s' % stream
+        self._stream = stream
+        self._offset = 0
+        
+    def read(self, nbytes=None):
+        '''
+        @see: IInputStreamCT.read
+        '''
+        bytes = self._stream.read(nbytes)
+        self._offset += len(bytes)
+        return bytes
+    
+    def tell(self):
+        '''
+        @see: IInputStreamCT.tell
+        '''
+        return self._offset
+
+    def close(self):
+        '''
+        @see: IInputStreamCT.close
+        '''
+        if isinstance(self._stream, IClosable): self._stream.close()
+
+class StreamOnIterable(IInputStreamClosable):
+    '''
+    An implementation for a @see: IInputStream that uses as a source a generator that yileds bytes.
+    '''
+    __slots__ = ('_generator', '_closed', '_done', '_source')
+    
+    def __init__(self, generator):
+        '''
+        Construct the stream from generator.
+        
+        @param generator: Iterable(bytes)
+            The generator that yileds bytes that will be used as the stream source.
+        '''
+        assert isinstance(generator, Iterable), 'Invalid generator %s' % generator
+        
+        self._generator = iter(generator)
+        self._closed = False
+        self._done = False
+        self._source = BytesIO()
+        
+    def read(self, nbytes=None):
+        '''
+        @see: IInputStreamClosable.read
+        '''
+        if self._closed: raise ValueError('I/O operation on closed stream.')
+        if self._done: return b''
+        if nbytes:
+            assert isinstance(nbytes, int), 'Invalid number of bytes required %s' % nbytes
+            if nbytes < 0: nbytes = None
+            elif nbytes == 0: return b''
+            
+        if nbytes is None:
+            while True:
+                try: bytes = next(self._generator)
+                except StopIteration: break
+                self._source.write(bytes)
+            self._done = True
+            return self._source.getvalue()
+        
+        if self._source.tell() == nbytes:
+            value = self._source.getvalue()
+            self._source.seek(0)
+            self._source.truncate()
+        elif self._source.tell() > nbytes:
+            self._source.seek(0)
+            value = self._source.read(nbytes)
+            remaining = self._source.read()
+            self._source.truncate()
+            self._source.write(remaining)
+        else:
+            while True:
+                try: bytes = next(self._generator)
+                except StopIteration:
+                    value = self._source.getvalue()
+                    self._done = True
+                    break
+                self._source.write(bytes)
+                if self._source.tell() == nbytes:
+                    # We have the correct size
+                    value = self._source.getvalue()
+                    self._source.seek(0)
+                    self._source.truncate()
+                    break
+                elif self._source.tell() > nbytes:
+                    self._source.seek(0)
+                    value = self._source.read(nbytes)
+                    remaining = self._source.read()
+                    self._source.truncate()
+                    self._source.write(remaining)
+                    break
+        return value
+        
+    def close(self):
+        '''
+        @see: IInputStreamClosable.close
+        '''
+        self._closed = True
+
+class ReplaceInStream(IInputStreamClosable):
+    '''
+    Provides the file read replacing.
+    '''
+    __slots__ = ('_stream', '_replacements', '_maxKey', '_leftOver')
+
+    def __init__(self, stream, replacements):
+        '''
+        Creates a proxy for the provided file object that will replace in the provided file content based on the data
+        provided in the replacements map.
+
+        @param fileObj: a file like object with a 'read' method
+            The file object to wrap and have the content changed.
+        @param replacements: dictionary{string|bytes, string|bytes}
+            A dictionary containing as a key the data that needs to be changed and as a value the data to change with.
+        @return: Proxy
+            The proxy created for the file that will handle the data replacing.
+        '''
+        assert isinstance(stream, IInputStream), 'Invalid stream %s' % stream
+        assert isinstance(replacements, dict), 'Invalid replacements %s' % replacements
+        if __debug__:
+            for key, value in replacements.items():
+                assert isinstance(key, (str, bytes)), 'Invalid key %s' % key
+                assert isinstance(value, (str, bytes)), 'Invalid value %s' % value
+        self._stream = stream
+        self._replacements = replacements
+
+        self._maxKey = len(max(replacements.keys(), key=lambda v: len(v)))
+        self._leftOver = None
+
+    def read(self, nbytes=None):
+        '''
+        @see: IInputStreamClosable.read
+        '''
+        if nbytes is None: data = self._stream.read()
+        else: data = self._stream.read(nbytes)
+
+        if not data:
+            if self._leftOver:
+                data = self._leftOver
+                self._leftOver = None
+            else: return data
+
+        toIndex = None
+        if self._leftOver:
+            toIndex = len(data)
+            data = self._leftOver + data
+        else:
+            extra = self._stream.read(self._maxKey - 1)
+            if extra:
+                toIndex = len(data)
+                data = data + extra
+
+        for key, value in self._replacements.items(): data = data.replace(key, value)
+
+        if toIndex:
+            self._leftOver = data[toIndex:]
+            data = data[:toIndex]
+
+        return data
+    
+    def close(self):
+        '''
+        @see: IInputStreamClosable.close
+        '''
+        if isinstance(self._stream, IClosable): self._stream.close()

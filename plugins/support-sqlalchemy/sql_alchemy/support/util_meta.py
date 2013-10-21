@@ -26,7 +26,6 @@ from sqlalchemy.schema import Column, ForeignKey
 from sqlalchemy.sql import expression
 from sqlalchemy.sql.expression import join, select
 from sqlalchemy.types import DateTime, TypeDecorator, String
-from functools import partial
 import json
 
 
@@ -56,7 +55,7 @@ def hybrid(*args, fset=None, fdel=None, expr=None):
     if not args: return decorator
     return decorator(*args)
 
-def relationshipModel(mappedId, *spec, cls=None):
+def relationshipModel(mappedId, *spec):
     '''
     Creates a relationship with the model, this should only be used in case the mapped model database id is different from the
     actual model id.
@@ -71,14 +70,8 @@ def relationshipModel(mappedId, *spec, cls=None):
             The SQL alchemy relationship target name, if None provided it will create one automatically.
     '''
     assert isinstance(mappedId, InstrumentedAttribute), 'Invalid mapped id %s' % mappedId
-    if cls:
-        setter = partial(setattr, cls)
-        getter = partial(getattr, cls)
-    else:
-        register = callerLocals()
-        assert '__module__' in register, 'This function should only be used inside meta class definitions'
-        setter = register.__setitem__
-        getter = register.__getitem__
+    register = callerLocals()
+    assert '__module__' in register, 'This function should only be used inside meta class definitions'
     rtype = typeFor(mappedId.class_)
     assert isinstance(rtype, TypeModel), 'Invalid class %s' % mappedId.class_
     assert isinstance(rtype.propertyId, TypeProperty), 'No property id for %s' % rtype
@@ -96,8 +89,8 @@ def relationshipModel(mappedId, *spec, cls=None):
         target = modifyFirst(rtype.name, False)
         if column is None:
             column = '%sId' % target
-            setter(column, Column('fk_%s_id' % toUnderscore(target), ForeignKey(mappedId, ondelete='CASCADE'), nullable=False))
-        setter(target, relationship(mappedId.class_, uselist=False, lazy='joined', viewonly=True))
+            register[column] = Column('fk_%s_id' % toUnderscore(target), ForeignKey(mappedId, ondelete='CASCADE'), nullable=False)
+        register[target] = relationship(mappedId.class_, uselist=False, lazy='joined', viewonly=True)
     
     def fget(self):
         rel = getattr(self, target)

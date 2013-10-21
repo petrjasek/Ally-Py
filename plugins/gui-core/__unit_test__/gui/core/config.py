@@ -34,6 +34,8 @@ from ally.support.util_context import listBFS
 from gui.core.config.impl.processor.synchronize.category import RepositoryGroup, RepositoryRight,\
     SynchronizeRightsHandler
 
+from pkg_resources import get_provider, ResourceManager
+
 # --------------------------------------------------------------------
 
 logging.basicConfig()
@@ -63,19 +65,19 @@ class TestConfigurationParsing(unittest.TestCase):
         rightRepos = listBFS(result.solicit.repository, RepositoryGroup.children, RepositoryRight.rightName)
         
         #make sure the number of groups and rights is correct
-        assert len(groupRepos) == 2 and len(rightRepos) == 5, 'Wrong number of groups and rights: %s groups, %s rights' \
-                                                                % (len(groupRepos), len(rightRepos)) 
+        self.assertTrue(len(groupRepos) == 2 and len(rightRepos) == 5, 'Wrong number of groups and rights: %s groups, %s rights' \
+                                                                        % (len(groupRepos), len(rightRepos))) 
         
         groups = {group.groupName:group for group in groupRepos}
         #make sure Anonymous and Captcha groups have been parsed
-        assert 'Anonymous' in groups and 'Captcha' in groups, 'Missing groups: Anonymous and Captcha'
+        self.assertTrue('Anonymous' in groups and 'Captcha' in groups, 'Missing groups: Anonymous and Captcha')
         
         rights = {right.rightName:right for right in rightRepos}
         #make sure Requests_inspection right has been parsed
-        assert 'Requests_inspection' in rights and 'Requests_inspection_2' in rights, 'Missing rights: Requests_inspection, Requests_inspection_2'
+        self.assertTrue('Requests_inspection' in rights and 'Requests_inspection_2' in rights, 'Missing rights: Requests_inspection, Requests_inspection_2')
         #check if description has been parsed
         for right in rights.values():
-            assert right.description, 'Missing description for %s' % right.description
+            self.assertIsNotNone(right.description, 'Missing description for %s' % right.description) 
         
         #check actions for group Anonymous
         self.checkActions(groups, 'Anonymous', ['menu', 'menu.request', 'menu.request.blob', 'menu.mucu', 'menu.cucu'])
@@ -94,7 +96,7 @@ class TestConfigurationParsing(unittest.TestCase):
         self.checkAccesses(rights, 'Requests_inspection', toCheck)
         
         #check right inheritance attribute
-        assert 'Requests_inspection' in rights['Requests_inspection_2'].rightInherits
+        self.assertTrue('Requests_inspection' in rights['Requests_inspection_2'].rightInherits, 'Inheritance not detected for Requests_inspection_2 and Requests_inspection') 
     
     def testSyncRights(self):
         '''
@@ -112,8 +114,8 @@ class TestConfigurationParsing(unittest.TestCase):
         cyclicInheritance = ['Right_1', 'Right_2', 'Right_3']
         rightsCyclicTest = {right.rightName:[right] for right in rightRepos}
         
-        assert syncRigthsAssembler.isCyclicInheritance('Right_1', rightsCyclicTest), 'Cyclic inheritance not detected for %s' % rightsCyclicTest
-        assert not syncRigthsAssembler.isCyclicInheritance('Requests_inspection', rightsCyclicTest), 'Non-existing cyclic inheritance detected for Requests_inspection' 
+        self.assertTrue(syncRigthsAssembler.isCyclicInheritance('Right_1', rightsCyclicTest), 'Cyclic inheritance not detected for %s' % rightsCyclicTest)
+        self.assertFalse(syncRigthsAssembler.isCyclicInheritance('Requests_inspection', rightsCyclicTest), 'Non-existing cyclic inheritance detected for Requests_inspection') 
         
         #test rights inheritance - discard the cyclic inheritance rights
         syncRigthsAssembler.doInheritance([right for right in rightRepos if right.rightName not in cyclicInheritance])
@@ -132,27 +134,30 @@ class TestConfigurationParsing(unittest.TestCase):
         missing = []
         for t in toCheck:
             if not t in filtersUrlsMethods: missing.append(t)
-        assert not missing, 'Missing accesses from category %s: %s' % (categoryName, missing) 
+        self.assertFalse(missing, 'Missing accesses from category %s: %s' % (categoryName, missing)) 
     
     def checkActions(self, categories, categoryName, toCheck):
         actions = {action.path: action for action in categories[categoryName].actions}
         missing = []
         for action in toCheck:
             if not action in actions: missing.append(action)
-        assert not missing, 'Missing actions from category %s: %s' % (categoryName, missing)
+        self.assertFalse(missing, 'Missing actions from category %s: %s' % (categoryName, missing))
     
     def executeProcess(self, assembly):
         proc = assembly.create(solicit=TestSolicit)
         assert isinstance(proc, Processing)
         
-        uri = 'file://%s' % os.path.abspath('config_test.xml')
-        content = open('config_test.xml', 'rb')
-        solicit = proc.ctx.solicit(stream=content, uri = uri)
+        #use packageProvider (not os package) to access files from inside the package (like config_test.xml)
+        packageProvider = get_provider(__name__)
+        manager = ResourceManager()
+        self.assertTrue(packageProvider.has_resource('config_test.xml'), 'Xml Config file missing')
+        
+        content = packageProvider.get_resource_stream(manager, 'config_test.xml')
+        solicit = proc.ctx.solicit(stream=content, uri = 'file://%s' % 'config_test.xml')
         
         arg = proc.execute(FILL_ALL, solicit=solicit)
         assert isinstance(arg.solicit, TestSolicit)
         content.close()
-        
         return arg
     
     def createAssemplyParsing(self):

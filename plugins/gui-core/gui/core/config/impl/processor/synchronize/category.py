@@ -120,7 +120,7 @@ class RepositoryRight(Repository):
     description = optional(str)
     # ---------------------------------------------------------------- Required
     rightName = requires(str)
-    rightInherits = defines(list)
+    rightInherits = requires(list)
     actions = requires(list)
 
 # --------------------------------------------------------------------
@@ -277,6 +277,7 @@ def syncWithDatabase(service, entitiesConfig, entitiesDb):
     @type service: IAclPrototype 
     @param entitiesConfig: mapping entityName : entityCreator
     @param entitiesDb: mapping entityName : entityId
+    @return: mapping entityName : entityId for the old and newly created entities
     '''
     assert isinstance(entitiesDb, dict), 'Invalid entities mapping %s' % entitiesDb
     assert isinstance(entitiesConfig, dict), 'Invalid entities mapping %s' % entitiesConfig

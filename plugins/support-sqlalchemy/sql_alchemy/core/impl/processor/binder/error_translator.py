@@ -135,7 +135,8 @@ class ProxyTransalator(IProxyHandler):
         
         try: return execution.invoke()
         except SQLAlchemyError as exc:
-                iexc = None
+            iexc = None
+            
             if isinstance(exc, NoResultFound):
                 iexc = IdError()
             

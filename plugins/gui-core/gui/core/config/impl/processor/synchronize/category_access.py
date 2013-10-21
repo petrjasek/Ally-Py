@@ -22,6 +22,8 @@ from acl.api.group import IGroupService
 from security.api.right import IRightService
 from acl.api.acl import IAclPrototype
 
+from functools import reduce
+
 # --------------------------------------------------------------------
 
 log = logging.getLogger(__name__)
@@ -119,8 +121,11 @@ class SynchronizeCategoryAccessHandler(HandlerProcessor):
                                     log.warning('Unknown filter \'%s\' in category \'%s\' in file \'%s\' at line \'%s\' column \'%s\'', 
                                                 filter, entityIdNameMapping.get(entityId, entityId), accessData.uri, accessData.lineNumber, accessData.colNumber)
                 if unusedFilters:
-                    log.warning('Filters \'%s\' do not apply to any of the access URLs \'%s\' defined in category \'%s\' in file \'%s\' at line \'%s\' column \'%s\' ',
-                                unusedFilters, accessData.urls, entityIdNameMapping.get(entityId, entityId), accessData.uri, accessData.lineNumber, accessData.colNumber)
+                    log.warning('Filters (%s) do not apply to any of the access URLs (%s) defined in category \'%s\' in file \'%s\' at line \'%s\' column \'%s\' ',
+                                reduce(lambda x, y: '\'%s\',\'%s\'' % (x,y), unusedFilters), 
+                                reduce(lambda x, y: '\'%s\',\'%s\'' % (x,y), accessData.urls),
+                                entityIdNameMapping.get(entityId, entityId), 
+                                accessData.uri, accessData.lineNumber, accessData.colNumber)
                 
             #now remove from db the accesses that are no longer present in the configuration files
             for accessId in accessesFromDb:

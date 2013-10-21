@@ -80,7 +80,6 @@ class SynchronizeCategoryAccessHandler(HandlerProcessor):
         '''
         if entityIdNameMapping is None: entityIdNameMapping = {}
         for entityId, accesses in entityAccesses.items():
-            if not accesses: continue
             accessesFromDb = set(self.accessCategoryService.getAccesses(entityId))
             
             #keep a record of Acls added so far to avoid adding the same acl twice or adding a different filter for a acl

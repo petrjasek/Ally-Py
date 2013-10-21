@@ -22,6 +22,7 @@ from ally.support.util_context import listBFS
 from security.api.right_type import IRightTypeService
 from security.api.right import IRightService, Right, RightType
 from functools import partial
+from security.rbac.api.role import IRoleService, Role
 
 # --------------------------------------------------------------------
 
@@ -136,6 +137,7 @@ class SynchronizeRightsHandler(HandlerProcessor):
     ''')
     rightService = IRightService; wire.entity('rightService')
     rightTypeService = IRightTypeService; wire.entity('rightTypeService')
+    roleService = IRoleService; wire.entity('roleService') 
     
     def __init__(self):
         assert isinstance(self.type_name, str), 'Invalid type name %s' % self.type_name
@@ -172,7 +174,13 @@ class SynchronizeRightsHandler(HandlerProcessor):
         for r in rightRepositories:
             r.rightId = rightIds.get(r.rightName)
             
-        #TODO: create root role ("Admin") and add all the rights on it
+        #create root role ("Admin") and add all the rights on it
+        try: self.roleService.getById('Admin')
+        except:
+            role = Role()
+            role.Name = 'Admin'
+            self.roleService.insert(role)
+        for rightId in rightIds.values(): self.roleService.addRight('Admin', rightId)
     
     def doInheritance(self, repositories):
         '''

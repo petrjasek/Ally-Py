@@ -33,7 +33,6 @@ from ally.support.util_context import listBFS
 
 from gui.core.config.impl.processor.synchronize.category import RepositoryGroup, RepositoryRight,\
     SynchronizeRightsHandler
-from acl.api.access import generateId
 
 # --------------------------------------------------------------------
 

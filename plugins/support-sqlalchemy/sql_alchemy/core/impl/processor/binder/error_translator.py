@@ -152,6 +152,6 @@ class ProxyTransalator(IProxyHandler):
                 log.info('SQL Alchemy handled exception occurred', exc_info=(type(exc), exc, exc.__traceback__))
                 iexc.with_traceback(exc.__traceback__)
                 exc = iexc
-            else: log.warn('Unknown SQL Alchemy error', str(exc))
+            else: log.warn('Unknown SQL Alchemy error', exc_info=(type(exc), exc, exc.__traceback__))
                 
             raise exc

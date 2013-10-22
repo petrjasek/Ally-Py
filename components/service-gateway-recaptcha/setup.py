@@ -16,13 +16,14 @@ from setuptools import setup, find_packages
 
 # --------------------------------------------------------------------
 
-setup(package_data={'': ['*.zip']},
-version='1.0',
-name='service-gateway-recaptcha',
-description='Provides the gateway reCAPTCHA service',
-packages=find_packages('.'),
-      platforms=['all'],
-      zip_safe=True,
-      license='GPL v3',
-      url='http://www.sourcefabric.org/en/superdesk/', # project home page
+setup(     package_data={'': ['*.zip']},
+     version='1.0',
+     name='service-gateway-recaptcha',
+     description='Provides the gateway reCAPTCHA service',
+
+     packages=find_packages('.'),
+     platforms=['all'],
+     zip_safe=True,
+     license='GPL v3',
+     url='http://www.sourcefabric.org/en/superdesk/', # project home page
       )

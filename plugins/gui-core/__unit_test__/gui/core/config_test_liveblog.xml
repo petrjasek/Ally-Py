@@ -1,15 +1,15 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <Config>
 	<Anonymous>
-		<Action path="menu" label="Menu">
+		<Action path="menux" label="Menu">
 			<Action path="request" label="Request" >
 				<Action path="blob" label="Blob" />
 			</Action>				
 		</Action>
-		<Action path="mucu" label="Mucu" parent="menu" />
-		<Action path="cucu" label="Mucu" parent="menu" />
-		<Action path="bucu" label="Mucu" parent="menu" />
-		<Action path="ducu" label="Mucu" parent="menu" />
+		<Action path="mucu" label="Mucu" parent="menux" />
+		<Action path="cucu" label="Mucu" parent="menux" />
+		<Action path="bucu" label="Mucu" parent="menux" />
+		<Action path="ducu" label="Mucu" parent="menux" />
 
 		<Allows methods="GET">
 			<URL>ACL/Group/*/Action</URL>

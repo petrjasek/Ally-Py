@@ -9,6 +9,11 @@
 		<Action path="mucu" label="Mucu" parent="menu" />
 		<Action path="cucu" label="Mucu" parent="menu" />
 
+		<Allows>
+			<Method>GET</Method>
+			<URL>/</URL>
+		</Allows>
+
 		<Allows methods="PUT,DELETE" filter="FilterDummy,Authent,lala">
 			<Method>GET</Method>
 			<URL>User/*</URL>
@@ -101,11 +106,6 @@
 			<Action path="menu_x" />
 		</Actions>		
 		
-		<Allows>
-			<Method>GET</Method>
-			<URL>User/*/Blog</URL>
-		</Allows>
-
 		<Description>Test cyclic inheritance
 		</Description>
 	</Right>

@@ -101,7 +101,7 @@ class SynchronizeCategoryAccessHandler(HandlerProcessor):
                 
                 for filter in filters:
                     for url, method in urlsMethods:
-                            accessId = generateId(url.replace('#', '*'), method)
+                            accessId = generateId(url.rstrip('/').strip('/').replace('#', '*'), method)
                             if accessId in addedAccesses:
                                 unusedFilters.clear() #avoid displaying unnecessary filter errors for inherited accesses
                                 continue

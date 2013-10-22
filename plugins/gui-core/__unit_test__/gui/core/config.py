@@ -17,7 +17,6 @@ if True:
 
 import logging
 import unittest
-import os
 
 from ally.support.util_io import IInputStream
 from ally.container.ioc import initialize

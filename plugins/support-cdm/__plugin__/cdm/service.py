@@ -9,12 +9,14 @@ Created on Oct 14, 2013
 Configuration for cdm service
 '''
 
+from os import path
+
 from ally.cdm.impl.local_filesystem import IDelivery, HTTPDelivery, \
     LocalFileSystemLinkCDM, LocalFileSystemCDM
 from ally.cdm.spec import ICDM
 from ally.container import ioc
-from os import path
 
+# --------------------------------------------------------------------
 
 @ioc.config
 def server_uri():

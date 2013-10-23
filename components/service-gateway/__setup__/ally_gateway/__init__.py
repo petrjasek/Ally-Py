@@ -21,4 +21,6 @@ KEYWORDS = ['Ally', 'REST', 'gateway', 'service']
 LONG_DESCRIPTION = '''This component provides the gateway security service.'''
 TEST_SUITE = '__unit_test__'
 CLASSIFIERS = ['Development Status :: 4 - Beta']
-INSTALL_REQUIRES = ['ally-http>=1.0', 'ally-indexing>=1.0']
+INSTALL_REQUIRES = ['ally-http >= 1.0', 'ally-indexing >= 1.0']
+
+__extra__ = dict(package_data = {'': ['*.zip']})

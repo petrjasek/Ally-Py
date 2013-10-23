@@ -19,3 +19,5 @@ AUTHOR_EMAIL = 'gabriel.nistor@sourcefabric.org'
 KEYWORDS = ['Ally', 'REST', 'gateway', 'service', 'assemblage']
 TEST_SUITE = '__unit_test__'
 CLASSIFIERS = ['Development Status :: 4 - Beta']
+INSTALL_REQUIRES = ['ally-http >= 1.0', 'ally-indexing >= 1.0']
+__extra__ = dict(package_data = {'': ['*.zip']})

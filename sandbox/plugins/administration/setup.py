@@ -1,10 +1,13 @@
-'''
-Created on June 14, 2012
 
-@package: support administration
-@copyright: 2012 Sourcefabric o.p.s.
+'''
+Created on Oct 1, 2013
+ 
+@package: distribution_manager
+@copyright: 2013 Sourcefabric o.p.s.
 @license: http://www.gnu.org/licenses/gpl-3.0.txt
-@author: Mugur Rus
+@author: Cristian Domsa
+ 
+Setup configuration for components/plugins needed for pypi.
 '''
 
 # --------------------------------------------------------------------
@@ -13,20 +16,16 @@ from setuptools import setup, find_packages
 
 # --------------------------------------------------------------------
 
-setup(
-    name='administration',
-    version='1.0',
-    packages=find_packages(),
-    install_requires=['ally_core >= 1.0'],
-    platforms=['all'],
-    zip_safe=True,
-
-    # metadata for upload to PyPI
-    author='Gabriel Nistor',
-    author_email='gabriel.nistor@sourcefabric.org',
-    description='Ally framework - administration plugin',
-    long_description='The administration support plugin of the Ally framework',
-    license='GPL v3',
-    keywords='Ally REST framework',
-    url='http://www.sourcefabric.org/en/superdesk/', # project home page
-)
+setup(name='administration',
+author='Gabriel Nistor',
+install_requires=['ally-http >= 1.0'],
+author_email='gabriel.nistor@sourcefabric.org',
+version='1.0',
+keywords=['Ally', 'REST', 'administration'],
+description='Provides the administration services that interact with the application code',
+packages=find_packages('.'),
+      platforms=['all'],
+      zip_safe=True,
+      license='GPL v3',
+      url='http://www.sourcefabric.org/en/superdesk/', # project home page
+      )

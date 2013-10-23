@@ -9,7 +9,7 @@ Created on Jul 15, 2011
 Contains setup and configuration files for the HTTP REST server.
 '''
 
-
+# The default configurations
 # --------------------------------------------------------------------
 
 NAME = 'ally HTTP mongrel2 server'
@@ -22,6 +22,7 @@ LONG_DESCRIPTION = '''Similar to the asyncore server but provides support for us
 0MQ messaging in order to communicate with Mongrel2 HTTP server.'''
 TEST_SUITE = '__unit_test__'
 CLASSIFIERS = ['Development Status :: 4 - Beta']
-INSTALL_REQUIRES = ['ally-http>=1.0']
+INSTALL_REQUIRES = ['ally-http >= 1.0']
 # --------------------------------------------------------------------
-# The default configurations
+# The extra configurations
+__extra__ = dict(package_data={'': ['*.txt', '*.conf']})

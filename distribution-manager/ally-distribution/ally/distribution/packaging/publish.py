@@ -30,7 +30,7 @@ class Publisher:
         '''
         for path in self.publish_list:
             os.chdir(path)
-            os.system(' '.join([PY_RUN, 'setup.py', OFFICIAL_REP, SOURCE, EGG, WIN, UPLOAD, OFFICIAL_REP])) 
+            os.system(' '.join([PY_RUN, 'setup.py', REGISTER, OFFICIAL_REP, SOURCE, EGG, WIN, UPLOAD, OFFICIAL_REP])) 
                                 
                                 
 #                                  sdist bdist_egg upload -r pypi')

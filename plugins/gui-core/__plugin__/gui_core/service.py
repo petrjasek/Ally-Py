@@ -44,6 +44,7 @@ def access_group():
 def gui_configuration():
     ''' The URI pattern (can have * for dynamic path elements) where the XML configurations can be found.'''
     return 'file://../plugins-ui/*/config.xml'
+    #return 'file:///home/mihaigociu/Work/workspace/Ally-Py/plugins-ui/*/config.xml'
 
 # --------------------------------------------------------------------
 

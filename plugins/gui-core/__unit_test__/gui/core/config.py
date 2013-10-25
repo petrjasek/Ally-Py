@@ -91,7 +91,7 @@ class TestConfigurationParsing(unittest.TestCase):
         
         #check accesses for right Requests_inspection
         toCheck = [(filter, url, method) for filter in ['userAuth'] for method in ['GET'] 
-                   for url in ['User/*', 'User/*/Blog', 'User/#/SubUser/*']]
+                   for url in ['HR/User/*', 'HR/User/*/Action', 'HR/User/#/SubUser/*']]
         self.checkAccesses(rights, 'Requests_inspection', toCheck)
         
         #check right inheritance attribute
@@ -123,12 +123,12 @@ class TestConfigurationParsing(unittest.TestCase):
         
         #check if accesses have been inherited correctly from Requests_inspection
         toCheck = [(filter, url, method) for filter in ['userAuth'] for method in ['GET'] 
-                   for url in ['User/*', 'User/*/Blog', 'User/#/SubUser/*']]
+                   for url in ['HR/User/*', 'HR/User/*/Action', 'HR/User/#/SubUser/*']]
         self.checkAccesses(rights, 'Requests_inspection_2', toCheck)
         
         
     def checkAccesses(self, categories, categoryName, toCheck):
-        filtersUrlsMethods = set((filter, url, method) for access in categories[categoryName].accesses for url in access.urls 
+        filtersUrlsMethods = set((filter, url.url, method) for access in categories[categoryName].accesses for url in access.urls 
                        for method in access.methods for filter in access.filters)
         missing = []
         for t in toCheck:

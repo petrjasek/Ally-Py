@@ -14,6 +14,11 @@ from ally.design.processor.assembly import Assembly
 from ally.design.processor.execution import Processing, FILL_ALL
 from ally.design.processor.handler import Handler
 from ally.notifier.impl.processor.scanner_file_system import FileSystemScanner
+from ally.design.priority import Priority, PRIORITY_NORMAL
+
+# --------------------------------------------------------------------
+PRIORITY_NOTIFIER = Priority('Start notifier', after=PRIORITY_NORMAL)
+# The priority for @see: loadAllEntities.
 
 # --------------------------------------------------------------------
 
@@ -38,7 +43,7 @@ def fileSystemScanner() -> Handler: return FileSystemScanner()
 def updateNotifierForFileSystemScanner():
     assemblyNotifier().add(fileSystemScanner())
 
-@ioc.start
+@ioc.start(priority=PRIORITY_NOTIFIER)
 def startNotifications():
     if registersListeners():
         assemblyNotifier().add(*registersListeners(), before=fileSystemScanner())

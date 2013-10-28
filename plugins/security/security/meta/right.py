@@ -33,7 +33,7 @@ class RightMapped(Base, Right):
 
     Id = Column('id', INTEGER(unsigned=True), primary_key=True)
     Type = relationshipModel(RightTypeMapped.id)
-    Name = Column('name', String(150), nullable=False, unique=True)
+    Name = Column('name', String(150), nullable=False)
     Description = Column('description', String(255))
 
 class RightAccess(Base, WithAclAccess):

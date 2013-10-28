@@ -41,7 +41,7 @@ def assemblyBind() -> Assembly:
     return Assembly('Bind SQL alchemy')
 
 @ioc.entity
-def assemblyAssembler() -> Assembly:
+def assemblySQLAssembler() -> Assembly:
     '''
     The assembly containing the handlers to be used in the assembly of invokers for error handling.
     '''
@@ -64,7 +64,7 @@ def bindSession() -> Handler:
 @ioc.entity
 def errorTranslator() -> Handler:
     b = ErrorTranslatorHandler()
-    b.assembly = assemblyAssembler()
+    b.assembly = assemblySQLAssembler()
     return b
 
 # --------------------------------------------------------------------

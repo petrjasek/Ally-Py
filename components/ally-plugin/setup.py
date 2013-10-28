@@ -16,7 +16,11 @@ from setuptools import setup, find_packages
 
 # --------------------------------------------------------------------
 
-setup(     name='ally-plugin',
+setup(packages=find_packages('.'),
+     platforms=['all'],
+     zip_safe=True,
+     license='GPL v3',
+     url='http://www.sourcefabric.org/en/superdesk/', # project home page     description='The plugin support for REST.',
      author='Gabriel Nistor',
      install_requires=['ally>=1.0'],
      long_description='This component handles the plugins and incorporates them in the application.',
@@ -25,10 +29,6 @@ setup(     name='ally-plugin',
      test_suite='__unit_test__',
      keywords=['Ally', 'REST', 'plugin'],
      classifiers=['Development Status :: 4 - Beta'],
-     description='The plugin support for REST.',
-packages=find_packages('.'),
-     platforms=['all'],
-     zip_safe=True,
-     license='GPL v3',
-     url='http://www.sourcefabric.org/en/superdesk/', # project home page
-      )
+     name='ally-plugin',
+
+     )

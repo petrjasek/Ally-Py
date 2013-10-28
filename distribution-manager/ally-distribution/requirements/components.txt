@@ -7,10 +7,3 @@ ally-plugin >= 1.0
 service-assemblage >= 1.0
 service-cdm >= 1.0
 service-gateway >= 1.0
-
-### Ally-py Plugins ###
-
-### Our implementation ###
-#babel==1.0dev
-#pytz==2012d
-#MySql-connector-python==0.3.2dev

@@ -1,15 +1,37 @@
 
-About:
+About distribution-manager:
 - Collect package information from __setup__(__plugin__)/__init__.py files in each package.
 - Generate eggs to path
-- Generate setup.py files used for pypi upload
+- Generate setup.py and setup.cfg files used for pypi upload
 - Publish package to pypi (requires auth)
 
+!!!IMPORTANT!!!
+Only use this if your intention is to publish NEW components/plugins versions to pypi.
 
-Usage:
-distribution.py --location [path] 
-				--location [path] --components (Deploy only components from ally-py)
-				--location [path] --plugins (Deploy only plugins from ally-py)
-				
+Usage (Ubuntu):
+1. create in your home directory pypi config file:
 
-pip-3.2 install --target /opt/superdesk/ 
+echo "[distutils]
+index-servers =
+    pypi
+
+[pypi]
+username:Sourcefabric
+password:Sofabulous#78" > ~/.pypirc
+
+2. Build and publish components and/or plugins:
+(python 3.2.5 is required, for now)
+
+python3 distribution.py --location [path] 
+				        --location [path] --components 
+				        --location [path] --plugins
+
+Help: 
+  path         - the path where the eggs will be deployed
+  --components - build and publish only ally-py components
+  --plugins    - build and publish only ally-py plugins 
+
+
+For installing ally-py core with deps:
+
+pip-3.2 install --target /opt/superdesk/ -r all.txt 

@@ -16,7 +16,11 @@ from setuptools import setup, find_packages
 
 # --------------------------------------------------------------------
 
-setup(     name='ally-api',
+setup(packages=find_packages('.'),
+     platforms=['all'],
+     zip_safe=True,
+     license='GPL v3',
+     url='http://www.sourcefabric.org/en/superdesk/', # project home page     description='Provides the REST API support for marking REST services and models',
      author='Gabriel Nistor',
      install_requires=['ally >= 1.0'],
      long_description='Contains HTTP specific handling for requests and also the basic HTTP server based on the python built in server.',
@@ -25,10 +29,6 @@ setup(     name='ally-api',
      test_suite='__unit_test__',
      keywords=['Ally', 'REST', 'API'],
      classifiers=['Development Status :: 4 - Beta'],
-     description='Provides the REST API support for marking REST services and models',
-packages=find_packages('.'),
-     platforms=['all'],
-     zip_safe=True,
-     license='GPL v3',
-     url='http://www.sourcefabric.org/en/superdesk/', # project home page
-      )
+     name='ally-api',
+
+     )

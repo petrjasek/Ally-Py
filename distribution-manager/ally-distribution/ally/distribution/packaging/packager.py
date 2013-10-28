@@ -60,8 +60,7 @@ match = .egg
 keep = 1
 '''
 IGNORE_DIRS = ['__pycache__']
-ATTRIBUTE_MAPPING = {'NAME'            : 'name',
-                     'VERSION'         : 'version',
+ATTRIBUTE_MAPPING = {'VERSION'         : 'version',
                      'AUTHOR'          : 'author',
                      'AUTHOR_EMAIL'    : 'author_email',
                      'KEYWORDS'        : 'keywords',
@@ -177,9 +176,9 @@ class Packager:
 
                     infoTimestamp = os.path.getmtime(os.path.join(setupPath, setupModule, INIT_FILENAME))
                     setupTimestamp = os.path.getmtime(setupFilePath) 
-                    if infoTimestamp < setupTimestamp: 
-                        assert log.info('*** SKIPPED (no new info found) ***') or True
-                        continue 
+#                     if infoTimestamp < setupTimestamp: 
+#                         assert log.info('*** SKIPPED (no new info found) ***') or True
+#                         continue 
                     try:
                         module = imp.load_source(setupModule, os.path.join(setupPath, setupModule, INIT_FILENAME))
                         try:

@@ -1,10 +1,13 @@
-'''
-Created on June 14, 2012
 
-@package: ally core
-@copyright: 2012 Sourcefabric o.p.s.
+'''
+Created on Oct 1, 2013
+ 
+@package: distribution_manager
+@copyright: 2013 Sourcefabric o.p.s.
 @license: http://www.gnu.org/licenses/gpl-3.0.txt
-@author: Mugur Rus
+@author: Cristian Domsa
+ 
+Setup configuration for components/plugins needed for pypi.
 '''
 
 # --------------------------------------------------------------------
@@ -13,22 +16,19 @@ from setuptools import setup, find_packages
 
 # --------------------------------------------------------------------
 
-setup(
-    name='ally_core',
-    version='1.0',
-    packages=find_packages(),
-    install_requires=['ally_api >= 1.0', 'ally_indexing >= 1.0'],
-    platforms=['all'],
-    test_suite='test',
-    py_modules=[],
-    zip_safe=True,
-
-    # metadata for upload to PyPI
-    author='Gabriel Nistor',
-    author_email='gabriel.nistor@sourcefabric.org',
-    description='Ally framework - core component',
-    long_description='The core component of the Ally framework',
-    license='GPL v3',
-    keywords='Ally REST framework',
-    url='http://www.sourcefabric.org/en/superdesk/', # project home page
-)
+setup(     name='ally-core',
+     author='Gabriel Nistor',
+     install_requires=['ally-api >= 1.0', 'ally-indexing >= 1.0'],
+     long_description='Provides the general support for handling the [API] services that have been decorated as [REST] services.',
+     author_email='gabriel.nistor@sourcefabric.org',
+     version='1.0',
+     test_suite='__unit_test__',
+     keywords=['Ally', 'core', 'REST'],
+     classifiers=['Development Status :: 4 - Beta'],
+     description='Provides the core functionality for handling the REST API decorated services and models',
+packages=find_packages('.'),
+     platforms=['all'],
+     zip_safe=True,
+     license='GPL v3',
+     url='http://www.sourcefabric.org/en/superdesk/', # project home page
+      )

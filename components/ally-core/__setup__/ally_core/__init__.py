@@ -18,6 +18,6 @@ AUTHOR = 'Gabriel Nistor'
 AUTHOR_EMAIL = 'gabriel.nistor@sourcefabric.org'
 KEYWORDS = ['Ally', 'core', 'REST']
 LONG_DESCRIPTION = '''Provides the general support for handling the [API] services that have been decorated as [REST] services.'''
-INSTALL_REQUIRES = ['ally-api>=1.0', 'ally-indexing>=1.0']
+INSTALL_REQUIRES = ['ally-api >= 1.0', 'ally-indexing >= 1.0']
 TEST_SUITE = '__unit_test__'
 CLASSIFIERS = ['Development Status :: 4 - Beta']

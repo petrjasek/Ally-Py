@@ -14,7 +14,7 @@ import logging
 from ally.container import ioc, app
 from ally.design.processor.handler import Handler
 
-from .db_application import assemblyAssembler
+from .db_application import assemblySQLAssembler
 
 
 # --------------------------------------------------------------------
@@ -36,9 +36,9 @@ else:
 
     # ----------------------------------------------------------------
 
-    @ioc.after(assemblyAssembler)
-    def updateAssemblyAssembler():
-        assemblyAssembler().add(invokerService(), processMethod())
+    @ioc.after(assemblySQLAssembler)
+    def updateAssemblySQLAssembler():
+        assemblySQLAssembler().add(invokerService(), processMethod())
 
     @ioc.after(updateAssemblyResources)
     def updateAssemblyResourcesForAlchemy():

@@ -189,7 +189,7 @@ def iterateObjectCollection(sql, offset=None, limit=None, withTotal=False, facto
     '''
     if withTotal:
         sqlLimit = buildLimits(sql, offset, limit)
-        if limit <= 0: return (), sql.count()
+        if limit <= 0: return factorySlice((), sql.count())
         return factorySlice(sqlLimit.yield_per(10), sql.count(), offset, limit)
     return sql.yield_per(10)
 
@@ -207,7 +207,7 @@ def iterateCollection(sql, offset=None, limit=None, withTotal=False, factorySlic
     '''
     if withTotal:
         sqlLimit = buildLimits(sql, offset, limit)
-        if limit == 0: return (), sql.count()
+        if limit == 0: return factorySlice((), sql.count())
         return factorySlice((value for value, in sqlLimit.all()), sql.count(), offset, limit)
     return (value for value, in sql.all())
 

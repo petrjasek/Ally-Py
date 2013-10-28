@@ -14,4 +14,7 @@ Contains the GUI setup files.
 NAME = 'GUI action'
 GROUP = 'GUI'
 VERSION = '1.0'
+AUTHOR = 'Mihai Balaceanu'
+AUTHOR_EMAIL = 'mihai.balaceanu@sourcefabric.org'
 DESCRIPTION = 'Provides the the GUI actions'
+INSTALL_REQUIRES = ['ally-api >= 1.0']

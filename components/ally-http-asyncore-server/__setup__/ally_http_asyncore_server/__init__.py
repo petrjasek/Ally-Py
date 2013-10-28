@@ -22,4 +22,4 @@ LONG_DESCRIPTION = '''Provides an HTTP server substitute for the basic server fr
 that handles the requests in an asyncore manner by using the python built in asyncore package.'''
 TEST_SUITE = '__unit_test__'
 CLASSIFIERS = ['Development Status :: 4 - Beta']
-INSTALL_REQUIRES = ['ally-http>=1.0']
+INSTALL_REQUIRES = ['ally-http >= 1.0']

@@ -6,7 +6,7 @@ About distribution-manager:
 - Publish package to pypi (requires auth)
 
 !!!IMPORTANT!!!
-Only use this if your intention is to publish NEW components/plugins versions to pypi.
+Only use distribution-manager if your intention is to publish NEW components/plugins versions to pypi.
 
 Usage (Ubuntu):
 1. create in your home directory pypi config file:
@@ -32,6 +32,15 @@ Help:
   --plugins    - build and publish only ally-py plugins 
 
 
-For installing ally-py core with deps:
+For installing ally-py core with deps (Ubuntu):
 
-pip-3.2 install --target /opt/superdesk/ -r all.txt 
+1. Download /requirements/ folder
+
+2. Install compiling dependencies
+
+sudo apt-get install libxml2 libxml2-dev libxslt1.1 libxslt1-dev 
+
+3. Install Ally-py core (pip-3.2 needed - http://www.pip-installer.org/en/latest/installing.html) 
+
+cd requirements
+pip-3.2 install --target [path_to_desired_location] -r all.txt 

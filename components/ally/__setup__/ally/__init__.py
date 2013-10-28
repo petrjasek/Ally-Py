@@ -17,14 +17,11 @@ DESCRIPTION = 'Ally framework - utilities component'
 AUTHOR = 'Gabriel Nistor'
 AUTHOR_EMAIL = 'gabriel.nistor@sourcefabric.org'
 KEYWORDS = ['Ally', 'REST']
-INSTALL_REQUIRES = ['httplib2 == 0.7.7', 
-                    'Jinja2 == 2.6',
-                    'MySql-connector==0.3.2dev',
+INSTALL_REQUIRES = ['httplib2==0.7.7', 
+                    'Jinja2==2.6',
                     'PyYAML==3.10',
                     'SQLAlchemy==0.7.1',
                     'sunburnt==0.6',
-                    'babel==1.0dev',
-                    'pytz==2012d',
                     'lxml==3.0']
 LONG_DESCRIPTION = '''This is the main component and is the application entry point. 
 'This component provides also support for inversion of control container.

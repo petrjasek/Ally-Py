@@ -12,4 +12,4 @@ distribution.py --location [path]
 				--location [path] --plugins (Deploy only plugins from ally-py)
 				
 
-pip-3.2 install --target /opt/superdesk/ --use-wheel -r requirements.txt 
+pip-3.2 install --target /opt/superdesk/ 

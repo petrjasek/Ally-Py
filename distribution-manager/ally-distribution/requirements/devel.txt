@@ -10,13 +10,7 @@ service-gateway >= 1.0
 
 ### Ally-py Plugins ###
 
-### External Dependencies ###
-httplib2==0.7.7
-Jinja2==2.6
-MySql-connector==0.3.2dev
-PyYAML==3.10
-SQLAlchemy==0.7.1
-sunburnt==0.6
-babel==1.0dev
-pytz==2012d
-lxml==3.0
+### Our implementation ###
+#babel==1.0dev
+#pytz==2012d
+#MySql-connector-python==0.3.2dev

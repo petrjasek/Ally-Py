@@ -34,9 +34,9 @@ Help:
 
 For installing ally-py core with deps (Ubuntu):
 
-1. Download /requirements/ folder
+1. Download components requirements file
 
-https://github.com/cristidomsa/Ally-Py/blob/packaging_ally/requirements/components.txt
+wget https://github.com/cristidomsa/Ally-Py/blob/packaging_ally/requirements/components.txt
 
 2. Install compiling dependencies
 

@@ -314,16 +314,46 @@ class URLRule(Rule, IPrepare):
         '''
         # ---------------------------------------------------------------- Defined
         urls = defines(list, doc='''
-        @rtype: list[string]
+        @rtype: list[Context]
         The list of urls.
+        ''')
+        
+    class URL(Context):
+        '''
+        The url context.
+        '''
+        # ---------------------------------------------------------------- Defined
+        url = defines(str, doc='''
+        @rtype: string
+        The actual URL.
+        ''')
+        compensates = defines(list, doc='''
+        @rtype: list[string]
+        The list of URLs to compensate (can be None).
         ''')
     
     def prepare(self, resolvers):
         '''
         @see: IVerifier.prepare
         '''
-        merge(resolvers, dict(Access=URLRule.Access))
+        merge(resolvers, dict(Access=URLRule.Access, URL=URLRule.URL))
     
+    def begin(self, digester, **attributes):
+        '''
+        @see: Rule.begin
+        '''
+        assert isinstance(digester, DigesterArg), 'Invalid digester %s' % digester
+        assert digester.stack, 'Expected access repository on the digester stack'
+        access = digester.stack[-1]
+        assert isinstance(access, URLRule.Access), 'Invalid Access class %s' % access
+        
+        #create the url here and add it to the access (also add the compensates to the url)
+        if access.urls is None: access.urls = []
+        url = digester.arg.URL()
+        if attributes.get('alter'): 
+            url.compensates = attributes.get('alter').split(',')
+        access.urls.append(url)
+        
     def content(self, digester, content):
         '''
         @see: Rule.content
@@ -335,8 +365,13 @@ class URLRule(Rule, IPrepare):
         
         content = content.strip()
         if content:
-            if access.urls is None: access.urls = []
-            access.urls.append(content)
+            #update the last url on the access
+            if access.urls: 
+                url = access.urls[-1]
+                assert isinstance(url, URLRule.URL), 'Invalid url context %s' % url
+                url.url = content
+        #else remove last url from access
+        elif access.urls: access.urls.pop()
             
 class MethodRule(Rule, IPrepare):
     '''

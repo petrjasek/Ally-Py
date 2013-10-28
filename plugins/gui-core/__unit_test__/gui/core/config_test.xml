@@ -47,9 +47,9 @@
 
 		<Allows filter="userAuth">
 			<Method>GET</Method>
-			<URL>User/*</URL>
-			<URL>User/*/Blog</URL>
-			<URL>User/#/SubUser/*</URL>
+			<URL alter="GUI/Action">HR/User/*/Action</URL>
+			<URL>HR/User/*</URL>
+			<URL>HR/User/#/SubUser/*</URL>
 		</Allows>
 
 		<Description>Allows for the viewing of all possible requests that can be made on the REST server, also the plugins and

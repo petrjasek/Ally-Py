@@ -23,7 +23,7 @@ from gui.core.config.impl.rules import AccessRule, MethodRule, URLRule, \
 # --------------------------------------------------------------------
 # The synchronization processors
 synchronizeAction = synchronizeGroups = synchronizeRights = synchronizeGroupActions = synchronizeRightActions =\
-synchronizeGroupAccesses = synchronizeRightAccesses = support.notCreated  # Just to avoid errors
+prepareGroupAccesses = prepareRightAccesses = syncCategoryAccesses = syncGroupAccesses = syncRightAccesses = support.notCreated  # Just to avoid errors
 support.createEntitySetup('gui.core.config.impl.processor.synchronize.**.*')
 
 # --------------------------------------------------------------------
@@ -43,8 +43,8 @@ def access_group():
 @ioc.config
 def gui_configuration():
     ''' The URI pattern (can have * for dynamic path elements) where the XML configurations can be found.'''
-    #return 'file:///home/mihaigociu/Work/*/config_test.xml'
     return 'file://../plugins-ui/*/config.xml'
+    #return 'file:///home/mihaigociu/Work/workspace/Ally-Py/plugins-ui/*/config.xml'
 
 # --------------------------------------------------------------------
 
@@ -95,7 +95,7 @@ def updateRootNodeXMLForGroups():
 def updateAssemblyConfiguration():
     assemblyConfiguration().add(parserXML(), synchronizeAction(), synchronizeGroups(), synchronizeRights(), 
                                 synchronizeGroupActions(), synchronizeRightActions(), 
-                                synchronizeGroupAccesses(), synchronizeRightAccesses())
+                                prepareGroupAccesses(), prepareRightAccesses(), syncGroupAccesses(), syncRightAccesses())
 
 @ioc.before(registersListeners)
 def updateRegistersListenersForConfiguration():

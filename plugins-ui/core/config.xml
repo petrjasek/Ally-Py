@@ -5,7 +5,7 @@
 			<URL>/</URL>
 		</Allows>
 	</Anonymous>
-	<Right name="Actions View">
+	<Right name="View all actions">
 		<Actions>
 			<!-- This node should contain actions to be used to generate the top navigation menu -->
 			<Action path="menu" />
@@ -17,10 +17,11 @@
 	
 		<Allows methods="GET">
 			<URL>GUI/Action</URL>
+			<URL>GUI/Action/*</URL>
 			<URL>GUI/Action/*/SubAction</URL>
 		</Allows>
 	
-		<Description>Right containing the default actions.
+		<Description>Right containing all actions.
 		</Description>
 	</Right>
 	

@@ -36,6 +36,8 @@ For installing ally-py core with deps (Ubuntu):
 
 1. Download /requirements/ folder
 
+https://github.com/cristidomsa/Ally-Py/blob/packaging_ally/requirements/components.txt
+
 2. Install compiling dependencies
 
 sudo apt-get install libxml2 libxml2-dev libxslt1.1 libxslt1-dev 
@@ -43,4 +45,4 @@ sudo apt-get install libxml2 libxml2-dev libxslt1.1 libxslt1-dev
 3. Install Ally-py core (pip-3.2 needed - http://www.pip-installer.org/en/latest/installing.html) 
 
 cd requirements
-pip-3.2 install --target [path_to_desired_location] -r all.txt 
+pip-3.2 install --target [path_to_desired_location] -r components.txt 

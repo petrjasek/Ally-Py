@@ -30,5 +30,4 @@ setup(packages=find_packages('.'),
      keywords=['Ally', 'REST', 'gateway', 'service', 'assemblage'],
      classifiers=['Development Status :: 4 - Beta'],
      name='service-assemblage',
-
      )

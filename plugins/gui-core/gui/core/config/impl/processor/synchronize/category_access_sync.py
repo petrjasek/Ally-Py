@@ -59,6 +59,8 @@ class SyncAccess(Context):
 
 # --------------------------------------------------------------------
 
+#TODO: fix BUG - when removing access from acl config file it does not get removed from the database
+
 @injected
 class SynchronizeCategoryAccessHandler(HandlerProcessor):
     '''
@@ -87,11 +89,11 @@ class SynchronizeCategoryAccessHandler(HandlerProcessor):
             self.syncCategoryAccesses(categoryId, accesses)
             
     def syncCategoryAccesses(self, categoryId, accesses):
-        accessesFromDb = set(str(accessId) for accessId in self.accessCategoryService.getAccesses(categoryId))
+        accessesFromDb = set(accessId for accessId in self.accessCategoryService.getAccesses(categoryId))
         accessesFromConfig = set(access.accessId for access in accesses)
         
         toAdd = [access for access in accesses if access.accessId in accessesFromConfig.difference(accessesFromDb)]
-        toDelete = [access for access in accesses if access.accessId in accessesFromDb.difference(accessesFromConfig)]
+        toDelete = accessesFromDb.difference(accessesFromConfig)
         
         addedFilters = set(access.filter for access in toAdd if self.addCategoryAccess(categoryId, access) and 
                         self.addAccessFilter(categoryId, access))
@@ -105,7 +107,7 @@ class SynchronizeCategoryAccessHandler(HandlerProcessor):
                         reduce(lambda x, y: '\'%s\',\'%s\'' % (x,y), urls),
                         categoryName, uri, line, column)
         
-        for access in toDelete: self.accessCategoryService.remAcl(categoryId, access.accessId)
+        for accessId in toDelete: self.accessCategoryService.remAcl(categoryId, accessId)
         
     def addCategoryAccess(self, categoryId, access):
         try:

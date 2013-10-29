@@ -70,10 +70,9 @@ def updateWrapper(wrapper, wrapped):
     Updates a wrapper function just like @see: update_wrapper from functools, but additionaly provides the location
     stack tracking for the wrapped function.
     '''
-    location = locationStack(wrapper)
     functools.update_wrapper(wrapper, wrapped)
-    try: wrapper.__wrapped_location__ = '%s%s' % (location, wrapped.__wrapped_location__)
-    except AttributeError: wrapper.__wrapped_location__ = '%s%s' % (location, locationStack(wrapped))
+    try: wrapper.__wrapped_location__ = wrapped.__wrapped_location__
+    except AttributeError: wrapper.__wrapped_location__ = locationStack(wrapped)
 
 def locationStack(located):
     '''

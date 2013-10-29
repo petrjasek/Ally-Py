@@ -44,14 +44,13 @@ from setuptools import setup, find_packages
 
 # --------------------------------------------------------------------
 
-setup('''
-SETUP_TEMPLATE_END = '''packages=find_packages('.'),
+setup(packages=find_packages('.'),
      platforms=['all'],
      zip_safe=True,
      license='GPL v3',
-     url='http://www.sourcefabric.org/en/superdesk/', # project home page
-      )
-'''
+     url='http://www.sourcefabric.org/en/superdesk/', # project home page'''
+SETUP_TEMPLATE_END = '''
+     )'''
 SETUP_CFG_TEMPLATE = '''
 [bdist_egg]
 dist_dir = {0}
@@ -61,8 +60,7 @@ match = .egg
 keep = 1
 '''
 IGNORE_DIRS = ['__pycache__']
-ATTRIBUTE_MAPPING = {'NAME'            : 'name',
-                     'VERSION'         : 'version',
+ATTRIBUTE_MAPPING = {'VERSION'         : 'version',
                      'AUTHOR'          : 'author',
                      'AUTHOR_EMAIL'    : 'author_email',
                      'KEYWORDS'        : 'keywords',

@@ -72,7 +72,7 @@ def errorTranslator() -> Handler:
 @ioc.before(assemblyBind)
 def updateAssemblyBind():
     assemblyBind().add(bindSession(), errorTranslator())
-
+    
 # --------------------------------------------------------------------
 
 def bindApplicationSession(proxy):

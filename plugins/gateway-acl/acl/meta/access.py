@@ -9,7 +9,7 @@ Created on Jan 28, 2013
 Contains the SQL alchemy meta for ACL access.
 '''
 
-from ..api.access import Access, Entry, Property
+from ..api.access import AccessCreate, Entry, Property
 from .acl_intern import WithMethod, WithPath, WithSignature
 from .metadata_acl import Base
 from sql_alchemy.support.mapper import validate
@@ -17,11 +17,12 @@ from sqlalchemy.dialects.mysql.base import INTEGER
 from sqlalchemy.ext.associationproxy import association_proxy
 from sqlalchemy.schema import Column, ForeignKey, UniqueConstraint
 from sqlalchemy.types import String
+from ally.api.validate import ReadOnly
 
 # --------------------------------------------------------------------
 
-@validate
-class AccessMapped(Base, WithPath, WithMethod, WithSignature, Access):
+@validate(ReadOnly(AccessCreate.Id))
+class AccessMapped(Base, WithPath, WithMethod, WithSignature, AccessCreate):
     '''
     Provides the ACL access mapping.
     '''

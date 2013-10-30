@@ -59,8 +59,6 @@ class SyncAccess(Context):
 
 # --------------------------------------------------------------------
 
-#TODO: fix BUG - when removing access from acl config file it does not get removed from the database
-
 @injected
 class SynchronizeCategoryAccessHandler(HandlerProcessor):
     '''

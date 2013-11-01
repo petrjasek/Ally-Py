@@ -1,6 +1,5 @@
 #!/bin/sh
 
-#PYTHONPATH=$PYTHONPATH:"../components"
 PYTHONPATH=$PYTHONPATH:"../components/ally-api"
 PYTHONPATH=$PYTHONPATH:"../components/ally-core"
 PYTHONPATH=$PYTHONPATH:"../components/ally-core-http"
@@ -29,9 +28,16 @@ PYTHONPATH=$PYTHONPATH:"../plugins/gateway-acl"
 PYTHONPATH=$PYTHONPATH:"../components/service-assemblage"
 PYTHONPATH=$PYTHONPATH:"../components/service-gateway"
 
+PYTHONPATH=$PYTHONPATH:"libraries/Babel-1.0dev-py3.2"
+PYTHONPATH=$PYTHONPATH:"libraries/SQLAlchemy-0.7.1-py3.2.egg"
+
 export PYTHONPATH
 echo $PYTHONPATH
 
-cd distribution
-nosetests "../plugins/gui-core/__unit_test__/gui/core/config.py" --with-xunit
-#python3.2 -m unittest "../plugins/gui-core/__unit_test__"
+nosetests 	"../plugins/gui-core/__unit_test__" \
+		"../components/ally-api/__unit_test__" \
+		"../components/ally/__unit_test__" \
+		"../components/ally-core/__unit_test__" \
+		"../components/ally-core-http/__unit_test__" \
+		--with-xunit --all-modules
+

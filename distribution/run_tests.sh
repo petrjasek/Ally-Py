@@ -37,7 +37,6 @@ echo $PYTHONPATH
 nosetests 	"../plugins/gui-core/__unit_test__" \
 		"../components/ally-api/__unit_test__" \
 		"../components/ally/__unit_test__" \
-		"../components/ally-core/__unit_test__" \
 		"../components/ally-core-http/__unit_test__" \
 		--with-xunit --all-modules
 

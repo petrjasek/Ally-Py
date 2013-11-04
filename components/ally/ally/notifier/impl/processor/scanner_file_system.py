@@ -130,6 +130,7 @@ class FileSystemScanner(HandlerProcessor):
         
         scanThread = ScannerThread(target=self.scanItems, name='File system notifier scanner thread',
                                    args=(register.itemTree, Item))
+        scanThread.daemon = True
         scanThread.start()
     
     def createItemTree(self, listeners, root, Item):

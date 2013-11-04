@@ -36,7 +36,6 @@ class IServiceEntity:
 @service((Entity, APIModel))
 class IService(IServiceEntity):
 
-    #@call(Non, Number, method=GET)
     @call(method=GET)
     def doNothing(self, x:Integer):
         '''

@@ -15,23 +15,13 @@ from .article_type import ArticleType
 #from ally.support.sqlalchemy.mapper import mapperModel
 from sqlalchemy.schema import Table, Column, ForeignKey
 from sqlalchemy.types import String, Integer
-from ally.api.config import model
+from sql_alchemy.support.mapper import mapperModel
 
 # --------------------------------------------------------------------
 
-@model(id='Id')
-class Article:
-    '''
-    Provides the article type model.
-    '''
-    Id = int
-    Type = ArticleType
-    Name = str
-
-
-# table = Table('article', meta,
-#               Column('id', Integer, primary_key=True, key='Id'),
-#               Column('fk_article_type_id', ForeignKey(ArticleType.Id), nullable=False, key='Type'),
-#               Column('name', String(255), nullable=False, key='Name'))
-# 
-# Article = mapperModel(Article, table)
+table = Table('article', meta,
+              Column('id', Integer, primary_key=True, key='Id'),
+              Column('fk_article_type_id', ForeignKey(ArticleType.Id), nullable=False, key='Type'),
+              Column('name', String(255), nullable=False, key='Name'))
+ 
+Article = mapperModel(Article, table)

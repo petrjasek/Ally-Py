@@ -34,7 +34,6 @@ from gui.core.config.impl.processor.synchronize.category import RepositoryGroup,
     SynchronizeRightsHandler
 
 from pkg_resources import get_provider, ResourceManager
-#from __unit_test__.gui.core.config import TestSolicit
 # --------------------------------------------------------------------
 
 logging.basicConfig()

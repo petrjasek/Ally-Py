@@ -11,13 +11,13 @@ Provides the properties validation.
 
 import logging
 
-from ally.api.operator.type import TypeProperty
-from ally.api.validate import Validation
-from ally.container.ioc import injected
+from ally.api.operator.type import TypeProperty, TypeService
+from ally.api.validate import IValidation
 from ally.design.processor.attribute import defines, requires
 from ally.design.processor.context import Context
 from ally.design.processor.execution import Chain
 from ally.design.processor.handler import HandlerProcessor
+from ally.support.util_sys import locationStack, isLocated
 
 
 # --------------------------------------------------------------------
@@ -25,6 +25,20 @@ log = logging.getLogger(__name__)
 
 # --------------------------------------------------------------------
 
+class Register(Context):
+    '''
+    The register context.
+    '''
+    # ---------------------------------------------------------------- Required
+    validations = requires(dict)
+    
+class Invoker(Context):
+    '''
+    The invoker context.
+    '''
+    # ---------------------------------------------------------------- Required
+    service = requires(TypeService)
+    
 class Decoding(Context):
     '''
     The model decoding context.
@@ -37,45 +51,49 @@ class Decoding(Context):
     ''')
     # ---------------------------------------------------------------- Required
     property = requires(TypeProperty)
-    
+
 # --------------------------------------------------------------------
 
-@injected
 class ValidationPropertyProvider(HandlerProcessor):
     '''
     Implementation for a handler that provides the properties validation requirements.
     '''
     
-    validations = list
-    # The list of assigned validations.
-    
-    def __init__(self):
-        assert isinstance(self.validations, list), 'Invalid validations %s' % self.validations
-        super().__init__()
-        
-        self._validationsByProperty = {}
-        for validation in self.validations:
-            assert isinstance(validation, Validation), 'Invalid validation %s' % validation
-            assert isinstance(validation.property, TypeProperty), 'Invalid property type %s' % validation.property
-            validations = self._validationsByProperty.get(validation.property)
-            if validations is None: validations = self._validationsByProperty[validation.property] = []
-            validations.append(validation)
-    
-    def process(self, chain, decoding:Decoding, **keyargs):
+    def process(self, chain, register:Register, invoker:Invoker, decoding:Decoding, **keyargs):
         '''
         @see: HandlerProcessor.process
         
         Provide the validations for the property.
         '''
         assert isinstance(chain, Chain), 'Invalid chain %s' % chain
+        assert isinstance(register, Register), 'Invalid register %s' % register
+        assert isinstance(invoker, Invoker), 'Invalid invoker %s' % invoker
         assert isinstance(decoding, Decoding), 'Invalid decoding %s' % decoding
+        
+        if not register.validations: return
         if not decoding.property: return
         assert isinstance(decoding.property, TypeProperty), 'Invalid property type %s' % decoding.property
         
-        validations = self._validationsByProperty.get(decoding.property)
+        svalidations = register.validations.get(invoker.service)
+        if not svalidations: return
+        assert isinstance(svalidations, list), 'Invalid validations %s' % svalidations
+        
+        k, validations = 0, []
+        while k < len(svalidations):
+            validation, target = svalidations[k]
+            k += 1
+            if not isinstance(validation, IValidation):
+                if isLocated(target): log.warn('Cannot use validation %s from:%s', validation, locationStack(target))
+                else: log.warn('Cannot use validation %s from target %s', validation, target)
+                k -= 1
+                del svalidations[k]
+                continue
+            
+            assert isinstance(validation, IValidation)
+            if validation.isFor(decoding.property): validations.append(validation)
         if not validations: return
         
-        decoding.validations = list(validations)
+        decoding.validations = validations
         chain.onFinalize(self.checkUnhandled)
     
     # ----------------------------------------------------------------

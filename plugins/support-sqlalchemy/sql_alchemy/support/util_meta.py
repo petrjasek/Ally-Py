@@ -10,7 +10,6 @@ Provides utility methods for SQL alchemy meta definitions.
 '''
 
 from collections import OrderedDict
-from functools import partial
 from inspect import isclass
 import json
 from operator import attrgetter
@@ -26,12 +25,11 @@ from sqlalchemy.types import DateTime, TypeDecorator, String
 
 from ally.api.operator.type import TypeModel, TypeProperty
 from ally.api.type import typeFor
-from ally.api.validate import Mandatory, Relation
+from ally.api.validate import Mandatory, Relation, validate
 from ally.support.util import modifyFirst, toUnderscore
 from ally.support.util_sys import callerLocals
 
-from .mapper import mappingFor, tableFor, validate
-from .mapper import columnFor
+from .mapper import columnFor, mappingFor, tableFor
 
 
 # --------------------------------------------------------------------

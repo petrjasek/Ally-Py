@@ -9,12 +9,9 @@ Created on Jan 12, 2012
 Provides the setup registry for the plugins.
 '''
 
-from collections import Iterable
 from functools import partial
 
-from __setup__.ally_core.decode import validations
 from __setup__.ally_core.resources import services
-from ally.api.validate import Validation
 from ally.container.bind import processBinders
 from ally.container.impl.proxy import proxyWrapFor
 
@@ -45,21 +42,3 @@ def addService(*binders):
     binders = processBinders(binders)
     assert binders, 'At least a binder is required, if you want the register without binders use the \'registerService\' function'
     return partial(registerService, binders=binders)
-
-# --------------------------------------------------------------------
-
-def registerValidations(*validators):
-    '''
-    Register the validations for the services.
-    
-    @param validations: arguments[Validation|Iterable(Validation)]
-        The validations to register.
-    '''
-    assert validators, 'At least a validation is required'
-    for validator in validators:
-        if isinstance(validator, Validation): validations().append(validator)
-        else:
-            assert isinstance(validator, Iterable), 'Invalid validation %s' % validator
-            if __debug__:
-                for valid in validator: assert isinstance(valid, Validation), 'Invalid validation %s' % valid
-            validations().extend(validator)

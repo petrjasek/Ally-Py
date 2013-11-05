@@ -14,7 +14,8 @@ import logging
 from ally.container import ioc, app
 from ally.design.processor.handler import Handler
 
-from .db_application import assemblySQLAssembler, metas
+from .db_application import assemblySQLAssembler
+from sql_alchemy.core.impl.processor.assembler.mapped_validation import MappedValidationHandler
 
 
 # --------------------------------------------------------------------
@@ -29,20 +30,21 @@ else:
     from __setup__.ally_core.processor import invoking
     from __setup__.ally_core_http.processor import assemblyResources, updateAssemblyResources
     from __setup__.ally_core.resources import invokerService, processMethod
-    from __setup__.ally_core.decode import validations
+    from __setup__.ally_core.resources import assemblyAssembler, updateAssemblyAssembler, decoding
     from sql_alchemy.core.impl.processor import transaction_core
     
     @ioc.entity
     def transactionCore() -> Handler: return transaction_core.TransactionCoreHandler()
+    
+    @ioc.entity
+    def mappedValidation() -> Handler: return MappedValidationHandler()
 
     # ----------------------------------------------------------------
 
-    @ioc.before(validations)
-    def updateValidations():
-        for meta in metas():
-            try:  validations().extend(meta._ally_validations)
-            except AttributeError: pass
-
+    @ioc.after(updateAssemblyAssembler)
+    def updateAssemblyAssemblerForMetaValidation():
+        assemblyAssembler().add(mappedValidation(), before=decoding())
+        
     @ioc.after(assemblySQLAssembler)
     def updateAssemblySQLAssembler():
         assemblySQLAssembler().add(invokerService(), processMethod())

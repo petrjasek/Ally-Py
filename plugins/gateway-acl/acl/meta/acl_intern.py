@@ -19,8 +19,8 @@ from sqlalchemy.orm import relationship
 from sqlalchemy.orm.exc import NoResultFound
 from sqlalchemy.schema import Column, ForeignKey
 from sqlalchemy.types import String
-from ally.api.validate import Mandatory, MaxLen
-from sql_alchemy.support.mapper import validate, columnFor
+from ally.api.validate import Mandatory, MaxLen, validate
+from sql_alchemy.support.mapper import columnFor
 
 # --------------------------------------------------------------------
 

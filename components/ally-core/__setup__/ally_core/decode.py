@@ -67,13 +67,6 @@ def slice_with_total() -> bool:
 # --------------------------------------------------------------------
 
 @ioc.entity
-def validations() -> list:
-    ''' The list of validations to be registered'''
-    return []
-
-# --------------------------------------------------------------------
-
-@ioc.entity
 def assemblyDecodeExport() -> Assembly:
     '''
     The assembly containing the decoders exports.
@@ -222,10 +215,7 @@ def primitiveDecode() -> Handler: return PrimitiveDecode()
 # --------------------------------------------------------------------
 
 @ioc.entity
-def validationPropertyProvider() -> Handler:
-    b = ValidationPropertyProvider()
-    b.validations = validations()
-    return b
+def validationPropertyProvider() -> Handler: return ValidationPropertyProvider()
 
 @ioc.entity
 def validateReadOnly() -> Handler: return ValidateReadOnly()
@@ -292,9 +282,9 @@ def updateAssemblyDecodePropertyOfModel():
     
 @ioc.before(assemblyDecodeModel)
 def updateAssemblyDecodeModel():
-    assemblyDecodeModel().add(propertyOfModelDecode(), validationPropertyProvider(),
-                              validateReadOnly(), validateAutoId(), validateMandatory(), validateMaxLen(),
-                              listDecode(), dictDecode(), primitiveDecode(),
+    assemblyDecodeModel().add(validationPropertyProvider(), validateReadOnly(), validateAutoId(), validateMandatory(),
+                              validateMaxLen(),
+                              propertyOfModelDecode(), listDecode(), dictDecode(), primitiveDecode(),
                               definitionXMLCreate(), definitionContentXML(), definitionIndex(), definitionObjectCreate(),
                               definitionContentObject(), definitionIndex())
     

@@ -45,7 +45,7 @@ def assemblySQLAssembler() -> Assembly:
     '''
     The assembly containing the handlers to be used in the assembly of invokers for error handling.
     '''
-    return Assembly('Assemblers SQL alchemy')
+    return Assembly('Assemblers SQL alchemy', reportUnused=False)
 
 # --------------------------------------------------------------------
 

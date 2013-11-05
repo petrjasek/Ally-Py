@@ -74,6 +74,21 @@ def updateWrapper(wrapper, wrapped):
     try: wrapper.__wrapped_location__ = wrapped.__wrapped_location__
     except AttributeError: wrapper.__wrapped_location__ = locationStack(wrapped)
 
+def isLocated(located):
+    '''
+    Checks if the provided object can be used safely with @see: locationStack. 
+    
+    @param located: function|class
+        The function or class to construct the stack message based on.
+    @return: boolean
+        True if the object can have a location stack provided for.
+    '''
+    if isclass(located): return True
+    if hasattr(located, '__wrapped_location__'): return True
+    if isinstance(located, types.FrameType): return True
+    if hasattr(located, '__code__') and hasattr(located, '__name__'): return True
+    return False
+    
 def locationStack(located):
     '''
     Provides a stack message for the provided located element, the stack will look as being part of a exception. This is 

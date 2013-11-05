@@ -12,9 +12,8 @@ Provides the maximum length validation.
 from ally.api.error import InputError
 from ally.api.operator.type import TypeProperty
 from ally.api.validate import MaxLen
-from ally.design.processor.attribute import requires, attribute
+from ally.design.processor.attribute import requires, definesIf
 from ally.design.processor.context import Context
-from ally.design.processor.execution import Chain
 from ally.design.processor.handler import HandlerProcessor
 from ally.support.util_spec import IDo
 from ally.internationalization import _
@@ -26,7 +25,7 @@ class Decoding(Context):
     The model decoding context.
     '''
     # ---------------------------------------------------------------- Defined
-    maximumLength = attribute(int, doc='''
+    maximumLength = definesIf(int, doc='''
     @rtype: integer
     Flag indicating if the decoding is mandatory.
     ''')
@@ -48,7 +47,6 @@ class ValidateMaxLen(HandlerProcessor):
         
         Process the maximum length validation.
         '''
-        assert isinstance(chain, Chain), 'Invalid chain %s' % chain
         assert isinstance(decoding, Decoding), 'Invalid decoding %s' % decoding
         if not decoding.validations: return
         

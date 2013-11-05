@@ -13,7 +13,6 @@ from ally.api.config import INSERT
 from ally.api.validate import Mandatory
 from ally.design.processor.attribute import requires, defines
 from ally.design.processor.context import Context
-from ally.design.processor.execution import Chain
 from ally.design.processor.handler import HandlerProcessor
 
 
@@ -50,7 +49,6 @@ class ValidateMandatory(HandlerProcessor):
         
         Process the mandatory validation.
         '''
-        assert isinstance(chain, Chain), 'Invalid chain %s' % chain
         assert isinstance(decoding, Decoding), 'Invalid decoding %s' % decoding
         assert isinstance(invoker, Invoker), 'Invalid invoker %s' % invoker
         if not decoding.validations: return

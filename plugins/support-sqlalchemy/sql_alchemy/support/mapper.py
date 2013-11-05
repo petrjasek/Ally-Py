@@ -10,29 +10,19 @@ Provides support for SQL alchemy mapper that is able to link the alchemy with RE
 '''
 
 from abc import ABCMeta
-from collections import deque
-from inspect import isclass, isfunction
+from inspect import isclass
 import logging
 from sqlalchemy import event
 from sqlalchemy.ext.compiler import compiles
 from sqlalchemy.ext.declarative import DeclarativeMeta, declarative_base
 from sqlalchemy.orm.attributes import InstrumentedAttribute
-from sqlalchemy.orm.exc import NoResultFound
 from sqlalchemy.orm.mapper import Mapper
-from sqlalchemy.orm.properties import ColumnProperty
-from sqlalchemy.schema import Table, MetaData, Column, ForeignKey
+from sqlalchemy.schema import Table, MetaData
 from sqlalchemy.sql.expression import Executable, ClauseElement, Join
-from sqlalchemy.types import String
 
 from ally.api.operator.descriptor import Reference
-from ally.api.operator.type import TypeModel, typePropFor, TypeProperty, \
-    TypePropertyContainer
+from ally.api.operator.type import TypeModel
 from ally.api.type import typeFor
-from ally.api.validate import AutoId, Mandatory, MaxLen, Validation, Relation
-from ally.internationalization import _
-from ally.support.util_sys import getAttrAndClass
-
-from .session import openSession
 
 
 # --------------------------------------------------------------------
@@ -93,7 +83,7 @@ def mapperSimple(clazz, sql, **keyargs):
 
     return type(clazz.__name__ + '$Mapped', bases, attributes)
 
-def mapperModel(clazz, sql, exclude=None, **keyargs):
+def mapperModel(clazz, sql, **keyargs):
     '''
     Maps a table to a ally REST model. Use this instead of the classical SQL alchemy mapper since this will
     also provide to the model additional information extracted from the SQL alchemy configurations. Use
@@ -103,15 +93,12 @@ def mapperModel(clazz, sql, exclude=None, **keyargs):
         The model class to be mapped with the provided sql table.
     @param sql: Table|Join|Select
         The table or join to map the model with.
-    @param exclude: list[string]|tuple(string)
-        A list of column names to be excluded from automatic validation.
     @param keyargs: key arguments
         This key arguments are directly delivered to the SQL alchemy @see mapper.  
     @return: class
         The mapped class, basically a model derived class that also contains the mapping data.
     '''
     mapped = mapperSimple(clazz, sql, **keyargs)
-    registerValidation(mapped, exclude=exclude)
 
     return mapped
 
@@ -158,90 +145,6 @@ class DeclarativeMetaModel(DeclarativeMeta):
         mappings.append(self)
 
 # --------------------------------------------------------------------
-
-def validate(*validations):
-    '''
-    Decorator used for validating declarative based mapped classes, same as @see:  registerValidation
-    '''
-    if not validations: return validate
-    if isclass(validations[0]) and isinstance(validations[0], DeclarativeMetaModel):
-        clazz = validations[0]
-        validations = validations[1:]
-    else:  clazz = None
-        
-    def decorator(target):
-        if isclass(target):
-            if validations:
-                if __debug__:
-                    for validation in validations:
-                        assert isinstance(validation, Validation), \
-                        'Invalid validation %s for class %s' % (validation, target)
-                        
-                assert isinstance(target.metadata, MetaData), 'Invalid mapped class %s' % target
-                try: validationsMeta = target.metadata._ally_validations
-                except AttributeError: validationsMeta = target.metadata._ally_validations = []
-                validationsMeta.extend(validations)
-            registerValidation(target)
-        else:
-            assert validations, 'At least one validation is required for target %s' % target
-            if __debug__:
-                for validation in validations:
-                    assert callable(validation), 'Invalid validation call %s for target %s' % (validation, target)
-                    
-            try: validationsCreate = target._ally_validation_creators
-            except AttributeError: validationsCreate = target._ally_validation_creators = []
-            validationsCreate.extend(validations)
-        return target
-            
-    if clazz is not None: return decorator(clazz)
-    return decorator
-
-def registerValidation(mapped):
-    '''
-    Register to mapped class all the validations that can be performed based on the SQL alchemy mapping.
-    
-    @param mapped: class
-        The mapped model class.
-    @param exclude: list[string]|tuple(string)
-        A list of column names to be excluded from automatic validation.
-    @return: Property
-        The property id of the model.
-    '''
-    assert isclass(mapped), 'Invalid class %s' % mapped
-    assert isinstance(mapped.metadata, MetaData), 'Invalid mapped class %s' % mapped
-    mapper, model = mappingFor(mapped), typeFor(mapped)
-    assert isinstance(mapper, Mapper), 'Invalid mapped class %s' % mapped
-    assert isinstance(model, TypeModel), 'Invalid model class %s' % mapped
-    
-    try: validationsMeta = mapped.metadata._ally_validations
-    except AttributeError: validationsMeta = mapped.metadata._ally_validations = []
-    
-    for name, prop in model.properties.items():
-        descriptor, _class = getAttrAndClass(mapped, name)
-        try: descriptor._ally_validation_creators
-        except AttributeError: pass
-        else:
-            for creator in descriptor._ally_validation_creators:
-                validation = creator(prop)
-                assert isinstance(validation, Validation), 'Invalid created validation %s' % validation
-                validationsMeta.append(validation)
-            continue
-        
-        column = getattr(mapper.c, name, None)
-        if column is None: continue
-
-        if column.primary_key:
-            if column.autoincrement: validationsMeta.append(AutoId(prop))
-            else: validationsMeta.append(Mandatory(prop))
-        elif not column.nullable: validationsMeta.append(Mandatory(prop))
-
-        if isinstance(column.type, String) and column.type.length:
-            validationsMeta.append(MaxLen(prop, column.type.length))
-            # TODO: implement
-#         if column.unique:
-#             validateProperty(propRef, partial(onPropertyUnique, mapped))
-        
-        if isinstance(prop, TypePropertyContainer): validationsMeta.append(Relation(prop))
 
 def mappingFor(mapped):
     '''

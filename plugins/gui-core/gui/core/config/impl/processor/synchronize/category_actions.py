@@ -96,7 +96,7 @@ class SynchronizeCategoryActionsHandler(HandlerProcessor):
             assert hasAttribute(Repository, idName), 'Invalid repository %s' % repository
             actions = groupActions.get(getattr(repository, idName))
             if not actions: groupActions[getattr(repository, idName)] = repository.actions
-            else: actions.extend(repository.actions)
+            elif repository.actions: actions.extend(repository.actions)
         
         return groupActions
 

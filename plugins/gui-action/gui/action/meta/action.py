@@ -11,13 +11,11 @@ Contains the SQL alchemy meta for gui actions.
 
 from ..api.action import Action
 from .metadata_action import Base
-from sql_alchemy.support.mapper import validate
 from sqlalchemy.schema import Column
 from sqlalchemy.types import String
 
 # --------------------------------------------------------------------
 
-@validate
 class ActionMapped(Base, Action):
     '''
     Provides the action mapping.

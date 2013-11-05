@@ -174,7 +174,8 @@ class ValidateRelation(HandlerBranching):
             if target.arg.request.nodesValues:
                 request.nodesValues = dict(target.arg.request.nodesValues)
             else: request.nodesValues = {}
-            request.nodesValues[relation.node.parent] = value
+            assert isinstance(request.converterPath, Converter)
+            request.nodesValues[relation.node.parent] = request.converterPath.asString(value, prop)
             
             arg['request'] = request
             arg['response'] = processing.ctx.response()

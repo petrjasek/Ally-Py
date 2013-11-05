@@ -18,13 +18,14 @@ from sqlalchemy.types import String
 from ally.api.operator.type import TypeModel, TypePropertyContainer
 from ally.api.type import typeFor
 from ally.api.validate import IValidation, AutoId, Mandatory, MaxLen, Relation, \
-    validationsFor
+    validationsFor, ReadOnly
 from ally.design.processor.attribute import requires
 from ally.design.processor.context import Context
 from ally.design.processor.handler import HandlerProcessor
 from ally.support.util_sys import getAttrAndClass
 from sql_alchemy.support.mapper import DeclarativeMetaModel, mappingFor
-
+from sqlalchemy.schema import Column
+from sqlalchemy.ext.hybrid import hybrid_property
 
 # --------------------------------------------------------------------
 log = logging.getLogger(__name__)
@@ -101,8 +102,13 @@ class MappedValidationHandler(HandlerProcessor):
                     validations.append((validation, target))
                 continue
             
+            if isinstance(descriptor, hybrid_property):
+                assert isinstance(descriptor, hybrid_property)
+                if descriptor.fset is None: validations.append((ReadOnly(prop), dclazz))
+                continue
+            
             column = getattr(mapper.c, name, None)
-            if column is None: continue
+            if column is None or not isinstance(column, Column): continue
     
             if column.primary_key:
                 if column.autoincrement: validations.append((AutoId(prop), mapped))

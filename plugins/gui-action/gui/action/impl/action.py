@@ -13,15 +13,16 @@ from ally.container.ioc import injected
 from ally.container.support import setup
 from gui.action.api.action import Action, IActionManagerService
 from gui.action.meta.action import ActionMapped
-from sql_alchemy.impl.entity import EntityNQServiceAlchemy, EntitySupportAlchemy
 from sql_alchemy.support.util_service import iterateCollection, insertModel
 from sqlalchemy.sql.expression import not_
 from sql_alchemy.impl.entity import EntityNQServiceAlchemy, EntitySupportAlchemy
+from ally.api.validate import validate
 
 # --------------------------------------------------------------------
 
 @injected
 @setup(IActionManagerService, name='actionManager')
+@validate(ActionMapped)
 class ActionManagerServiceAlchemy(EntityNQServiceAlchemy, IActionManagerService):
     '''
     @see: IActionManagerService

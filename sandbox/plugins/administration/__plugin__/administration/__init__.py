@@ -15,3 +15,7 @@ NAME = 'administration support'
 GROUP = 'administration'
 VERSION = '1.0'
 DESCRIPTION = 'Provides the administration services that interact with the application code'
+AUTHOR = 'Gabriel Nistor'
+AUTHOR_EMAIL = 'gabriel.nistor@sourcefabric.org'
+KEYWORDS = ['Ally', 'REST', 'administration']
+INSTALL_REQUIRES = ['ally-http >= 1.0']

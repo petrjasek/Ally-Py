@@ -23,4 +23,6 @@ since REST is only for models, usually the REST models will have references to s
 the CDM is used for delivery them.'''
 TEST_SUITE = '__unit_test__'
 CLASSIFIERS = ['Development Status :: 4 - Beta']
-INSTALL_REQUIRES = ['ally-http>=1.0']
+INSTALL_REQUIRES = ['ally-http >= 1.0']
+
+__extra__ = dict(package_data = {'': ['*.zip']})

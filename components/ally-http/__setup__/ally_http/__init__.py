@@ -19,6 +19,6 @@ AUTHOR = 'Gabriel Nistor'
 AUTHOR_EMAIL = 'gabriel.nistor@sourcefabric.org'
 KEYWORDS = ['Ally', 'REST', 'http']
 LONG_DESCRIPTION = '''Contains HTTP specific handling for requests and also the basic HTTP server based on the python built in server.'''
-INSTALL_REQUIRES = ['ally>=1.0']
+INSTALL_REQUIRES = ['ally >= 1.0']
 TEST_SUITE = '__unit_test__'
 CLASSIFIERS = ['Development Status :: 4 - Beta']

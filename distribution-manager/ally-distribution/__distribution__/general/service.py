@@ -15,15 +15,34 @@ from ally.distribution.packaging.packager import Packager
 # --------------------------------------------------------------------
 
 @ioc.config
+def package_location():
+    ''' The location path where the components/plugins eggs will be placed'''
+    return 'packaged-eggs'
+
+@ioc.config
 def path_components():
     ''' The location path where the components sources are located'''
     return '../../components'
 
+@ioc.config
+def path_plugins():
+    ''' The location path where the plugins sources are located'''
+    return '../../plugins'
+
 # --------------------------------------------------------------------
 
 @ioc.entity
-def packager():
+def packagerComponents():
     b = Packager()
     b.pathSource = path_components()
+    b.folderType = '__setup__'
+    b.destFolder = package_location()
     return b
 
+@ioc.entity
+def packagerPlugins():
+    b = Packager()
+    b.pathSource = path_plugins()
+    b.folderType = '__plugin__'
+    b.destFolder = package_location()
+    return b

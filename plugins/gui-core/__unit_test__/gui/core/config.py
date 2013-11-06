@@ -34,7 +34,6 @@ from gui.core.config.impl.processor.synchronize.category import RepositoryGroup,
     SynchronizeRightsHandler
 
 from pkg_resources import get_provider, ResourceManager
-
 # --------------------------------------------------------------------
 
 logging.basicConfig()
@@ -56,79 +55,83 @@ class TestSolicit(Context):
     
 class TestConfigurationParsing(unittest.TestCase):
     
-    def testConfigurationParser(self):
+    def __init__(self, methodName):
+        super().__init__(methodName)
         assemblyParsing = self.createAssemplyParsing()
-        result = self.executeProcess(assemblyParsing)
+        self.parseResult = self.executeProcess(assemblyParsing)
         
-        groupRepos = listBFS(result.solicit.repository, RepositoryGroup.children, RepositoryGroup.groupName)
-        rightRepos = listBFS(result.solicit.repository, RepositoryGroup.children, RepositoryRight.rightName)
+        self.groups = {group.groupName:group for group in 
+                       listBFS(self.parseResult.solicit.repository, RepositoryGroup.children, RepositoryGroup.groupName)}
         
-        #make sure the number of groups and rights is correct
-        self.assertTrue(len(groupRepos) == 2 and len(rightRepos) == 5, 'Wrong number of groups and rights: %s groups, %s rights' \
-                                                                        % (len(groupRepos), len(rightRepos))) 
+        self.rightRepos = listBFS(self.parseResult.solicit.repository, RepositoryGroup.children, RepositoryRight.rightName)
+        self.rights = {right.rightName:right for right in self.rightRepos}
+        self.rightsInheritance = {right.rightName:[right] for right in self.rightRepos}
         
-        groups = {group.groupName:group for group in groupRepos}
-        #make sure Anonymous and Captcha groups have been parsed
-        self.assertTrue('Anonymous' in groups and 'Captcha' in groups, 'Missing groups: Anonymous and Captcha')
-        
-        rights = {right.rightName:right for right in rightRepos}
-        #make sure Requests_inspection right has been parsed
-        self.assertTrue('Requests_inspection' in rights and 'Requests_inspection_2' in rights, 'Missing rights: Requests_inspection, Requests_inspection_2')
-        #check if description has been parsed
-        for right in rights.values():
-            self.assertIsNotNone(right.description, 'Missing description for %s' % right.description) 
-        
-        #check actions for group Anonymous
-        self.checkActions(groups, 'Anonymous', ['menu', 'menu.request', 'menu.request.blob', 'menu.mucu', 'menu.cucu'])
-        
-        #check actions for right Requests_inspection
-        self.checkActions(rights, 'Requests_inspection', ['menu_2', 'menu_2.request', 'menu_2.mucu'])
-        
-        #check accesses for group Anonymous
+        self.syncRigthsAssembler = SynchronizeRightsHandler()
+    
+    def testGroupsRightsNumber(self):
+        '''Checks if the number of parsed groups and rights is correct '''
+        self.assertTrue(len(self.groups) == 2 and len(self.rights) == 5, 'Wrong number of groups and rights: %s groups, %s rights' \
+                                                                        % (len(self.groups), len(self.rights))) 
+    
+    def testGroupsExist(self):
+        '''Checks if Anonymous and Captcha groups have been parsed '''
+        self.assertTrue('Anonymous' in self.groups and 'Captcha' in self.groups, 'Missing groups: Anonymous and Captcha')
+    
+    def testRightsExist(self):
+        '''Checks if rights Requests_inspection and Requests_inspection_2 have been parsed'''
+        self.assertTrue('Requests_inspection' in self.rights and 'Requests_inspection_2' in self.rights, 'Missing rights: Requests_inspection, Requests_inspection_2')
+    
+    def testDescription(self):
+        '''Checks if description of rights has been parsed '''
+        for right in self.rights.values():
+            self.assertIsNotNone(right.description, 'Missing description for %s' % right.description)
+    
+    def testGroupActions(self):
+        '''Checks if actions of Anonymous group have been correctly parsed '''
+        self.checkActions(self.groups, 'Anonymous', ['menu', 'menu.request', 'menu.request.blob', 'menu.mucu', 'menu.cucu'])
+    
+    def testRightActions(self):
+        '''Checks if actions of Requests_inspection right have been correctly parsed '''
+        self.checkActions(self.rights, 'Requests_inspection', ['menu_2', 'menu_2.request', 'menu_2.mucu'])
+    
+    def testGroupAccesses(self):
+        '''Checks if accesses of Anonymous group have been correctly parsed '''
         toCheck = [(filter, url, method) for filter in ['FilterDummy','Authent','lala'] for method in ['GET'] 
                    for url in ['User/*', 'User/*/Blog', 'User/#/SubUser/*']]
-        self.checkAccesses(groups, 'Anonymous', toCheck)
-        
-        #check accesses for right Requests_inspection
-        toCheck = [(filter, url, method) for filter in ['userAuth'] for method in ['GET'] 
-                   for url in ['User/*', 'User/*/Blog', 'User/#/SubUser/*']]
-        self.checkAccesses(rights, 'Requests_inspection', toCheck)
-        
-        #check right inheritance attribute
-        self.assertTrue('Requests_inspection' in rights['Requests_inspection_2'].rightInherits, 'Inheritance not detected for Requests_inspection_2 and Requests_inspection') 
+        self.checkAccesses(self.groups, 'Anonymous', toCheck)
     
-    def testSyncRights(self):
-        '''
-        Will test parts of the Right Synchronization assemblers (the parts that don't interact with the database)
-        '''
-        assemblyParsing = self.createAssemplyParsing()
-        result = self.executeProcess(assemblyParsing)
-        
-        rightRepos = listBFS(result.solicit.repository, RepositoryGroup.children, RepositoryRight.rightName)
-        syncRigthsAssembler = SynchronizeRightsHandler()
-        
-        rights = {right.rightName:right for right in rightRepos}
-        
-        #test cyclic inheritance first
-        cyclicInheritance = ['Right_1', 'Right_2', 'Right_3']
-        rightsCyclicTest = {right.rightName:[right] for right in rightRepos}
-        
-        self.assertTrue(syncRigthsAssembler.isCyclicInheritance('Right_1', rightsCyclicTest), 'Cyclic inheritance not detected for %s' % rightsCyclicTest)
-        self.assertFalse(syncRigthsAssembler.isCyclicInheritance('Requests_inspection', rightsCyclicTest), 'Non-existing cyclic inheritance detected for Requests_inspection') 
-        
-        #test rights inheritance - discard the cyclic inheritance rights
-        syncRigthsAssembler.doInheritance([right for right in rightRepos if right.rightName not in cyclicInheritance])
-        #check if actions have been inherited correctly from Requests_inspection
-        self.checkActions(rights, 'Requests_inspection_2', ['menu_2', 'menu_2.request', 'menu_2.mucu'])
-        
-        #check if accesses have been inherited correctly from Requests_inspection
+    def testRightAccesses(self):
+        '''Checks if accesses of Requests_inspection right have been correctly parsed '''
         toCheck = [(filter, url, method) for filter in ['userAuth'] for method in ['GET'] 
-                   for url in ['User/*', 'User/*/Blog', 'User/#/SubUser/*']]
-        self.checkAccesses(rights, 'Requests_inspection_2', toCheck)
-        
-        
+                   for url in ['HR/User/*', 'HR/User/*/Action', 'HR/User/#/SubUser/*']]
+        self.checkAccesses(self.rights, 'Requests_inspection', toCheck)
+    
+    def testRightInheritance(self):
+        '''Checks if inheritance attribute was correctly parsed '''
+        self.assertTrue('Requests_inspection' in self.rights['Requests_inspection_2'].rightInherits, 'Inheritance not detected for Requests_inspection_2 and Requests_inspection')
+    
+    def testCyclicInheritance(self):
+        '''Checks if cyclic inheritance has been correctly detected '''        
+        self.assertTrue(self.syncRigthsAssembler.isCyclicInheritance('Right_1', self.rightsInheritance), 'Cyclic inheritance not detected for %s' % self.rights)
+        self.assertFalse(self.syncRigthsAssembler.isCyclicInheritance('Requests_inspection', self.rightsInheritance), 'Non-existing cyclic inheritance detected for Requests_inspection')
+    
+    def testInheritanceForActions(self):
+        '''Checks if actions have been correctly inherited for rights'''
+        cyclicInheritance = ['Right_1', 'Right_2', 'Right_3']
+        self.syncRigthsAssembler.doInheritance([right for right in self.rightRepos if right.rightName not in cyclicInheritance])
+        self.checkActions(self.rights, 'Requests_inspection_2', ['menu_2', 'menu_2.request', 'menu_2.mucu'])
+    
+    def testInheritanceForAccesses(self):
+        '''Checks if accesses have been correctly inherited for rights'''
+        cyclicInheritance = ['Right_1', 'Right_2', 'Right_3']
+        self.syncRigthsAssembler.doInheritance([right for right in self.rightRepos if right.rightName not in cyclicInheritance])
+        toCheck = [(filter, url, method) for filter in ['userAuth'] for method in ['GET'] 
+                   for url in ['HR/User/*', 'HR/User/*/Action', 'HR/User/#/SubUser/*']]
+        self.checkAccesses(self.rights, 'Requests_inspection_2', toCheck)
+    
     def checkAccesses(self, categories, categoryName, toCheck):
-        filtersUrlsMethods = set((filter, url, method) for access in categories[categoryName].accesses for url in access.urls 
+        filtersUrlsMethods = set((filter, url.url, method) for access in categories[categoryName].accesses for url in access.urls 
                        for method in access.methods for filter in access.filters)
         missing = []
         for t in toCheck:

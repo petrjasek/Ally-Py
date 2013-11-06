@@ -16,7 +16,11 @@ from setuptools import setup, find_packages
 
 # --------------------------------------------------------------------
 
-setup(     name='ally-http',
+setup(packages=find_packages('.'),
+     platforms=['all'],
+     zip_safe=True,
+     license='GPL v3',
+     url='http://www.sourcefabric.org/en/superdesk/', # project home page     description='Provides the HTTP communication support',
      author='Gabriel Nistor',
      install_requires=['ally >= 1.0'],
      long_description='Contains HTTP specific handling for requests and also the basic HTTP server based on the python built in server.',
@@ -25,10 +29,6 @@ setup(     name='ally-http',
      test_suite='__unit_test__',
      keywords=['Ally', 'REST', 'http'],
      classifiers=['Development Status :: 4 - Beta'],
-     description='Provides the HTTP communication support',
-packages=find_packages('.'),
-     platforms=['all'],
-     zip_safe=True,
-     license='GPL v3',
-     url='http://www.sourcefabric.org/en/superdesk/', # project home page
-      )
+     name='ally-http',
+
+     )

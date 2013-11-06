@@ -135,6 +135,10 @@ class SynchronizeRightsHandler(HandlerProcessor):
     type_name = 'GUI Access'; wire.config('type_name', doc='''
     The right type name to be used in inserting the configured rights. 
     ''')
+    role_name = 'Admin'; wire.config('role_name', doc='''
+    The root role that will contain all the rights. 
+    ''')
+    
     rightService = IRightService; wire.entity('rightService')
     rightTypeService = IRightTypeService; wire.entity('rightTypeService')
     roleService = IRoleService; wire.entity('roleService') 
@@ -175,12 +179,12 @@ class SynchronizeRightsHandler(HandlerProcessor):
             r.rightId = rightIds.get(r.rightName)
             
         #create root role ("Admin") and add all the rights on it
-        try: self.roleService.getById('Admin')
+        try: self.roleService.getById(self.role_name)
         except:
             role = Role()
-            role.Name = 'Admin'
+            role.Name = self.role_name
             self.roleService.insert(role)
-        for rightId in rightIds.values(): self.roleService.addRight('Admin', rightId)
+        for rightId in rightIds.values(): self.roleService.addRight(self.role_name, rightId)
     
     def doInheritance(self, repositories):
         '''

@@ -127,7 +127,7 @@ class RegisterListeners(HandlerProcessor):
         uriListener = urlsplit(uriPattern)
         pathListener = (uriListener.netloc + uriListener.path).split('/')
         # TODO: filename regex
-        patterns = [re.compile(p) for p in ['\/'.join(pathListener[:i+1]).replace('*', '[a-zA-Z0-9_. ]+')+'$' \
+        patterns = [re.compile(p) for p in ['\/'.join(pathListener[:i+1]).replace('*', '[a-zA-Z0-9_. \-]+')+'$' \
                                             for i in range(len(pathListener))] if len(p) > 1]
         
         def doMatch(uri):

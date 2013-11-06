@@ -77,7 +77,7 @@ class ErrorTranslatorHandler(HandlerProcessor):
         assert isinstance(self.assembly, Assembly), 'Invalid assembly %s' % self.assembly
         super().__init__()
         
-        self._processing = self.assembly.createWith(dict(register=Register, Invoker=Invoker))
+        self._processing = self.assembly.create(register=Register, Invoker=Invoker)
 
     def process(self, chain, bind:Bind, **keyargs):
         '''

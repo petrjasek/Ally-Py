@@ -9,15 +9,17 @@ Created on Jul 18, 2013
 Provides utility functions for processor contexts.
 '''
 
-from .util import Singletone
+import abc
+from collections import Iterable
+
 from ally.design.processor.context import Context, Object, attributeOf
 from ally.design.processor.spec import ContextMetaClass, IAttribute, IResolver
-from collections import Iterable
-import abc
 from collections import deque
 
-# --------------------------------------------------------------------
+from .util import Singletone
 
+
+# --------------------------------------------------------------------
 class IPrepare(metaclass=abc.ABCMeta):
     '''
     Specification for classes that perform different actions that require context classes. 

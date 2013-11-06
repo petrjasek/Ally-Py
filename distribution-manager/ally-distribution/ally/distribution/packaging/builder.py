@@ -8,53 +8,35 @@ Created on Oct 8, 2013
  
 Functionality for building eggs.
 '''
-from configparser import ConfigParser
-from os.path import join, dirname, isfile, normpath
-from os import chdir
 import logging
-import os
+from ally.distribution.util import SETUP_FILENAME, PYTHON_CLI, BUILD_EGG, runCmd
+from ally.container.ioc import injected
 
 # --------------------------------------------------------------------
 
 log = logging.getLogger(__name__)
 
 # --------------------------------------------------------------------
-SETUP_CFG_FILE = 'setup.cfg'
-SETUP_FILENAME = 'setup.py'
 
-
+@injected
 class Builder:
     
-#     packageDir = str
-#     #location of the current package
-#     packageName = str
-#     #name of the package
+    packagePath = str
+    #path to the current package
+    packageName = str
+    #name of the package
     
-    def __init__(self, packageDir, packageName):
-        
-        assert isinstance(packageDir, str), 'Invalid package dir %s' % packageDir
-        self.packageDir = packageDir
-        self.packageName = packageName
-        
-        
-    def getDistDir(self, packageDir):
+    def __init__(self):
         '''
-        Return the distribution directory corresponding to the given package.
+        do nothing
         '''
-        if isfile(join(packageDir, SETUP_CFG_FILE)):
-            p = ConfigParser()
-            p.read(join(packageDir, SETUP_CFG_FILE))
-            return normpath(join(packageDir, p.get('bdist_egg', 'dist_dir')))
-        else:
-            return dirname(join(packageDir, 'build'))
+                
+    def build(self):
+        '''
+        builds egg for current package
+        '''
+        assert logging.info('*** BUILD egg *** {0}'.format(self.packageName)) or True
         
-    def generateEggFile(self):
-        packageDir = self.packageDir
-        packageName = self.packageName
-
-        # do a preclean
-        chdir(packageDir)
-        assert logging.info('*** BUILD %s' % packageName) or True
-        os.system('python3 {0} bdist_egg'.format(SETUP_FILENAME))
-        assert logging.info("\n".rjust(79, '-')) or True
+        cmd = ' '.join([PYTHON_CLI, SETUP_FILENAME, BUILD_EGG]) 
+        runCmd(self.packagePath, cmd)
         

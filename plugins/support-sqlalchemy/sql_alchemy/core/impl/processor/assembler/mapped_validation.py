@@ -109,11 +109,13 @@ class MappedValidationHandler(HandlerProcessor):
             
             column = getattr(mapper.c, name, None)
             if column is None or not isinstance(column, Column): continue
+            assert isinstance(column, Column)
     
             if column.primary_key:
                 if column.autoincrement: validations.append((AutoId(prop), mapped))
                 else: validations.append((Mandatory(prop), mapped))
-            elif not column.nullable: validations.append((Mandatory(prop), mapped))
+            elif not column.nullable and column.default is None and column.server_default is None:
+                validations.append((Mandatory(prop), mapped))
     
             if isinstance(column.type, String) and column.type.length:
                 validations.append((MaxLen(prop, column.type.length), mapped))

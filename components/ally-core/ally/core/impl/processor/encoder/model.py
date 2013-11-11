@@ -153,7 +153,7 @@ class EncoderModel(TransfromWithSpecifiers):
             target.beginObject(self.name, **self.populate(value, support))
             for name, encoder in self.properties:
                 assert isinstance(encoder, ITransfrom), 'Invalid property encoder %s' % encoder
-                val = getattr(value, name)
+                val = getattr(value, name, None)
                 if val is None: continue
                 encoder.transform(val, target, support)
                 

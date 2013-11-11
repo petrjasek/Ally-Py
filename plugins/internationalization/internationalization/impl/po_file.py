@@ -105,9 +105,7 @@ class POFileService(IInternationlizationFileService):
         '''
         assert isinstance(poFile, Content), 'Invalid PO content %s' % poFile
         # Convert the byte file to text file
-#         poFile = codecs.getreader(poFile.charSet or self.default_charset)(poFile)
-        print(poFile)
-#         sys.exit()
+        poFile = codecs.getreader(poFile.charSet or self.default_charset)(poFile)
         try: self.poFileManager.updatePOTFile(name=name, poFile=poFile)
         except UnicodeDecodeError: raise InvalidPOFile(poFile)
         if poFile.next(): raise ToManyFiles()

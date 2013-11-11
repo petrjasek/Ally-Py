@@ -9,103 +9,64 @@ Created on Mar 9, 2012
 API specifications for PO file management.
 '''
 
-from admin.api.domain_admin import modelAdmin
-from admin.introspection.api.component import Component
-from admin.introspection.api.plugin import Plugin
-from ally.api.config import service, call
+from ally.api.config import service, call, model
 from ally.api.model import Content
-from ally.api.type import Reference, Scheme
+from ally.api.type import Scheme, Reference
+from internationalization.api.domain import modelLocalization
+from internationalization.language.api.language import Language
 
 # --------------------------------------------------------------------
-
-@modelAdmin(id='Locale')
+@modelLocalization(id='Name')
 class PO:
     '''
     Model for a PO file.
     '''
-    Locale = str
+    Name = str
     Reference = Reference
-
+    
 # --------------------------------------------------------------------
 
 @service
-class IPOFileService:
+class IInternationlizationFileService:
     '''
-    The PO file management service.
+    The PO/POT file management service.
     '''
-
     @call
-    def getGlobalPOFile(self, locale:PO.Locale, scheme:Scheme) -> PO.Reference:
+    def getPOFile(self, locale:Language.Code, scheme:Scheme, name:PO.Name=None) -> PO.Reference:
         '''
-        Provides the messages for the whole application and the given locale.
+        Provides the PO file for the whole application and the given locale.
 
         @param locale: string
             The locale for which to return the translation.
-        @return: string
-            The path to the temporary PO file.
+        @return: Content
+            The content of the PO file.
         '''
 
     @call
-    def getComponentPOFile(self, component:Component.Id, locale:PO.Locale, scheme:Scheme) -> PO.Reference:
+    def updatePOFile(self, locale:Language.Code, content:Content, name:PO.Name=None) -> bool:
         '''
-        Provides the messages for the given component and the given locale.
-
-        @param locale: string
-            The locale for which to return the translation.
-        @param component: Component.Id
-            The component for which to return the translation.
-        @return: string
-            The path to the temporary PO file.
+        Update a PO file for specified locale or upload new locale if doesn't exist
+        
+        @param PO: PO object
+            The PO object that need to be updated/uploaded
         '''
-
-    @call
-    def getPluginPOFile(self, plugin:Plugin.Id, locale:PO.Locale, scheme:Scheme) -> PO.Reference:
-        '''
-        Provides the messages for the given plugin and the given locale.
-
-        @param locale: string
-            The locale for which to return the translation.
-        @param plugin: Plugin.Id
-            The plugin for which to return the translation.
-        @return: string
-            The path to the temporary PO file.
-        '''
-
+                
     # ----------------------------------------------------------------
-
-    @call
-    def updateGlobalPOFile(self, locale:PO.Locale, poFile:Content):
+    
+    @call(webName='Template')
+    def getPOTFile(self, scheme:Scheme, name:PO.Name=None) -> PO.Reference:
         '''
-        Updates the messages for all components / plugins and the given locale.
+        Provides the POT file for the whole application and the given locale.
 
-        @param locale: string
-            The locale for which to update the translation.
-        @param poFile: file like object
-            The source PO file from which to read the translation.
+        @return: Content
+            The content of the PO file.
         '''
-
-    @call
-    def updateComponentPOFile(self, component:Component.Id, locale:PO.Locale, poFile:Content):
+    
+    @call(webName='Template')
+    def updatePOTFile(self, name:PO.Name, content: Content) -> bool:
         '''
-        Updates the messages for the given component and the given locale.
-
-        @param component: Component.Id
-            The component for which to update the translation.
-        @param locale: string
-            The locale for which to update the translation.
-        @param poFile: file like object
-            The source PO file from which to read the translation.
-        '''
-
-    @call
-    def updatePluginPOFile(self, plugin:Plugin.Id, locale:PO.Locale, poFile:Content):
-        '''
-        Updates the messages for the given plugin and the given locale.
-
-        @param plugin: Plugin.Id
-            The plugin for which to update the translation.
-        @param locale: string
-            The locale for which to update the translation.
-        @param poFile: file like object
-            The source PO file from which to read the translation.
+        Update a POT file or upload if doesn't exist
+        
+        @param potFile: POT object
+            The POT object that needs to be updated/uploaded
         '''

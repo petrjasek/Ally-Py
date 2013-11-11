@@ -10,9 +10,12 @@ Meta data definition.
 '''
 
 from sqlalchemy.schema import MetaData
-
+from sqlalchemy.ext.declarative import declarative_base
+from sql_alchemy.support.mapper import DeclarativeMetaModel
 # --------------------------------------------------------------------
 
 meta = MetaData()
 # Provides the meta object for SQL alchemy.
 
+Base = declarative_base(metadata=meta, metaclass=DeclarativeMetaModel)
+# Provides the Base for declarative mapping.

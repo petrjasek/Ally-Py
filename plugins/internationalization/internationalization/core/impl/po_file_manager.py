@@ -22,32 +22,37 @@ from collections import Iterable
 from copy import copy
 from datetime import datetime
 from genericpath import isdir, isfile
-from internationalization.api.message import IMessageService, Message
-from internationalization.api.source import ISourceService, QSource
 from internationalization.core.spec import IPOFileManager, InvalidLocaleError
 from internationalization.support.babel.util_babel import msgId, isMsgTranslated, \
     copyTranslation, fixBabelCatalogAddBug
 from io import BytesIO
 from os.path import dirname, join
 import os
+from sql_alchemy.support.util_service import SessionSupport
+from internationalization.meta.database import LocalizationCollection
+from sqlalchemy.sql.expression import and_
+from sql_alchemy.support.util_meta import JSONEncodedDict
+from json.encoder import JSONEncoder
+#TODO: be carefull with encoding
+from sys import getdefaultencoding
+from internationalization.impl.po_file import asDict, InvalidPOFile
+from json.decoder import JSONDecoder
+import logging
 
 # --------------------------------------------------------------------
 
 # Babel FIX: We need to adjust the dir name for locales since they need to be outside the .egg file
-localedata._dirname = localedata._dirname.replace('.egg', '')
-core._filename = core._filename.replace('.egg', '')
+# localedata._dirname = localedata._dirname.replace('.egg', '')
+# core._filename = core._filename.replace('.egg', '')
 
-FORMAT_PO = '%s_%s.po'
-# The format of the po files.
-FORMAT_MO = '%s_%s.mo'
-# The format of the mo files.
 
+log = logging.getLogger(__name__)
 # --------------------------------------------------------------------
 
 # TODO: add lock in order to avoid problems when a file is being updated an then read.
 @injected
 @setup(IPOFileManager, name='poFileManager')
-class POFileManager(IPOFileManager):
+class POFileManager(SessionSupport, IPOFileManager):
     '''
     Implementation for @see: IPOFileManager
     '''
@@ -104,408 +109,109 @@ class POFileManager(IPOFileManager):
     :param include_previous: include the old msgid as a comment when updating the catalog
     ''')
 
-    messageService = IMessageService; wire.entity('messageService')
-    sourceService = ISourceService; wire.entity('sourceService')
-
     def __init__(self):
         assert isinstance(self.locale_dir_path, str), 'Invalid locale directory %s' % self.locale_dir_path
         assert isinstance(self.catalog_config, dict), 'Invalid catalog configurations %s' % self.catalog_config
         assert isinstance(self.write_po_config, dict), 'Invalid write PO configurations %s' % self.write_po_config
-        assert isinstance(self.messageService, IMessageService), 'Invalid message service %s' % self.messageService
-        assert isinstance(self.sourceService, ISourceService), 'Invalid source file service %s' % self.sourceService
+        
+#         if not os.path.exists(self.locale_dir_path): os.makedirs(self.locale_dir_path)
+#         if not isdir(self.locale_dir_path) or not os.access(self.locale_dir_path, os.W_OK):
+#             raise IOError('Unable to access the locale directory %s' % self.locale_dir_path)
 
-        if not os.path.exists(self.locale_dir_path): os.makedirs(self.locale_dir_path)
-        if not isdir(self.locale_dir_path) or not os.access(self.locale_dir_path, os.W_OK):
-            raise IOError('Unable to access the locale directory %s' % self.locale_dir_path)
-
-    def getGlobalPOTimestamp(self, locale):
+    def getPOFileContent(self, name, locale):
         '''
-        @see: IPOFileManager.getGlobalPOTimestamp
+        @see: IPOFileManager.getGlobalPOFileContent
         '''
         try: locale = Locale.parse(locale)
         except UnknownLocaleError: raise InvalidLocaleError(locale)
-        return self._lastModified(locale)
+        meta = {}
+        template, templateMeta = self.getPOTFileContent(name=name)
+        catalog, catalogMeta = self._getData(name=name, locale=locale)
+        meta['_ts'] = templateMeta['_ts'] if templateMeta['_ts'] > catalogMeta['_ts'] else catalogMeta['_ts'] 
+        return catalog.update(template), meta
 
-    def getComponentPOTimestamp(self, component, locale):
+    def getPOTFileContent(self, name):
         '''
-        @see: IPOFileManager.getComponentPOTimestamp
+        @see: IPOFileManager.getGlobalPOTFileContent
         '''
-        assert isinstance(component, str), 'Invalid component id %s' % component
-        try: locale = Locale.parse(locale)
-        except UnknownLocaleError: raise InvalidLocaleError(locale)
-        return self._lastModified(locale, component=component)
+        return self._getData(name=name)
+        
+    def updatePOFile(self, name, locale, poFile):
+        '''
+        @see IPOFileManager.updatePOFile
+        '''
+        oldCatalog = self.getPOFileContent(name, locale)
+        try:
+            newCatalog = read_po(poFile, locale=locale)
+        except:
+            raise InvalidPOFile
+        content = self._toFile(newCatalog.update(oldCatalog))
+        return self._storeData(name=name, locale=locale, content=content)
 
-    def getPluginPOTimestamp(self, plugin, locale):
+    def updatePOTFile(self, name, poFile):
         '''
-        @see: IPOFileManager.getComponentPOTimestamp
+        @see IPOFileManager.updatePOTFile
         '''
-        assert isinstance(plugin, str), 'Invalid plugin id %s' % plugin
-        try: locale = Locale.parse(locale)
-        except UnknownLocaleError: raise InvalidLocaleError(locale)
-        return self._lastModified(locale, plugin=plugin)
-
+        try:
+            oldCatalog = self.getPOTFileContent(name)
+        except: 
+            oldCatalog = Catalog()
+        try:
+            newCatalog = read_po(poFile)
+            assert log.info('poFile {poFile}'.format(poFile=poFile)) or True
+        except:
+            raise InvalidPOFile
+#        print(newCatalog.update(oldCatalog))
+        content = self._toFile(oldCatalog.update(newCatalog))
+        return self._storeData(name=name, content=content)
+    
     # --------------------------------------------------------------------
 
-    def getGlobalPOFile(self, locale):
+    def _getData(self, name=None, locale=None):
         '''
-        @see: IPOFileManager.getGlobalPOFile
+        Provides the actual content
         '''
-        try: locale = Locale.parse(locale)
-        except UnknownLocaleError: raise InvalidLocaleError(locale)
-        catalog = self._build(locale, self.messageService.getMessages(), self._filePath(locale))
-        return self._toPOFile(catalog)
-
-    def getGlobalAsDict(self, locale):
+        name = name if name else 'global'
+        locale = locale if locale else 'global'
+        
+        poFile, timestamp = self.session().query(LocalizationCollection.poFile, 
+                                                 LocalizationCollection.timestamp).filter(and_(LocalizationCollection.Name == name, \
+                                                                                               LocalizationCollection.locale == locale))
+        return poFile, {'_ts': timestamp}
+        
+    def _storeData(self, content, name=None, locale=None):
         '''
-        @see: IPOFileManager.getGlobalAsDict
+        Stores new/updated content
         '''
-        try: locale = Locale.parse(locale)
-        except UnknownLocaleError: raise InvalidLocaleError(locale)
-
-        messages = self.messageService.getMessages()
-        catalog = self._build(locale, messages, self._filePath(locale))
-        return self._toDict('', catalog)
-
-    def getComponentPOFile(self, component, locale):
-        '''
-        @see: IPOFileManager.getComponentPOFile
-        '''
-        try: locale = Locale.parse(locale)
-        except UnknownLocaleError: raise InvalidLocaleError(locale)
-        catalog = self._build(locale, self.messageService.getComponentMessages(component),
-                              self._filePath(locale, component=component), self._filePath(locale))
-        return self._toPOFile(catalog)
-
-    def getComponentAsDict(self, component, locale):
-        '''
-        @see: IPOFileManager.getComponentAsDict
-        '''
-        try: locale = Locale.parse(locale)
-        except UnknownLocaleError: raise InvalidLocaleError(locale)
-        messages = self.messageService.getComponentMessages(component)
-        catalog = self._build(locale, messages, self._filePath(locale, component=component),
-                              self._filePath(locale))
-        return self._toDict(component, catalog)
-
-    def getPluginPOFile(self, plugin, locale):
-        '''
-        @see: IPOFileManager.getPluginPOFile
-        '''
-        try: locale = Locale.parse(locale)
-        except UnknownLocaleError: raise InvalidLocaleError(locale)
-        catalog = self._build(locale, self.messageService.getPluginMessages(plugin),
-                              self._filePath(locale, plugin=plugin), self._filePath(locale))
-        return self._toPOFile(catalog)
-
-    def getPluginAsDict(self, plugin, locale):
-        '''
-        @see: IPOFileManager.getPluginAsDict
-        '''
-        try: locale = Locale.parse(locale)
-        except UnknownLocaleError: raise InvalidLocaleError(locale)
-        messages = self.messageService.getPluginMessages(plugin)
-        catalog = self._build(locale, messages, self._filePath(locale, plugin=plugin),
-                              self._filePath(locale))
-        return self._toDict(plugin, catalog)
-
-    def updateGlobalPOFile(self, locale, poFile):
-        '''
-        @see: IPOFileManager.updateGlobalPOFile
-        '''
-        try: locale = Locale.parse(locale)
-        except UnknownLocaleError: raise InvalidLocaleError(locale)
-        assert isinstance(poFile, IInputStream), 'Invalid file object %s' % poFile
-
-        return self._update(locale, self.messageService.getMessages(), poFile, self._filePath(locale),
-                            self._filePath(locale, format=FORMAT_MO))
-
-    def updateComponentPOFile(self, component, locale, poFile):
-        '''
-        @see: IPOFileManager.updateComponentPOFile
-        '''
-        try: locale = Locale.parse(locale)
-        except UnknownLocaleError: raise InvalidLocaleError(locale)
-        assert isinstance(poFile, IInputStream), 'Invalid file object %s' % poFile
-
-        return self._update(locale, self.messageService.getComponentMessages(component), poFile,
-                            self._filePath(locale, component=component),
-                            self._filePath(locale, component=component, format=FORMAT_MO), False)
-
-    def updatePluginPOFile(self, plugin, locale, poFile):
-        '''
-        @see: IPOFileManager.updatePluginPOFile
-        '''
-        try: locale = Locale.parse(locale)
-        except UnknownLocaleError: raise InvalidLocaleError(locale)
-        assert isinstance(poFile, IInputStream), 'Invalid file object %s' % poFile
-
-        return self._update(locale, self.messageService.getPluginMessages(plugin), poFile,
-                            self._filePath(locale, plugin=plugin),
-                            self._filePath(locale, plugin=plugin, format=FORMAT_MO), False)
-
-    # --------------------------------------------------------------------
-
-    def _filePath(self, locale, component=None, plugin=None, format=FORMAT_PO):
-        '''
-        Returns the path to the internal PO file corresponding to the given locale and / or
-        component / plugin. If no component of plugin was specified it returns the
-        name of the global PO file.
-
-        @param locale: Locale
-            The locale.
-        @param component: string
-            The component id.
-        @param plugin: string
-            The plugin id.
-        @param format: string
-            The format pattern for the file, the default is the PO file.
-        @return: string
-            The file path.
-        '''
-        assert isinstance(locale, Locale), 'Invalid locale %s' % locale
-        assert component is None or isinstance(component, str), 'Invalid component %s' % component
-        assert plugin is None or isinstance(plugin, str), 'Invalid plugin %s' % plugin
-        assert not(component and plugin), 'Cannot process a component id %s and a plugin id %s' % (component, plugin)
-
-        path = [self.locale_dir_path]
-        if component:
-            path.append('component')
-            name = component
-        elif plugin:
-            path.append('plugin')
-            name = plugin
+        name = name if name else 'global'
+        locale = locale if locale else 'global'
+        
+        timestamp = self._doTimestamp() 
+        entry = LocalizationCollection(Name=name, locale=locale, timestamp=timestamp, poFile=content)
+        if self.session().query(LocalizationCollection).filter(and_(LocalizationCollection.Name == name, \
+                                                                    LocalizationCollection.locale == locale)).count():
+            self.session().query(LocalizationCollection).update(entry)
         else:
-            name = 'global'
-
-        path.append(format % (name, locale))
-
-        return join(*path)
-
-    def _lastModified(self, locale, component=None, plugin=None):
+            self.session().query(LocalizationCollection).add(entry)
+        
+    def _doTimestamp(self):
         '''
-        Provides the last modification time stamp for the provided locale. You can specify the component id in order to
-        get the last modification for the component domain, or plugin or either to get the global domain modification.
-
-        @param locale: Locale
-            The locale to get the last modification for.
-        @param component: string|None
-            The component id to get the last modification for.
-        @param plugin: string|None
-            The plugin id to get the last modification for.
-        @return: datetime|None
-            The last modification time stamp, None if there is no such time stamp available.
+        Generates the current timestamp for the item stored in db 
         '''
-        assert isinstance(locale, Locale), 'Invalid locale %s' % locale
-        assert not(component and plugin), 'Cannot process a component id %s and a plugin id %s' % (component, plugin)
-
-        q = QSource()
-        q.lastModified.orderDesc()
-        if component: q.component = component
-        elif plugin: q.plugin = plugin
-        sources = self.sourceService.getAll(0, 1, q=q)
-        try: lastModified = next(iter(sources)).LastModified
-        except StopIteration: lastModified = None
-
-        path = self._filePath(locale, component, plugin)
-        if isfile(path):
-            lastModified = max(lastModified, datetime.fromtimestamp(os.stat(path).st_mtime))
-        return lastModified
-
-    def _processCatalog(self, catalog, messages, fallBack=None):
-        '''
-        Processes a catalog based on the given messages list. Basically the catalog will be made in sync with the list of
-        messages.
-
-        @param catalog: Catalog
-            The catalog to keep in sync.
-        @param messages: Iterable
-            The messages to update the catalog with.
-        @param fallBack: Catalog
-            The fall back catalog to get the missing catalog messages .
-        @return: Catalog
-            The same catalog
-        '''
-        assert isinstance(catalog, Catalog), 'Invalid catalog %s' % catalog
-        assert isinstance(messages, Iterable), 'Invalid messages list %s' % messages
-
-        for msg in catalog: msg.locations = []
-
-        for msg in messages:
-            assert isinstance(msg, Message)
-            id = msg.Singular if not msg.Plural else (msg.Singular,) + tuple(msg.Plural)
-            src = self.sourceService.getById(msg.Source)
-            context = msg.Context if msg.Context != '' else None
-            msgC = catalog.get(msg.Singular, context)
-            if msgC is None and fallBack is not None:
-                assert isinstance(fallBack, Catalog), 'Invalid fall back catalog %s' % fallBack
-                msgC = fallBack.get(msg.Singular, context)
-                if msgC is not None:
-                    msgC.locations = []
-                    catalog[msg.Singular] = msgC
-            msgCOrig = copy(msgC)
-            catalog.add(id, context=msg.Context if msg.Context != '' else None,
-                        locations=((src.Path, msg.LineNumber),),
-                        user_comments=(msg.Comments if msg.Comments else '',))
-            if msgC: fixBabelCatalogAddBug(msgC, catalog.num_plurals)
-            if msg.Plural and msgC and msgCOrig and isinstance(msgCOrig.string, str) and msgCOrig.string != '':
-                copyTranslation(msgCOrig, msgC)
-
-        creationDate = catalog.creation_date  # We need to make sure that the catalog keeps its creation date.
-        catalog.creation_date = creationDate
-        return catalog
-
-    def _toPOFile(self, catalog):
+        return int(datetime.now().strftime('%s'))
+                                                        
+    def _toFile(self, catalog):
         '''
         Convert the catalog to a PO file like object.
-
+    
         @param catalog: Catalog
             The catalog to convert to a file.
         @return: file read object
             A file like object to read the PO file from.
         '''
         assert isinstance(catalog, Catalog), 'Invalid catalog %s' % catalog
-
+    
         fileObj = BytesIO()
         write_po(fileObj, catalog, **self.write_po_config)
         fileObj.seek(0)
         return fileObj
-
-    def _toDict(self, domain, catalog):
-        '''
-        Convert the catalog to a dictionary.
-        Format description: @see IPOFileManager.getGlobalAsDict
-
-        @param catalog: Catalog
-            The catalog to convert to a dictionary.
-        @return: dict
-            The dictionary in the format specified above.
-        '''
-        assert isinstance(catalog, Catalog), 'Invalid catalog %s' % catalog
-
-        d = { }
-        d[''] = { 'lang' : catalog.locale.language, 'plural-forms' : catalog.plural_forms }
-        for msg in catalog:
-            if not msg or msg.id == '': continue
-            if isinstance(msg.id, (list, tuple)):
-                key, key_plural = msg.id
-                singular, plural = msg.string[0], msg.string[1]
-            else:
-                key, key_plural = msg.id, ''
-                singular, plural = msg.string, ''
-            singular = singular if singular is not None else ''
-            plural = plural if plural is not None else ''
-            key = key if not msg.context else "%s:%s" % (msg.context, key)
-            d[key] = [ key_plural, singular, plural ]
-        return { domain : d }
-
-    def _build(self, locale, messages, path, pathGlobal=None):
-        '''
-        Builds a catalog based on the provided locale paths, the path is used as the main source any messages that are not
-        found in path locale but are part of messages will attempt to be extracted from the global path locale.
-
-        @param locale: Locale
-            The locale.
-        @param messages: Iterable(Message)
-            The messages to build the PO file on.
-        @param path: string
-            The path of the targeted PO file from the locale repository.
-        @param pathGlobal: string|None
-            The path of the global PO file from the locale repository.
-        @return: file like object
-            File like object that contains the PO file content
-        '''
-        assert isinstance(locale, Locale), 'Invalid locale %s' % locale
-        assert isinstance(messages, Iterable), 'Invalid messages %s' % messages
-        assert isinstance(path, str), 'Invalid path %s' % path
-        assert pathGlobal is None or isinstance(pathGlobal, str), 'Invalid global path %s' % pathGlobal
-        if isfile(path):
-            with open(path) as fObj: catalog = read_po(fObj, locale)
-        else:
-            catalog = Catalog(locale, creation_date=datetime.now(), **self.catalog_config)
-        if pathGlobal and isfile(pathGlobal):
-            with open(pathGlobal) as fObj: catalogGlobal = read_po(fObj, locale)
-        else:
-            catalogGlobal = None
-
-        self._processCatalog(catalog, messages, fallBack=catalogGlobal)
-        catalog.revision_date = datetime.now()
-
-        return catalog
-
-    def _update(self, locale, messages, poFile, path, pathMO, isGlobal=True):
-        assert isinstance(locale, Locale), 'Invalid locale %s' % locale
-        assert isinstance(messages, Iterable), 'Invalid messages %s' % messages
-        assert isinstance(poFile, IInputStream), 'Invalid file object %s' % poFile
-        assert isinstance(path, str), 'Invalid path %s' % path
-        assert isinstance(pathMO, str), 'Invalid path MO %s' % pathMO
-        assert isinstance(isGlobal, bool), 'Invalid is global flag %s' % isGlobal
-
-        catalog = read_po(poFile, locale=locale)
-        assert isinstance(catalog, Catalog), 'Invalid catalog %s' % catalog
-        if not catalog:
-            # The catalog has no messages, no need for updating.
-            return
-
-        if not isGlobal:
-            pathGlobal = self._filePath(locale)
-            pathGlobalMO = self._filePath(locale, format=FORMAT_MO)
-            if isfile(pathGlobal):
-                with open(pathGlobal) as fObj: catalogGlobal = read_po(fObj, locale)
-                self._processCatalog(catalogGlobal, self.messageService.getMessages())
-            else:
-                isGlobal, path, pathMO = True, pathGlobal, pathGlobalMO
-                messages = self.messageService.getMessages()
-        self._processCatalog(catalog, messages)
-
-        if isfile(path):
-            with open(path) as fObj: catalogOld = read_po(fObj, locale)
-            for msg in catalog:
-                msgO = catalogOld.get(msgId(msg), msg.context)
-                if not isMsgTranslated(msg) and msgO and isMsgTranslated(msgO):
-                    msg.string = msgO.string
-            catalog.creation_date = catalogOld.creation_date
-        else:
-            pathDir = dirname(path)
-            if not isdir(pathDir): os.makedirs(pathDir)
-            catalog.creation_date = datetime.now()
-
-        if not isGlobal:
-            # We remove all the messages that are not translated or have the same translation as in the global locale
-            # or are the only plugin that makes use of the message in the global.
-            updatedGlobal = False
-            for msg in list(catalog):
-                id = msgId(msg)
-                if not id: continue
-                if not isMsgTranslated(msg):
-                    catalog.delete(id, msg.context)
-                else:
-                    msgG = catalogGlobal.get(id, msg.context)
-                    if not msgG or msgG.string == msg.string:
-                        catalog.delete(id, msg.context)
-                    elif not isMsgTranslated(msgG) or msgG.locations == msg.locations:
-                        copyTranslation(msg, msgG)
-                        catalog.delete(id, msg.context)
-                        updatedGlobal = True
-
-            if updatedGlobal:
-                # We remove all the messages that are not translated.
-                for msg in list(catalogGlobal):
-                    if not isMsgTranslated(msg):
-                        catalogGlobal.delete(msgId(msg), msg.context)
-
-                catalogGlobal.revision_date = datetime.now()
-                os.makedirs(dirname(pathGlobal), exist_ok=True)
-                with open(pathGlobal, 'wb') as fObj: write_po(fObj, catalogGlobal, **self.write_po_config)
-                os.makedirs(dirname(pathGlobalMO), exist_ok=True)
-                with open(pathGlobalMO, 'wb') as fObj: write_mo(fObj, catalogGlobal)
-        else:
-            # We remove all the messages that are not translated.
-            for msg in list(catalog):
-                if not isMsgTranslated(msg):
-                    catalog.delete(msgId(msg), msg.context)
-
-        catalog.revision_date = datetime.now()
-        os.makedirs(dirname(path), exist_ok=True)
-        with open(path, 'wb') as fObj: write_po(fObj, catalog, **self.write_po_config)
-        os.makedirs(dirname(pathMO), exist_ok=True)
-        with open(pathMO, 'wb') as fObj: write_mo(fObj, catalog)

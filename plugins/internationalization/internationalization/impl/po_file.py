@@ -9,27 +9,39 @@ Created on Mar 9, 2012
 Implementation for the PO file management.
 '''
 
-from admin.introspection.api.component import IComponentService
-from admin.introspection.api.plugin import IPluginService, Plugin
 from ally.api.model import Content
 from ally.cdm.spec import ICDM, PathNotFound
 from ally.container import wire
 from ally.container.ioc import injected
 from ally.container.support import setup
-from ally.exception import InputError, DevelError
+from ally.core.error import DevelError
+from ally.api.error import InputError
 from ally.internationalization import _, C_
 from datetime import datetime
-from internationalization.api.po_file import IPOFileService
+from internationalization.api.po_file import IInternationlizationFileService
 from internationalization.core.spec import IPOFileManager, InvalidLocaleError
+from babel.messages.catalog import Catalog
 import codecs
+import logging
+import sys
+
+FORMAT_PO = '{filename}.po'
+# The format of the po files.
+FORMAT_MO = '{filename}.mo'
+# The format of the mo files.
+FORMAT_POT = '{filename}.pot'
+# The format of the pot files.
 
 # --------------------------------------------------------------------
 
+log = logging.getLogger(__name__)
+
+# --------------------------------------------------------------------
 @injected
-@setup(IPOFileService, name='poFileService')
-class POFileService(IPOFileService):
+@setup(IInternationlizationFileService, name='poFileService')
+class POFileService(IInternationlizationFileService):
     '''
-    Implementation for @see: IPOFileService
+    Implementation for @see: IInternationlizationFileService
     '''
 
     default_charset = 'UTF-8'; wire.config('default_charset', doc='''
@@ -38,120 +50,75 @@ class POFileService(IPOFileService):
 
     poFileManager = IPOFileManager; wire.entity('poFileManager')
     cdmLocale = ICDM; wire.entity('cdmLocale')
-    pluginService = IPluginService; wire.entity('pluginService')
-    componentService = IComponentService; wire.entity('componentService')
 
     def __init__(self):
         assert isinstance(self.default_charset, str), 'Invalid default charset %s' % self.default_charset
         assert isinstance(self.poFileManager, IPOFileManager), 'Invalid PO file manager %s' % self.poFileManager
         assert isinstance(self.cdmLocale, ICDM), 'Invalid PO CDM %s' % self.cdmLocale
-        assert isinstance(self.pluginService, IPluginService), 'Invalid plugin service %s' % self.pluginService
-        assert isinstance(self.componentService, IComponentService), 'Invalid component service %s' % self.componentService
 
-    def getGlobalPOFile(self, locale, scheme):
+    def getPOFile(self, locale, scheme, name=None):
         '''
-        @see: IPOFileService.getGlobalPOFile
+        @see: IInternationlizationFileService.getGlobalPOFile
         '''
-        path = self._cdmPath(locale)
+        path = self._cdmPath(name=name, locale=locale, format=FORMAT_PO)
+        oldMetadata = self.cdmLocale.getMetadata(path)
         try:
-            try: cdmFileTimestamp = self.cdmLocale.getTimestamp(path)
-            except PathNotFound: republish = True
-            else:
-                mngFileTimestamp = self.poFileManager.getGlobalPOTimestamp(locale)
-                republish = False if mngFileTimestamp is None else cdmFileTimestamp < mngFileTimestamp
-
-            if republish:
-                self.cdmLocale.publishFromFile(path, self.poFileManager.getGlobalPOFile(locale))
+            content, newMetadata = self.poFileManager.getPOFileContent(name=name, locale=locale)
+            if newMeta['_ts'] > oldMeta['_ts']:
+                self.cdmLocale.publishFromFile(path, content)
+                self.cdmLocale.publishMetadata(path, newMetadata)
         except InvalidLocaleError: raise InputError(_('Invalid locale %(locale)s') % dict(locale=locale))
         return self.cdmLocale.getURI(path, scheme)
 
-    def getComponentPOFile(self, component, locale, scheme):
+    def getPOTFile(self, scheme, name=None):
         '''
-        @see: IPOFileService.getComponentPOFile
+        @see: IInternationlizationFileService.getGlobalPOTFile
         '''
-        self.componentService.getById(component)
-        path = self._cdmPath(locale, component=component)
+        path = self._cdmPath(name=name, format=FORMAT_POT)
+        oldMetadata = self.cdmLocale.getMetadata(path)
         try:
-            try: cdmFileTimestamp = self.cdmLocale.getTimestamp(path)
-            except PathNotFound: republish = True
-            else:
-                mngFileTimestamp = max(self.poFileManager.getGlobalPOTimestamp(locale) or datetime.min,
-                                       self.poFileManager.getComponentPOTimestamp(component, locale) or datetime.min)
-                republish = False if mngFileTimestamp is None else cdmFileTimestamp < mngFileTimestamp
-
-            if republish:
-                self.cdmLocale.publishFromFile(path, self.poFileManager.getComponentPOFile(component, locale))
-        except InvalidLocaleError: raise InputError(_('Invalid locale %(locale)s') % dict(locale=locale))
-        return self.cdmLocale.getURI(path, scheme)
-
-    def getPluginPOFile(self, plugin, locale, scheme):
-        '''
-        @see: IPOFileService.getPluginPOFile
-        '''
-        pluginObj = self.pluginService.getById(plugin)
-        assert isinstance(pluginObj, Plugin)
-        if pluginObj.Component: return self.getComponentPOFile(pluginObj.Component, locale, scheme)
-
-        path = self._cdmPath(locale, plugin=plugin)
-        try:
-            try: cdmFileTimestamp = self.cdmLocale.getTimestamp(path)
-            except PathNotFound: republish = True
-            else:
-                mngFileTimestamp = max(self.poFileManager.getGlobalPOTimestamp(locale) or datetime.min,
-                                       self.poFileManager.getPluginPOTimestamp(plugin, locale) or datetime.min)
-                republish = False if mngFileTimestamp is None else cdmFileTimestamp < mngFileTimestamp
-
-            if republish:
-                self.cdmLocale.publishFromFile(path, self.poFileManager.getPluginPOFile(plugin, locale))
+            content, newMetadata = self.poFileManager.getPOTFileContent(name=name)
+            if newMeta['_ts'] > oldMeta['_ts']:
+                self.cdmLocale.publishFromFile(path, content)
+                self.cdmLocale.publishMetadata(path, newMetadata)
         except InvalidLocaleError: raise InputError(_('Invalid locale %(locale)s') % dict(locale=locale))
         return self.cdmLocale.getURI(path, scheme)
 
     # ----------------------------------------------------------------
 
-    def updateGlobalPOFile(self, locale, poFile):
+    def updatePOFile(self, locale, poFile, name=None):
         '''
-        @see: IPOFileService.updateGlobalPOFile
+        @see: IInternationlizationFileService.updateGlobalPOFile
         '''
         assert isinstance(poFile, Content), 'Invalid PO content %s' % poFile
         # Convert the byte file to text file
         poFile = codecs.getreader(poFile.charSet or self.default_charset)(poFile)
-        try: self.poFileManager.updateGlobalPOFile(locale, poFile)
+        try: self.poFileManager.updatePOFile(name=name, locale=locale, poFile=poFile)
         except UnicodeDecodeError: raise InvalidPOFile(poFile)
         if poFile.next(): raise ToManyFiles()
+        return True
 
-    def updateComponentPOFile(self, component, locale, poFile):
+        
+    def updatePOTFile(self, name, poFile):
         '''
-        @see: IPOFileService.updateComponentPOFile
-        '''
-        self.componentService.getById(component)
-        assert isinstance(poFile, Content), 'Invalid PO content %s' % poFile
-        # Convert the byte file to text file
-        poFile = codecs.getreader(poFile.charSet or self.default_charset)(poFile)
-        try: self.poFileManager.updateComponentPOFile(component, locale, poFile)
-        except UnicodeDecodeError: raise InvalidPOFile(poFile)
-        if poFile.next(): raise ToManyFiles()
-
-    def updatePluginPOFile(self, plugin, locale, poFile):
-        '''
-        @see: IPOFileService.updatePluginPOFile
+        @see: IInternationlizationFileService.updateComponentPOTFile
         '''
         assert isinstance(poFile, Content), 'Invalid PO content %s' % poFile
-        pluginObj = self.pluginService.getById(plugin)
-        assert isinstance(pluginObj, Plugin)
-        if pluginObj.Component: return self.updateComponentPOFile(pluginObj.Component, locale, poFile)
         # Convert the byte file to text file
-        poFile = codecs.getreader(poFile.charSet or self.default_charset)(poFile)
-        try: self.poFileManager.updatePluginPOFile(plugin, locale, poFile)
+#         poFile = codecs.getreader(poFile.charSet or self.default_charset)(poFile)
+        print(poFile)
+#         sys.exit()
+        try: self.poFileManager.updatePOTFile(name=name, poFile=poFile)
         except UnicodeDecodeError: raise InvalidPOFile(poFile)
         if poFile.next(): raise ToManyFiles()
+        return True
 
     # ----------------------------------------------------------------
-
-    def _cdmPath(self, locale, component=None, plugin=None):
+    def _cdmPath(self, name, format, locale=None):
         '''
-        Returns the path to the CDM PO file corresponding to the given locale and / or
+        Returns the path to the CDM file corresponding to the given locale and / or
         component / plugin. If no component of plugin was specified it returns the
-        name of the global PO file.
+        name of the global file.
         
         @param locale: string
             The locale.
@@ -162,22 +129,58 @@ class POFileService(IPOFileService):
         @return: string
             The file path.
         '''
-        assert isinstance(locale, str), 'Invalid locale %s' % locale
-
         path = []
-        if component:
-            path.append('component')
-            path.append(component)
-        elif plugin:
-            path.append('plugin')
-            path.append(plugin)
-        else:
-            path.append('global')
-        path.append(locale)
-        return '%s.po' % '-'.join(path)
-
-
+        name = name if name else 'global'
+        path.append(name)
+        if locale: path.append(locale)
+        return format.format(filename='-'.join(path))
+    
+    def _toPOFile(self, catalog):
+        '''
+        Convert the catalog to a PO file like object.
+    
+        @param catalog: Catalog
+            The catalog to convert to a file.
+        @return: file read object
+            A file like object to read the PO file from.
+        '''
+        assert isinstance(catalog, Catalog), 'Invalid catalog %s' % catalog
+    
+        fileObj = BytesIO()
+        write_po(fileObj, catalog, **self.write_po_config)
+        fileObj.seek(0)
+        return fileObj
 # --------------------------------------------------------------------
+
+def asDict(self, catalog):
+    '''
+    Convert the catalog to a dictionary.
+    Format description: @see IPOFileManager.getGlobalAsDict
+
+    @param catalog: Catalog
+        The catalog to convert to a dictionary.
+    @return: dict
+        The dictionary in the format specified above.
+    '''
+    assert isinstance(catalog, Catalog), 'Invalid catalog %s' % catalog
+
+    d = { }
+    d[''] = { 'lang' : catalog.locale.language, 'plural-forms' : catalog.plural_forms }
+    for msg in catalog:
+        if not msg or msg.id == '': continue
+        if isinstance(msg.id, (list, tuple)):
+            key, key_plural = msg.id
+            singular, plural = msg.string[0], msg.string[1]
+        else:
+            key, key_plural = msg.id, ''
+            singular, plural = msg.string, ''
+        singular = singular if singular is not None else ''
+        plural = plural if plural is not None else ''
+        key = key if not msg.context else "%s:%s" % (msg.context, key)
+        d[key] = [ key_plural, singular, plural ]
+    return { domain : d }
+
+
 
 # Raised when there is an invalid PO content
 InvalidPOFile = lambda poFile:InputError(_('Invalid content for PO file %(file)s') % dict(file=poFile.getName() or

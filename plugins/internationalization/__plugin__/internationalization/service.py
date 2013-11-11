@@ -9,24 +9,28 @@ Created on Jan 9, 2012
 Contains the services setup for internationalization.
 '''
 
-from ..plugin.registry import addService
-from .db_internationalization import bindInternationalizationSession, \
-    bindInternationalizationValidations
+from ..plugin.registry import registerService
+from .database import binders
 from ally.cdm.spec import ICDM
 from ally.cdm.support import ExtendPathCDM
 from ally.container import support, ioc, bind
-from internationalization.scanner import Scanner
 from ..cdm.service import contentDeliveryManager
+import logging
+from internationalization.core.impl.po_file_manager import POFileManager
+
+log = logging.getLogger(__name__)
 
 # --------------------------------------------------------------------
 
 SERVICES = 'internationalization.api.**.I*Service'
-@ioc.entity
-def binders(): return [bindInternationalizationSession]
 
-bind.bindToEntities('internationalization.impl.**.*Alchemy', binders=binders)
-support.createEntitySetup('internationalization.impl.**.*', 'internationalization.*.impl.**.*', Scanner)
-support.listenToEntities(SERVICES, listeners=addService(bindInternationalizationValidations), beforeBinding=False)
+# --------------------------------------------------------------------
+
+
+
+bind.bindToEntities('internationalization.impl.**.*Alchemy', POFileManager, binders=binders)
+support.createEntitySetup('internationalization.impl.**.*', 'internationalization.*.impl.**.*')
+support.listenToEntities(SERVICES, listeners=registerService, beforeBinding=False)
 support.loadAllEntities(SERVICES)
 
 # --------------------------------------------------------------------

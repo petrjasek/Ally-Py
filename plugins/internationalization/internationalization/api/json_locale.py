@@ -9,19 +9,18 @@ Created on May 4, 2012
 API specifications for PO file management.
 '''
 
-from admin.api.domain_admin import modelAdmin
-from admin.introspection.api.component import Component
-from admin.introspection.api.plugin import Plugin
-from ally.api.config import service, call
+from ally.api.config import service, call, model
 from ally.api.type import Reference, Scheme
+from internationalization.api.domain import modelLocalization
+from internationalization.language.api.language import Language
 
 # --------------------------------------------------------------------
-
-@modelAdmin(id='Locale')
+@modelLocalization(id='Name')
 class JSONLocale:
     '''
     Model for a JSON locale file.
     '''
+    Name = str
     Locale = str
     Reference = Reference
 
@@ -46,7 +45,7 @@ class IJSONLocaleFileService:
         '''
 
     @call
-    def getComponentJSONFile(self, component:Component.Id, locale:JSONLocale.Locale,
+    def getComponentJSONFile(self, name:JSONLocale.Name, locale:JSONLocale.Locale,
                              scheme:Scheme) -> JSONLocale.Reference:
         '''
         Provides the messages for the given component and the given locale in JSON format.
@@ -56,21 +55,6 @@ class IJSONLocaleFileService:
             The component for which to return the translation.
         @param locale: string
             The locale for which to return the translation.
-        @return: string
-            The path to the temporary JSON file.
-        '''
-
-    @call
-    def getPluginJSONFile(self, plugin:Plugin.Id, locale:JSONLocale.Locale,
-                          scheme:Scheme) -> JSONLocale.Reference:
-        '''
-        Provides the messages for the given plugin and the given locale in JSON format.
-        For format @see: IPOFileManager.getGlobalAsDict.
-
-        @param locale: string
-            The locale for which to return the translation.
-        @param plugin: Plugin.Id
-            The plugin for which to return the translation.
         @return: string
             The path to the temporary JSON file.
         '''

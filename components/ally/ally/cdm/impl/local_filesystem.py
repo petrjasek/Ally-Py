@@ -23,10 +23,8 @@ import abc
 import json
 import logging
 import os
-from json.decoder import JSONDecoder
-from setuptools.compat import BytesIO
 from json.encoder import JSONEncoder
-
+from json.decoder import JSONDecoder
 # --------------------------------------------------------------------
 
 log = logging.getLogger(__name__)
@@ -180,12 +178,9 @@ class LocalFileSystemCDM(ICDM):
         @see ICDM.publishMetadata
         '''
         assert isinstance(path, str), 'Invalid content path %s' % path
-        fObj = BytesIO()
-        fObj.write(JSONEncoder.encode(metadata))
         metadataPath = path + '.meta'
-        publishContent(metadataPath, fObj)
+        self.publishFromFile(metadataPath, metadata)
         assert log.debug('Success publishing metadata for path %s', path) or True
-        
 
     def republish(self, oldPath, newPath):
         '''
@@ -250,13 +245,15 @@ class LocalFileSystemCDM(ICDM):
         
         assert isinstance(path, str), 'Invalid content path %s' % path
         path, itemPath = self._validatePath(path)
-        if not isdir(itemPath) and not isfile(itemPath):
-            raise PathNotFound(path)
-        metaItemPath = itemPath + '.meta'
-        metaFile = open(itemPath + '.meta', 'r')
-        metaInfo = JSONDecoder.decode(metaFile)
-        metaFile.close()
-        return metaInfo
+        if isdir(itemPath) or isfile(itemPath):
+            metaItemPath = itemPath + '.meta'
+            try:
+                metaFile = open(itemPath + '.meta', 'r')
+                metaInfo = JSONDecoder().decode(metaFile.read())
+                metaFile.close()
+                return metaInfo
+            except: 
+                return {}
         
     def _publishFromFileObj(self, path, fileObj):
         '''

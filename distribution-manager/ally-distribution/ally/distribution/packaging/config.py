@@ -25,7 +25,6 @@ class Config:
         '''
         do nothing
         '''
-        #assert isinstance(self.packagePath, str), 'Invalid package path provided %s' % self.packagePath
         
     def _generateParser(self, configOptions):
         '''

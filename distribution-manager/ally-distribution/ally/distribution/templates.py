@@ -92,7 +92,7 @@ setup(
       install_requires=[], 
       description='Core UI plugin',
       version='1.0',
-      name='core UI',
+      name='{packageName}',
       long_description='Long Core UI description',
       platforms=['all'],
       zip_safe=True,
@@ -102,4 +102,5 @@ setup(
       [babel.extractors]
         extract_html = internationalization.core.impl.extract_html:extract_html
         \"\"\"
+    )
 '''

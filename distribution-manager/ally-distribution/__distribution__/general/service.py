@@ -11,6 +11,7 @@ Provides the services setup for distribution.
 
 from ally.container import ioc, deploy
 from ally.distribution.packaging.broker import Broker
+from ally.design.priority import PRIORITY_LAST, PRIORITY_FIRST
 
 # --------------------------------------------------------------------
 
@@ -55,5 +56,5 @@ def actions_bucket():
 def runBroker():
     b = Broker()
     b.actions = actions_bucket()
-    b.plugins_ui_path = path_plugins_ui()
+    b.path_ui = path_ui()
     b.process()

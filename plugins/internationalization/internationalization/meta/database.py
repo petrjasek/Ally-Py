@@ -26,5 +26,5 @@ class LocalizationCollection(Base, PO):
     id = Column('id', INTEGER(unsigned=True), primary_key=True)
     Name = Column('Name', String(20), nullable=False, unique=True)
     locale = Column('locale', String(20), nullable=False)
-    timestamp = Column('_ts', INTEGER(unsigned=True))
+    timestamp = Column('timestamp', INTEGER(unsigned=True), nullable=False)
     poFile = Column('poFile', LargeBinary())

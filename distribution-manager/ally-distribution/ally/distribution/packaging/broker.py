@@ -8,13 +8,16 @@ Created on Oct 31, 2013
  
 Broker used for different actions needed by the distribution manager.
 '''
-from ally.distribution.util import getDirs, checkPathExists, createSymLink
+from ally.distribution.util import getDirs, checkPathExists, createSymLink,\
+    SETUP_FILENAME
 from ally.distribution.packaging.packager import Packager
 from ally.distribution.packaging.builder import Builder
 from ally.distribution.packaging.publisher import Publisher
 from ally.distribution.packaging.scanner import Scanner
 import logging
 import os
+from ally.distribution.packaging.config import Config
+from ally.distribution.templates import SETUP_UI_TEMPLATE
 
 log = logging.getLogger(__name__)
 
@@ -29,24 +32,37 @@ class Broker:
     actions = dict
     #TODO: update description
     #actions to be performed with information
-    plugins_ui_path = str
-    #The path to the plugins-ui folder
+    path_ui = str
+    #The path to the ui source folder
         
     def __init__(self):
         '''
         Constructor
         '''
-
+        
     def preparePackage(self, path):
         '''
         Prepares the env for packaging, building, publishing
         '''
         #TODO: extact preparing from Packager and move it here
         
-    def preparePluginsUI(self):
+    def preparePluginUI(self, packagePath, packageName):
         '''
-        Prepares the plugins-ui folder for packaging, building, publishing
+        Prepares the ui plugin for packaging, building, publishing.
+            - writes setup.py if doesn't exist
+            - creates path for mockup folder
+            - creates symlink to the source folder
+             
         '''
+        checkPathExists(packagePath)
+        symlink = os.path.join(packagePath, packageName)
+        sourcePath = os.path.abspath(os.path.join(self.path_ui, packageName))
+        createSymLink(source=sourcePath, dest=symlink)
+        filename = os.path.join(packagePath, SETUP_FILENAME)
+        if not os.path.isfile(filename):
+            with open(filename, 'w') as f:
+                f.write(SETUP_UI_TEMPLATE.format(packageName=packageName))
+                f.close()
     
     def process(self): 
         '''
@@ -54,15 +70,12 @@ class Broker:
         '''
         for action, targets in self.actions.items():
             for target in targets:
-                packagesPaths = getDirs(target['path'])
-                if target['type']=='plugins-ui':
-                    checkPathExists(self.plugins_ui_path)
+                checkPathExists(target['path'])
+                packagesPaths = getDirs(target['path']) if not target['type']=='plugins-ui' else getDirs(self.path_ui)
                 for packageName in packagesPaths:
-                    sourcePath = os.path.abspath(os.path.join(target['path'], packageName))
-                    packagePath = os.path.abspath(os.path.join(self.plugins_ui_path, packageName))
+                    packagePath = os.path.abspath(os.path.join(target['path'], packageName))
                     if target['type']=='plugins-ui': 
-                        checkPathExists(packagePath)
-                        createSymLink(source=sourcePath, dest=packagePath)
+                        self.preparePluginUI(packagePath, packageName)
                     assert log.info('*** {name} *** {action} *** STARTED'.format(name=packageName, action=action)) or True
                     worker = action_worker[action]()
                     worker.packagePath = packagePath

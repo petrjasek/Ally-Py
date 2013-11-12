@@ -57,7 +57,7 @@ class Scanner:
         babel action to do
         '''
         self.prepareUIPlugin()
-        #self.extractMessages()
+        self.extractMessages()
         
     def extractMessages(self):
         '''

@@ -10,20 +10,21 @@ Implementation for the PO file management.
 '''
 
 from ally.api.model import Content
-from ally.cdm.spec import ICDM, PathNotFound
+from ally.cdm.spec import ICDM
 from ally.container import wire
 from ally.container.ioc import injected
 from ally.container.support import setup
 from ally.core.error import DevelError
 from ally.api.error import InputError
 from ally.internationalization import _, C_
-from datetime import datetime
 from internationalization.api.po_file import IInternationlizationFileService
 from internationalization.core.spec import IPOFileManager, InvalidLocaleError
 from babel.messages.catalog import Catalog
-import codecs
+from os.path import join, isdir
 import logging
-import sys
+import os
+from setuptools.compat import BytesIO
+from json.encoder import JSONEncoder
 
 FORMAT_PO = '{filename}.po'
 # The format of the po files.
@@ -43,30 +44,34 @@ class POFileService(IInternationlizationFileService):
     '''
     Implementation for @see: IInternationlizationFileService
     '''
-
-    default_charset = 'UTF-8'; wire.config('default_charset', doc='''
-    The default character set to use whenever a PO file is uploaded and the character
-    set of the content is not specified''')
-
+    locale_dir_path = join('workspace', 'shared', 'locale'); wire.config('locale_dir_path', doc='''
+    The locale repository path''')
+    
     poFileManager = IPOFileManager; wire.entity('poFileManager')
     cdmLocale = ICDM; wire.entity('cdmLocale')
 
     def __init__(self):
-        assert isinstance(self.default_charset, str), 'Invalid default charset %s' % self.default_charset
         assert isinstance(self.poFileManager, IPOFileManager), 'Invalid PO file manager %s' % self.poFileManager
         assert isinstance(self.cdmLocale, ICDM), 'Invalid PO CDM %s' % self.cdmLocale
+        assert isinstance(self.locale_dir_path, str), 'Invalid locale directory %s' % self.locale_dir_path
+        
+        if not os.path.exists(self.locale_dir_path): os.makedirs(self.locale_dir_path)
+        if not isdir(self.locale_dir_path) or not os.access(self.locale_dir_path, os.W_OK):
+            raise IOError('Unable to access the locale directory %s' % self.locale_dir_path)
 
     def getPOFile(self, locale, scheme, name=None):
         '''
         @see: IInternationlizationFileService.getGlobalPOFile
         '''
         path = self._cdmPath(name=name, locale=locale, format=FORMAT_PO)
-        oldMetadata = self.cdmLocale.getMetadata(path)
+        cdmMetadata = self.cdmLocale.getMetadata(path)
+        cdmTimestamp = -1 if not cdmMetadata else cdmMetadata['timestamp']
         try:
-            content, newMetadata = self.poFileManager.getPOFileContent(name=name, locale=locale)
-            if newMeta['_ts'] > oldMeta['_ts']:
-                self.cdmLocale.publishFromFile(path, content)
-                self.cdmLocale.publishMetadata(path, newMetadata)
+            content, dbTimestamp = self.poFileManager.getPOFileContent(name=name, locale=locale)
+            if cdmTimestamp < dbTimestamp:
+                self.cdmLocale.publishFromFile(path, BytesIO(content))
+                dbMetadata = {'timestamp': dbTimestamp}
+                self.cdmLocale.publishMetadata(path, self._toMetadataFile(dbMetadata))
         except InvalidLocaleError: raise InputError(_('Invalid locale %(locale)s') % dict(locale=locale))
         return self.cdmLocale.getURI(path, scheme)
 
@@ -75,15 +80,17 @@ class POFileService(IInternationlizationFileService):
         @see: IInternationlizationFileService.getGlobalPOTFile
         '''
         path = self._cdmPath(name=name, format=FORMAT_POT)
-        oldMetadata = self.cdmLocale.getMetadata(path)
+        cdmMetadata = self.cdmLocale.getMetadata(path)
+        cdmTimestamp = -1 if not cdmMetadata else cdmMetadata['timestamp']
         try:
-            content, newMetadata = self.poFileManager.getPOTFileContent(name=name)
-            if newMeta['_ts'] > oldMeta['_ts']:
-                self.cdmLocale.publishFromFile(path, content)
-                self.cdmLocale.publishMetadata(path, newMetadata)
-        except InvalidLocaleError: raise InputError(_('Invalid locale %(locale)s') % dict(locale=locale))
-        return self.cdmLocale.getURI(path, scheme)
-
+            content, dbTimestamp = self.poFileManager.getPOTFileContent(name=name)
+            if cdmTimestamp < dbTimestamp:
+                self.cdmLocale.publishFromFile(path, BytesIO(content))
+                dbMetadata = {'timestamp': dbTimestamp}
+                self.cdmLocale.publishMetadata(path, self._toMetadataFile(dbMetadata))
+            return self.cdmLocale.getURI(path, scheme)
+        except:
+            return False
     # ----------------------------------------------------------------
 
     def updatePOFile(self, locale, poFile, name=None):
@@ -91,8 +98,6 @@ class POFileService(IInternationlizationFileService):
         @see: IInternationlizationFileService.updateGlobalPOFile
         '''
         assert isinstance(poFile, Content), 'Invalid PO content %s' % poFile
-        # Convert the byte file to text file
-        poFile = codecs.getreader(poFile.charSet or self.default_charset)(poFile)
         try: self.poFileManager.updatePOFile(name=name, locale=locale, poFile=poFile)
         except UnicodeDecodeError: raise InvalidPOFile(poFile)
         if poFile.next(): raise ToManyFiles()
@@ -104,8 +109,6 @@ class POFileService(IInternationlizationFileService):
         @see: IInternationlizationFileService.updateComponentPOTFile
         '''
         assert isinstance(poFile, Content), 'Invalid PO content %s' % poFile
-        # Convert the byte file to text file
-        poFile = codecs.getreader(poFile.charSet or self.default_charset)(poFile)
         try: self.poFileManager.updatePOTFile(name=name, poFile=poFile)
         except UnicodeDecodeError: raise InvalidPOFile(poFile)
         if poFile.next(): raise ToManyFiles()
@@ -145,7 +148,21 @@ class POFileService(IInternationlizationFileService):
         assert isinstance(catalog, Catalog), 'Invalid catalog %s' % catalog
     
         fileObj = BytesIO()
-        write_po(fileObj, catalog, **self.write_po_config)
+        write_po(fileObj, catalog)
+        fileObj.seek(0)
+        return fileObj
+    
+    def _toMetadataFile(self, content):
+        '''
+        Encode content as JSON and store it in a file like object
+        
+        @param content: any
+            Content to be converted to JSON
+        @return: file read object
+            A file like object to read the content file from.
+        '''
+        fileObj = BytesIO()
+        fileObj.write(bytes(JSONEncoder().encode(content), 'utf-8'))
         fileObj.seek(0)
         return fileObj
 # --------------------------------------------------------------------

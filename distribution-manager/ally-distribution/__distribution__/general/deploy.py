@@ -9,12 +9,13 @@ Created on Oct 2, 2013
 Provides the setup for general resources.
 '''
 
-from .service import path_components, package_location, path_plugins, path_ui
+from .service import path_components, package_location, path_plugins, path_plugins_ui
 from ally.container import support, deploy
 from distribution import parser, options
 from pydoc import getdoc
 import logging
 from .service import actions_bucket
+from ally.design.priority import PRIORITY_FIRST
 
 # --------------------------------------------------------------------
 
@@ -43,7 +44,7 @@ def prepare():
     
     destComponents = options.registerConfiguration(path_components)
     destPlugins    = options.registerConfiguration(path_plugins)
-    destPluginsUI  = options.registerConfiguration(path_ui)
+    destPluginsUI  = options.registerConfiguration(path_plugins_ui)
     
     options.location = None
     
@@ -68,13 +69,13 @@ def prepare():
                         'in current folder')
     parser.add_argument('--components', nargs='?', dest=destComponents, help=getdoc(path_components))
     parser.add_argument('--plugins', nargs='?', dest=destPlugins, help=getdoc(path_plugins))
-    parser.add_argument('--plugins-ui', nargs='?', dest=destPluginsUI, help=getdoc(path_ui))
+    parser.add_argument('--plugins-ui', nargs='?', dest=destPluginsUI, help=getdoc(path_plugins_ui))
     parser.add_argument('--package', action='store_true', dest=FLAG_PACKAGE)
     parser.add_argument('--publish', action='store_true', dest=FLAG_PUBLISH)
     parser.add_argument('--build', action='store_true', dest=FLAG_BUILD_EGGS)
     parser.add_argument('--scan', action='store_true', dest=FLAG_SCAN_INT)
     
-@deploy.start
+@deploy.start(priority=PRIORITY_FIRST)
 def deploy():
     if options.location: support.force(package_location, options.location)
     for action in actionFlags:
@@ -90,13 +91,13 @@ def deploy():
                     actions_bucket()[action].append({'path' : path_plugins(),
                                                   'type' : FLAG_PLUGINS})
                 if options.isFlag(FLAG_PLUGINS_UI):
-                    actions_bucket()[action].append({'path' : path_ui(),
+                    actions_bucket()[action].append({'path' : path_plugins_ui(),
                                                   'type' : FLAG_PLUGINS_UI})
             else:
                 actions_bucket[action] = [{'path' : path_components(),
                                                   'type' : FLAG_COMPONENTS},
                                          {'path' : path_plugins(),
                                                   'type' : FLAG_PLUGINS},
-                                         {'path' : path_ui(),
+                                         {'path' : path_plugins_ui(),
                                                   'type' : FLAG_PLUGINS_UI},
                                          ]

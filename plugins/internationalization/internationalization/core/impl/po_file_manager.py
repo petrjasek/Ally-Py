@@ -12,30 +12,15 @@ Implementation for the PO file management.
 from ally.container import wire
 from ally.container.ioc import injected
 from ally.container.support import setup
-from ally.support.util_io import IInputStream
-from babel import localedata, core
 from babel.core import Locale, UnknownLocaleError
 from babel.messages.catalog import Catalog
-from babel.messages.mofile import write_mo
 from babel.messages.pofile import read_po, write_po
-from collections import Iterable
-from copy import copy
 from datetime import datetime
-from genericpath import isdir, isfile
 from internationalization.core.spec import IPOFileManager, InvalidLocaleError
-from internationalization.support.babel.util_babel import msgId, isMsgTranslated, \
-    copyTranslation, fixBabelCatalogAddBug
 from io import BytesIO
-from os.path import dirname, join
-import os
 from sql_alchemy.support.util_service import SessionSupport
 from internationalization.meta.database import LocalizationCollection
 from sqlalchemy.sql.expression import and_
-from sql_alchemy.support.util_meta import JSONEncodedDict
-from json.encoder import JSONEncoder
-from sys import getdefaultencoding
-from internationalization.impl.po_file import asDict, InvalidPOFile
-from json.decoder import JSONDecoder
 import logging
 import codecs
 
@@ -232,7 +217,7 @@ class POFileManager(SessionSupport, IPOFileManager):
         @return: file read object
             A file like object to read the PO file from.
         '''
-        #assert isinstance(catalog, Catalog), 'Invalid catalog %s' % catalog
+        assert isinstance(catalog, Catalog), 'Invalid catalog %s' % catalog
     
         fileObj = BytesIO()
         write_po(fileObj, catalog, **self.write_po_config)

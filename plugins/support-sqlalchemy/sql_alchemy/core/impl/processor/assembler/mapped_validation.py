@@ -84,42 +84,49 @@ class MappedValidationHandler(HandlerProcessor):
         assert isinstance(mapper, Mapper), 'Invalid mapped class %s' % mapped
         assert isinstance(model, TypeModel), 'Invalid model class %s' % mapped
 
+        mappers = [mapper]
+        for mapper in mapper.polymorphic_iterator():
+            pmodel = mappingFor(mapper.class_)
+            if not isinstance(pmodel, TypeModel): continue
+            mappers.append(mapper)
+
         validations = []
-        mvalidations = validationsFor(mapped)
-        if mvalidations:
-            for validation, target in mvalidations:
-                assert isinstance(validation, IValidation), 'Invalid created validation %s' % validation
-                validations.append((validation, target))
-        
-        for name, prop in model.properties.items():
-            descriptor, dclazz = getAttrAndClass(mapped, name)
-            dvalidations = validationsFor(descriptor)
-            if dvalidations:
-                for creator, target in dvalidations:
-                    validation = creator(prop)
+        for mapper in mappers:
+            mvalidations = validationsFor(mapper.class_)
+            if mvalidations:
+                for validation, target in mvalidations:
                     assert isinstance(validation, IValidation), 'Invalid created validation %s' % validation
-                    if target == descriptor: target = dclazz
                     validations.append((validation, target))
-                continue
             
-            if isinstance(descriptor, hybrid_property):
-                assert isinstance(descriptor, hybrid_property)
-                if descriptor.fset is None: validations.append((ReadOnly(prop), dclazz))
-                continue
-            
-            column = getattr(mapper.c, name, None)
-            if column is None or not isinstance(column, Column): continue
-            assert isinstance(column, Column)
-    
-            if column.primary_key:
-                if column.autoincrement: validations.append((AutoId(prop), mapped))
-                else: validations.append((Mandatory(prop), mapped))
-            elif not column.nullable and column.default is None and column.server_default is None:
-                validations.append((Mandatory(prop), mapped))
-    
-            if isinstance(column.type, String) and column.type.length:
-                validations.append((MaxLen(prop, column.type.length), mapped))
-            
-            if isinstance(prop, TypePropertyContainer): validations.append((Relation(prop), mapped))
+            for name, prop in model.properties.items():
+                descriptor, dclazz = getAttrAndClass(mapper.class_, name)
+                dvalidations = validationsFor(descriptor)
+                if dvalidations:
+                    for creator, target in dvalidations:
+                        validation = creator(prop)
+                        assert isinstance(validation, IValidation), 'Invalid created validation %s' % validation
+                        if target == descriptor: target = dclazz
+                        validations.append((validation, target))
+                    continue
+                
+                if isinstance(descriptor, hybrid_property):
+                    assert isinstance(descriptor, hybrid_property)
+                    if descriptor.fset is None: validations.append((ReadOnly(prop), dclazz))
+                    continue
+                
+                column = getattr(mapper.c, name, None)
+                if column is None or not isinstance(column, Column): continue
+                assert isinstance(column, Column)
+        
+                if column.primary_key:
+                    if column.autoincrement: validations.append((AutoId(prop), mapper.class_))
+                    else: validations.append((Mandatory(prop), mapper.class_))
+                elif not column.nullable and column.default is None and column.server_default is None:
+                    validations.append((Mandatory(prop), mapper.class_))
+        
+                if isinstance(column.type, String) and column.type.length:
+                    validations.append((MaxLen(prop, column.type.length), mapper.class_))
+                
+                if isinstance(prop, TypePropertyContainer): validations.append((Relation(prop), mapper.class_))
             
         return validations        

@@ -43,7 +43,6 @@ from ally.core.impl.processor.decoder.validation.auto_id import ValidateAutoId
 from ally.core.impl.processor.decoder.validation.mandatory import ValidateMandatory
 from ally.core.impl.processor.decoder.validation.read_only import ValidateReadOnly
 from ally.core.impl.processor.decoder.validation.max_len import ValidateMaxLen
-from ally.core.impl.processor.decoder.validation.optional import ValidateOptional
 
 
 # --------------------------------------------------------------------
@@ -228,9 +227,6 @@ def validateAutoId() -> Handler: return ValidateAutoId()
 def validateMandatory() -> Handler: return ValidateMandatory()
 
 @ioc.entity
-def validateOptional() -> Handler: return ValidateOptional()
-
-@ioc.entity
 def validateMaxLen() -> Handler: return ValidateMaxLen()
 
 # --------------------------------------------------------------------
@@ -286,7 +282,7 @@ def updateAssemblyDecodePropertyOfModel():
     
 @ioc.before(assemblyDecodeModel)
 def updateAssemblyDecodeModel():
-    assemblyDecodeModel().add(validationPropertyProvider(), validateReadOnly(), validateAutoId(), validateOptional(), validateMandatory(),
+    assemblyDecodeModel().add(validationPropertyProvider(), validateReadOnly(), validateAutoId(), validateMandatory(),
                               validateMaxLen(),
                               propertyOfModelDecode(), listDecode(), dictDecode(), primitiveDecode(),
                               definitionXMLCreate(), definitionContentXML(), definitionIndex(), definitionObjectCreate(),

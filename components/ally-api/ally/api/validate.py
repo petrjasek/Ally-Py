@@ -74,17 +74,6 @@ class Mandatory(ValidationProperty):
         '''
         super().__init__(prop)
         
-class Optional(ValidationProperty):
-    '''
-    Optional property type validation, usually for overriding mandatories.
-    '''
-    
-    def __init__(self, prop):
-        '''
-        @see: Validation
-        '''
-        super().__init__(prop)
-        
 class ReadOnly(ValidationProperty):
     '''
     Read only property type validation.

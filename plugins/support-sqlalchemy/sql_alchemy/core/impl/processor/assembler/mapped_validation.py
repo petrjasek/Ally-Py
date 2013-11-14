@@ -84,18 +84,19 @@ class MappedValidationHandler(HandlerProcessor):
         assert isinstance(mapper, Mapper), 'Invalid mapped class %s' % mapped
         assert isinstance(model, TypeModel), 'Invalid model class %s' % mapped
 
-        mappers = [mapper]
+        mappers = [(True, model, mapper)]
         for mapper in mapper.polymorphic_iterator():
-            pmodel = mappingFor(mapper.class_)
-            if not isinstance(pmodel, TypeModel): continue
-            mappers.append(mapper)
+            pmodel = typeFor(mapper.class_)
+            if not isinstance(pmodel, TypeModel) or not issubclass(pmodel.clazz, model.clazz): continue
+            mappers.append((False, pmodel, mapper))
 
         validations = []
-        for mapper in mappers:
+        for isMain, model, mapper in mappers:
             mvalidations = validationsFor(mapper.class_)
             if mvalidations:
                 for validation, target in mvalidations:
                     assert isinstance(validation, IValidation), 'Invalid created validation %s' % validation
+                    if not isMain and isinstance(validation, Mandatory): continue
                     validations.append((validation, target))
             
             for name, prop in model.properties.items():
@@ -118,11 +119,12 @@ class MappedValidationHandler(HandlerProcessor):
                 if column is None or not isinstance(column, Column): continue
                 assert isinstance(column, Column)
         
-                if column.primary_key:
-                    if column.autoincrement: validations.append((AutoId(prop), mapper.class_))
-                    else: validations.append((Mandatory(prop), mapper.class_))
-                elif not column.nullable and column.default is None and column.server_default is None:
-                    validations.append((Mandatory(prop), mapper.class_))
+                if isMain:
+                    if column.primary_key:
+                        if column.autoincrement: validations.append((AutoId(prop), mapper.class_))
+                        else: validations.append((Mandatory(prop), mapper.class_))
+                    elif not column.nullable and column.default is None and column.server_default is None:
+                        validations.append((Mandatory(prop), mapper.class_))
         
                 if isinstance(column.type, String) and column.type.length:
                     validations.append((MaxLen(prop, column.type.length), mapper.class_))

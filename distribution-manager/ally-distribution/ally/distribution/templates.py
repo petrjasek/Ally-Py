@@ -60,13 +60,13 @@ SETUP_CFG_UI_OPTIONS = {'setup.cfg' :
                                               'mapping_file' : 'babel.cfg',
                                               'add_comments' : 'NOTE',
                                               'keywords'     : 'gettext _ ngettext pgettext C_ npgettext N_ NC_',
-                                              'input_dirs'   : './'
+                                              'input_dirs'   : '{inputPath}'
                                               },
                         'init_catalog'     : {'input_file'   : 'messages.pot',
                                               'output_dir'   : 'foo/bar',
                                               'output_file'  : 'mmm.po',
                                               'locale'       : 'en',
-                                              'input_dirs'   : './'
+                                              'input_dirs'   : '{inputPath}'
                                               }
                         }}
 

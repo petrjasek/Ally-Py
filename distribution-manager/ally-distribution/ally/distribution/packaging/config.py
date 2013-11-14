@@ -11,6 +11,7 @@ Provides configuration mechanisms used in distribution manager.
 
 from configparser import SafeConfigParser
 import os
+import sys
 
 class Config:
     '''
@@ -35,6 +36,7 @@ class Config:
             parser.add_section(section)
             if isinstance(content, dict):
                 for option, value in content.items():
+                    value = value.format(inputPath=self.packageName) if 'packagePath' in value else value
                     parser.set(section, option, value)
         return parser 
         

@@ -16,6 +16,7 @@ from internationalization.api.domain import modelLocalization
 from internationalization.language.api.language import Language
 
 # --------------------------------------------------------------------
+
 @modelLocalization(id='Name')
 class PO:
     '''
@@ -34,21 +35,26 @@ class IInternationlizationFileService:
     @call
     def getPOFile(self, locale:Language.Code, scheme:Scheme, name:PO.Name=None) -> PO.Reference:
         '''
-        Provides the PO file for the whole application and the given locale.
+        Provides the PO file for the plugin and the given locale. If name is None, global PO file will be provided.
 
-        @param locale: string
+        
+        @param locale: Language.Code
             The locale for which to return the translation.
-        @return: Content
-            The content of the PO file.
+        @param name: string
+            The name of the plugin
+        @return: Reference
+            The reference to the content of the PO file.
         '''
 
     @call
     def updatePOFile(self, locale:Language.Code, content:Content, name:PO.Name=None) -> bool:
         '''
-        Update a PO file for specified locale or upload new locale if doesn't exist
+        Update a PO file for specified locale or upload new locale if doesn't exist. If name is None, file will be uploaded a global PO file.
         
-        @param PO: PO object
-            The PO object that need to be updated/uploaded
+        @param locale: Language.Code
+            The locale for which to return the translation.
+        @param name: string
+            The name of the plugin
         '''
                 
     # ----------------------------------------------------------------
@@ -56,17 +62,19 @@ class IInternationlizationFileService:
     @call(webName='Template')
     def getPOTFile(self, scheme:Scheme, name:PO.Name=None) -> PO.Reference:
         '''
-        Provides the POT file for the whole application and the given locale.
-
-        @return: Content
-            The content of the PO file.
+        Provides the POT file for the specified plugin. If name is None the global POT file will be provided.
+    
+        @param name: string
+            The name of the plugin
+        @return: Reference
+            The reference to the content of the POT file.
         '''
     
     @call(webName='Template')
     def updatePOTFile(self, name:PO.Name, content: Content) -> bool:
         '''
-        Update a POT file or upload if doesn't exist
+        Update a POT file for the specified plugin or upload if POT doesn't exist.
         
-        @param potFile: POT object
-            The POT object that needs to be updated/uploaded
+        @param name: string
+            The name of the plugin
         '''

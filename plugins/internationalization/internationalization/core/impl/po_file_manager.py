@@ -12,68 +12,48 @@ Implementation for the PO file management.
 from ally.container import wire
 from ally.container.ioc import injected
 from ally.container.support import setup
-from babel.core import Locale, UnknownLocaleError
 from babel.messages.catalog import Catalog
 from babel.messages.pofile import read_po, write_po
 from datetime import datetime
-from internationalization.core.spec import IPOFileManager, InvalidLocaleError
+from internationalization.core.spec import IPOFileManager
 from io import BytesIO
 from sql_alchemy.support.util_service import SessionSupport
-from internationalization.meta.database import LocalizationCollection
+from internationalization.meta.db_mapping import POMapped, POTMapped
 from sqlalchemy.sql.expression import and_
 import logging
 import codecs
+from sqlalchemy.orm.exc import NoResultFound
+from ally.cdm.spec import ICDM
+from os.path import isdir, join
+import os
+from ally.api.model import Content
 
 # --------------------------------------------------------------------
-
-# Babel FIX: We need to adjust the dir name for locales since they need to be outside the .egg file
-# localedata._dirname = localedata._dirname.replace('.egg', '')
-# core._filename = core._filename.replace('.egg', '')
-
 
 log = logging.getLogger(__name__)
 # --------------------------------------------------------------------
 
-# TODO: add lock in order to avoid problems when a file is being updated an then read.
+FILENAME_PO = 'messages.po'
+# The format of the po files.
+FILENAME_POT = 'messages.pot'
+# The format of the pot files.
+
 @injected
 @setup(IPOFileManager, name='poFileManager')
 class POFileManager(SessionSupport, IPOFileManager):
     '''
     Implementation for @see: IPOFileManager
     '''
+    cdmLocale = ICDM; wire.entity('cdmLocale')
+    locale_dir_path = join('workspace', 'shared', 'locale'); wire.config('locale_dir_path', doc='''
+    The locale repository path''')
+    
+    cdmPOFilePath = join('{name}', 'locale', '{locale}', 'LC_MESSAGES', FILENAME_PO)
+    cdmPOTFilePath = join('{name}', 'locale', FILENAME_POT) 
     
     default_charset = 'UTF-8'; wire.config('default_charset', doc='''
     The default character set to use whenever a PO file is uploaded and the character
     set of the content is not specified''')
-    catalog_config = {
-                      'header_comment':'''\
-# Translations template for PROJECT.
-# Copyright (C) YEAR ORGANIZATION
-# This file is distributed under the same license as the PROJECT project.
-# Gabriel Nistor <gabriel.nistor@sourcefabric.org>, YEAR.
-#''',
-                      'project': 'Sourcefabric',
-                      'version': '1.0',
-                      'copyright_holder': 'Sourcefabric o.p.s.',
-                      'msgid_bugs_address': 'contact@sourcefabric.org',
-                      'last_translator': 'Automatic',
-                      'language_team': 'Automatic',
-                      'fuzzy': False,
-                      }; wire.config('catalog_config', doc='''
-    The global catalog default configuration for templates.
- 
-    :param header_comment: the header comment as string, or `None` for the default header
-    :param project: the project's name
-    :param version: the project's version
-    :param copyright_holder: the copyright holder of the catalog
-    :param msgid_bugs_address: the email address or URL to submit bug reports to
-    :param creation_date: the date the catalog was created
-    :param revision_date: the date the catalog was revised
-    :param last_translator: the name and email of the last translator
-    :param language_team: the name and email of the language team
-    :param charset: the encoding to use in the output
-    :param fuzzy: the fuzzy bit on the catalog header
-    ''')
     write_po_config = {
                        'no_location': False,
                        'omit_header': False,
@@ -94,114 +74,174 @@ class POFileManager(SessionSupport, IPOFileManager):
                             they are included as comments
     :param include_previous: include the old msgid as a comment when updating the catalog
     ''')
-
+    
     def __init__(self):
         assert isinstance(self.default_charset, str), 'Invalid default charset %s' % self.default_charset
-        assert isinstance(self.catalog_config, dict), 'Invalid catalog configurations %s' % self.catalog_config
         assert isinstance(self.write_po_config, dict), 'Invalid write PO configurations %s' % self.write_po_config
+        assert isinstance(self.cdmLocale, ICDM), 'Invalid PO CDM %s' % self.cdmLocale
 
-    def getPOFileContent(self, name, locale):
-        '''
-        @see: IPOFileManager.getPOFileContent
-        '''
-        try: locale = Locale.parse(locale)
-        except UnknownLocaleError: raise InvalidLocaleError(locale)
-        template, templateTS = self.getPOTFileContent(name=name)
-        catalog, catalogTS = self._getData(name=name, locale=locale)
-        if template and catalog:
-            timestamp = templateTS if templateTS > catalogTS else catalogTS
-            content = self._toFile(catalog.update(template)).getvalue()
-        elif not template:
-            timestamp = catalogTS
-            content = self._toFile(catalog).getvalue()
-    
-        return content, timestamp
-
-    def getPOTFileContent(self, name):
-        '''
-        @see: IPOFileManager.getPOTFileContent
-        '''
-        return self._getData(name=name)
+        assert isinstance(self.locale_dir_path, str), 'Invalid locale directory %s' % self.locale_dir_path
+        if not os.path.exists(self.locale_dir_path): os.makedirs(self.locale_dir_path)
+        if not isdir(self.locale_dir_path) or not os.access(self.locale_dir_path, os.W_OK):
+            raise IOError('Unable to access the locale directory %s' % self.locale_dir_path)
         
-    def updatePOFile(self, name, locale, poFile):
+    def getGlobalPOCatalog(self, locale):
         '''
-        @see IPOFileManager.updatePOFile
+        @see: IPOFileManager.getGlobalPOFileReference
         '''
-        try: locale = Locale.parse(locale)
-        except UnknownLocaleError: raise InvalidLocaleError(locale)
+        name = 'application'
+        
+        try:
+            content = self._getData(name=name, locale=locale)
+            catalog = self._getCatalog(content)
+            template = self.getGlobalPOTCatalog()
+            if template: catalog.update(template)
+            else: assert log.debug('Global POT file could not be generated. Check if you have any POTs in db') or True
+            return catalog
+        except:
+            return
+
+    def getPluginPOCatalog(self, name, locale):
+        '''
+        @see: IPOFileManager.getPluginPOCatalog
+        '''
+        try:
+            content = self._getData(name=name, locale=locale)
+            catalog = self._getCatalog(content)
+            template = self._getData(name=name)
+            if template: catalog.update(template)
+            else: assert log.debug('No POT file found for plugin {name}. Delivering not updated PO'.format(name=name)) or True
+            return catalog
+        except:
+            return
+
+    def getGlobalPOTCatalog(self, name):
+        '''
+        @see: IPOFileManager.getGlobalPOTCatalog
+        '''
+        try:
+            pots = self.session().query(POTMapped.Name).all()
+        except NoResultFound: return
+        template = Catalog()
+        for name in pots:
+            template.update(self._getCatalog(self._getData(name)))
+        return template
+    
+    def getPluginPOTCatalog(self, name):
+        '''
+        @see: IPOFileManager.getPluginPOTCatalog
+        '''
+        try:
+            content = self._getData(name)
+            catalog = self._getCatalog(content)
+            return catalog
+        except:
+            return
+    
+    def updateGlobalPO(self, locale, poFile):
+        '''
+        @see IPOFileManager.updateGlobalPO
+        '''
+        name = 'application'
         poFile = codecs.getreader(poFile.charSet or self.default_charset)(poFile)
-        try:
-            newCatalog = read_po(poFile, charset=poFile.charSet)
-        except:
-            raise UnicodeDecodeError
-        try:
-            oldContent, _ = self.getPOFileContent(name=name, locale=locale)
-            oldCatalog = read_po(oldContent)
+        newCatalog = self._getCatalog(poFile, encoding=poFile.charSet)
+        if newCatalog == None: raise UnicodeDecodeError
+        oldCatalog = self._getCatalog(self._getData(name=name, locale=locale))
+        if oldCatalog:
             catalog = oldCatalog.update(newCatalog)
-        except: 
+        else:
             catalog = newCatalog
-        try:
-            template, _ = self.getPOTFileContent(name)
-            templateCatalog = read_po(template)
-            content = self._toFile(catalog.update(templateCatalog))
-        except:
-            content = self._toFile(catalog)
+        content = self._toFile(catalog)
+        return self._storeData(name=name, locale=locale, content=content.getvalue())
+    
+    def updatePluginPO(self, name, locale, poFile):
+        '''
+        @see IPOFileManager.updatePluginPO
+        '''
+        poFile = codecs.getreader(poFile.charSet or self.default_charset)(poFile)
+        newCatalog = self._getCatalog(poFile, encoding=poFile.charSet)
+        if newCatalog == None: raise UnicodeDecodeError
+        oldCatalog = self.getPluginPOCatalog(name=name, locale=locale)
+        if oldCatalog:
+            catalog = oldCatalog.update(newCatalog)
+        else:
+            catalog = newCatalog
+        content = self._toFile(catalog)
         return self._storeData(name=name, locale=locale, content=content.getvalue())
 
-    def updatePOTFile(self, name, poFile):
+    def updatePluginPOT(self, name, poFile):
         '''
-        @see IPOFileManager.updatePOTFile
+        @see IPOFileManager.updatePluginPOT
         '''
-        #Convert from byte to text
         poFile = codecs.getreader(poFile.charSet or self.default_charset)(poFile)
-        try:
-            newCatalog = read_po(poFile, charset=poFile.charSet)
-        except:
-            raise UnicodeDecodeError
-        try:
-            oldContent, _ = self.getPOTFileContent(name)
-            oldCatalog = read_po(oldContent)
-            content = self._toFile(oldCatalog.update(newCatalog))
-        except: 
-            content = self._toFile(newCatalog)
-        
+        newTemplate = self._getCatalog(poFile, encoding=poFile.charSet)
+        if newTemplate == None: raise UnicodeDecodeError
+        #TODO: check if manual POT generation is permited
+        oldTemplate = self.getPluginPOTCatalog(name=name)
+        if oldTemplate:
+            catalog = oldTemplate.update(newTemplate)
+        else:
+            catalog = newTemplate
+        content = self._toFile(catalog)
         return self._storeData(name=name, content=content.getvalue())
-    
+            
     # --------------------------------------------------------------------
-
+    def _getCatalog(self, content, encoding='utf-8'):
+        '''
+        Validate content and return PO messages catalog from it.
+        '''
+        try:
+            catalog = read_po(BytesIO(content))
+            return catalog
+        except:
+            try:
+                catalog = read_po(content, encoding)
+                return catalog
+            except:
+                assert log.debug('db content not a PO file!') or True
+                return
+    
     def _getData(self, name=None, locale=None):
         '''
         Provides the actual content and False if no matching content is in db
         '''
-        name = name if name else 'global'
-        locale = locale if locale else 'global'
+        if not locale:
+            sql = self.session().query(POTMapped)
+            sql = sql.filter(POTMapped.Name == name)
+        else:
+            sql = self.session().query(POMapped)
+            sql = sql.filter(and_(POMapped.Name == name, POMapped.Locale == locale))
         
         try: 
-            result = self.session().query(LocalizationCollection).filter(and_(LocalizationCollection.Name == name, LocalizationCollection.locale == locale)).first()
-            return result.poFile, result.timestamp
-        except:
-            return False, False
+            result = sql.first()
+            return result.file
+        except NoResultFound:
+            assert log.debug('No result found for name \'%s\' and locale \'%s\'', name, locale) or True   
         
     def _storeData(self, content, name=None, locale=None):
         '''
         Stores new/updated content
         '''
-        name = name if name else 'global'
-        locale = locale if locale else 'global'
-         
         timestamp = self._doTimestamp()
-        
-        item = self.session().query(LocalizationCollection).filter(and_(LocalizationCollection.Name == name, \
-                                                                    LocalizationCollection.locale == locale)).first()
-        if item:
-            item.timestamp = timestamp
-            item.poFile = content
+        if not locale:
+            sql = self.session().query(POTMapped)
+            sql = sql.filter(POTMapped.Name == name)
         else:
-            item = LocalizationCollection(Name=name, locale=locale, timestamp=timestamp, poFile=content)
-
-        self.session().add(item)
-        return True
+            sql = self.session().query(POMapped)
+            sql = sql.filter(and_(POMapped.Name == name, POMapped.Locale == locale))
+         
+        try:
+            item = sql.first()
+            item.timestamp = timestamp
+            item.file = content
+            return self.session().add(item)
+        except:
+            item = POMapped(Name=name, Locale=locale, timestamp=timestamp, file=content) if locale \
+                   else POTMapped(Name=name, timestamp=timestamp, file=content) 
+            assert log.debug('Entry does not exist. Adding new entry') or True
+            return self.session().add(item)
         
+
     def _doTimestamp(self):
         '''
         Generates the current timestamp for the item stored in db 

@@ -88,9 +88,7 @@ class CatalogManager(IPOFileManager):
         template = Catalog()
         for result in pots:
             (name, ) = result
-            pot = polib.pofile(BytesIO(self.getData(name) ))
-            for entry in po:
-                print(entry.msgid, entry.msgstr, entry.occurrences)
+            template.update(self._getCatalog(self.getData(name), self.default_charset))
         return template or False
     
     def getPluginPOTCatalog(self, name):

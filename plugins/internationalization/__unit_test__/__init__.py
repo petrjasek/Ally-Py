@@ -10,6 +10,7 @@ Contains the unit tests.
 '''
 import requests
 import unittest
+from internationalization.core.impl.po_file_manager import DBPOFileManager
 # 
 # class POFileTest:
 #     
@@ -26,9 +27,7 @@ class TestInternationalization(unittest.TestCase):
         '''
         Test verifying getting an existing PO file.
         '''
-        r = requests.get('http://localhost:8080/resources/Localization/TemplatePO/vasile/')
-        assert r.status_code == 200
-        assert r.text == '{"Reference":"/content/cache/locale/vasile.pot"}'
+        DBPOFileManager
         
     def test_get_nonexisting_PO(self):
         '''

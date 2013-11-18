@@ -16,7 +16,8 @@ from ally.cdm.support import ExtendPathCDM
 from ally.container import support, ioc, bind
 from ..cdm.service import contentDeliveryManager
 import logging
-from internationalization.core.impl.po_file_manager import POFileManager
+from internationalization.core.impl.po_file_manager import DBPOFileManager
+from internationalization.core.impl.cdm_syncronizer import poCDMSyncronyzer
 
 log = logging.getLogger(__name__)
 
@@ -26,9 +27,7 @@ SERVICES = 'internationalization.api.**.I*Service'
 
 # --------------------------------------------------------------------
 
-
-
-bind.bindToEntities('internationalization.impl.**.*Alchemy', POFileManager, binders=binders)
+bind.bindToEntities('internationalization.impl.**.*Alchemy', poCDMSyncronyzer, DBPOFileManager, binders=binders)
 support.createEntitySetup('internationalization.impl.**.*', 'internationalization.*.impl.**.*')
 support.listenToEntities(SERVICES, listeners=registerService, beforeBinding=False)
 support.loadAllEntities(SERVICES)

@@ -27,6 +27,18 @@ class IPOFileManager(metaclass=abc.ABCMeta):
     '''
 
     @abc.abstractmethod
+    def getLatestTimestampForPO(self, name, locale):
+        '''
+        Provides latest timestamp for PO file
+        '''
+        
+    @abc.abstractmethod
+    def getLatestTimestampForPOT(self, name):
+        '''
+        Provides latest timestamp for POT file
+        '''
+        
+    @abc.abstractmethod
     def getGlobalPOCatalog(self, locale):
         '''
         Provides the global messages catalog for the given locale.
@@ -94,4 +106,24 @@ class IPOFileManager(metaclass=abc.ABCMeta):
         
         @param locale: string
             The locale for which to return translation
+        '''
+
+class ICDMSyncronizer(metaclass=abc.ABCMeta):
+    '''
+    CDM syncronization
+    '''
+    
+    @abc.abstractmethod
+    def publish(self, content, name, locale, timestamp):
+        '''
+        Publishes content to the CDM
+        
+        @param content: Catalog
+        @param name: string
+        @param name: string
+        '''
+    @abc.abstractmethod
+    def asReference(self, path, protocol):
+        '''
+        returns path as reference
         '''

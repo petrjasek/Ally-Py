@@ -14,7 +14,6 @@ from sqlalchemy.schema import Column
 from sqlalchemy.types import String, LargeBinary
 from internationalization.meta.metadata_internationalization import Base
 from internationalization.api.po_file import PO
-from sql_alchemy.support.util_meta import relationshipModel
 # --------------------------------------------------------------------
 
 class POTMapped(Base, PO):
@@ -24,7 +23,7 @@ class POTMapped(Base, PO):
     __tablename__ = 'localization_pot'
     __table_args__ = dict(mysql_engine='InnoDB', mysql_charset='utf8')
     
-    Name = Column('Name', String(20), nullable=True, unique=True)
+    Name = Column('Name', String(20), nullable=False, unique=True)
     # Non REST model attribute --------------------------------------    
     id = Column('id', INTEGER(unsigned=True), primary_key=True)
     timestamp = Column('timestamp', INTEGER(unsigned=True), nullable=False)
@@ -37,7 +36,7 @@ class POMapped(Base, PO):
     __tablename__ = 'localization_po'
     __table_args__ = dict(mysql_engine='InnoDB', mysql_charset='utf8')
     
-    Name = relationshipModel(POTMapped.id)
+    Name = Column('Name', String(20), nullable=False, unique=True)
     # Non REST model attribute --------------------------------------    
     id = Column('id', INTEGER(unsigned=True), primary_key=True)
     timestamp = Column('timestamp', INTEGER(unsigned=True), nullable=False)

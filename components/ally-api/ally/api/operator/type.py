@@ -148,6 +148,20 @@ class TypeContainer(TypeClass):
         super().__init__(clazz, False, isContainable)
         
         self.properties = {}
+        
+    def isValid(self, obj):
+        '''
+        Checks if the provided object instance is represented by this API type.
+        
+        @param obj: object
+            The object instance to check.
+        @return: boolean
+            True if the object is of this type, False otherwise.
+        '''
+        if isinstance(obj, self.clazz): return True
+        for sclazz in self.clazz.__mro__:
+            if isinstance(typeFor(sclazz), type(self)) and isinstance(obj, sclazz): return True
+        return False
 
 # --------------------------------------------------------------------
 

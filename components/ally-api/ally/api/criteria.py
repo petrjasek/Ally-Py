@@ -91,6 +91,23 @@ class AsRangeOrdered(AsRange, AsOrdered):
     '''
 
 # --------------------------------------------------------------------
+@criteria(main=('start', 'end'))
+class AsRangeInt:
+    '''
+    Provides a query for properties that need to be handled as a range.
+    '''
+    start = int
+    end = int
+    since = int
+    until = int
+
+@criteria
+class AsRangeIntOrdered(AsRangeInt, AsOrdered):
+    '''
+    Provides the equal search and also the ordering.
+    '''
+
+# --------------------------------------------------------------------
 
 @criteria(main=('start', 'end'))
 class AsDate:

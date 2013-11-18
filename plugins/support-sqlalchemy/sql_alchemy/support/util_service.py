@@ -11,13 +11,14 @@ Provides utility methods for SQL alchemy service implementations.
 
 from inspect import isclass
 from itertools import chain
+
 from sqlalchemy.orm.attributes import InstrumentedAttribute
 from sqlalchemy.orm.exc import NoResultFound
 from sqlalchemy.orm.interfaces import PropComparator
 from sqlalchemy.orm.mapper import Mapper
 
 from ally.api.criteria import AsLike, AsOrdered, AsBoolean, AsEqual, AsDate, \
-    AsTime, AsDateTime, AsRange
+    AsTime, AsDateTime, AsRange, AsRangeInt
 from ally.api.error import IdError
 from ally.api.extension import IterSlice
 from ally.api.operator.type import TypeProperty, TypeCriteria, TypeModel
@@ -154,7 +155,7 @@ def buildQuery(sql, query, Mapped, only=None, exclude=None, orderBy=None, autoJo
             assert isinstance(crt, AsEqual)
             if AsEqual.equal in crt:
                 sql = sql.filter(column == crt.equal)
-        elif isinstance(crt, (AsDate, AsTime, AsDateTime, AsRange)):
+        elif isinstance(crt, (AsDate, AsTime, AsDateTime, AsRange, AsRangeInt)):
             if crt.__class__.start in crt: sql = sql.filter(column >= crt.start)
             elif crt.__class__.until in crt: sql = sql.filter(column < crt.until)
             if crt.__class__.end in crt: sql = sql.filter(column <= crt.end)

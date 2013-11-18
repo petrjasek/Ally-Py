@@ -113,7 +113,9 @@ class ContentHandler(HandlerProcessor):
         if not request.invoker.inputContent: return  # No scheme required
         assert isinstance(request.invoker.inputContent, Input), 'Invalid input %s' % request.invoker.inputContent
         
-        if requestCnt is None or requestCnt.source is None: return CONTENT_EXPECTED.set(response)
+        if requestCnt is None or requestCnt.source is None:
+            if not request.invoker.inputContent.hasDefault: CONTENT_EXPECTED.set(response)
+            return 
         assert isinstance(requestCnt, RequestContent), 'Invalid request content %s' % requestCnt
         assert isinstance(requestCnt.source, IInputStream), 'Invalid request content source %s' % requestCnt.source
         

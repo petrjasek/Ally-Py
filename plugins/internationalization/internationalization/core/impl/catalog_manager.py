@@ -17,7 +17,6 @@ from ally.core.error import DevelError
 from babel.messages.pofile import read_po, write_po
 from babel.compat import BytesIO
 from internationalization.core.spec import IPOFileManager
-import polib
 
 log = logging.getLogger(__name__)
 

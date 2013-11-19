@@ -69,7 +69,7 @@ class ExtendPathCDM(ICDM):
         '''
         return self.wrapped.getSupportedProtocols()
 
-    def getURI(self, path, protocol):
+    def getURI(self, path, protocol='http'):
         '''
         @see: ICDM.getURI
         '''

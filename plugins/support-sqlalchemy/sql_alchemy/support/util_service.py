@@ -271,8 +271,9 @@ def updateModel(Mapped, model, **data):
         assert isinstance(typ, TypeModel), 'Invalid model class %s' % Mapped
         assert typ.isValid(model), 'Invalid model %s for %s' % (model, typ)
         assert isinstance(typ.propertyId, TypeProperty), 'Invalid property id of %s' % typ
-        
-        dbModel = openSession().query(Mapped).get(getattr(model, typ.propertyId.name))
+
+        idName = typ.propertyId.name
+        dbModel = openSession().query(Mapped).filter(getattr(Mapped, idName) == getattr(model, idName)).one()
         if not dbModel: raise IdError(typ.propertyId)
         for name, prop in typ.properties.items():
             if name in data or not isinstance(getattr(Mapped, name), InstrumentedAttribute): continue

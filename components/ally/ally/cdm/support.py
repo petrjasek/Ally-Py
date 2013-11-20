@@ -51,7 +51,7 @@ class ExtendPathCDM(ICDM):
         '''
         self.wrapped.publishContent(self.format % path, content)
         
-    def publishMetadata(self, path, metadata):
+    def updateMetadata(self, path, metadata):
         '''
         @see: ICDM.publishMetadata
         '''

@@ -10,13 +10,12 @@ CDM syncronyzer for the internationlization PO files.
 '''
 import logging
 from ally.container.ioc import injected
-from internationalization.core.spec import ICDMSyncronizer, IPOFileManager
+from internationalization.core.spec import ICDMSyncronizer
 from ally.container.support import setup
 from ally.cdm.spec import ICDM
 from ally.container import wire
 from os.path import join, isdir
 import os
-from babel.core import Locale
 from babel.compat import BytesIO
 from json.encoder import JSONEncoder
 from babel.messages.catalog import Catalog
@@ -32,6 +31,8 @@ FILENAME_PO = 'messages.po'
 # The format of the po files.
 FILENAME_POT = 'messages.pot'
 # The format of the pot files.
+
+# --------------------------------------------------------------------
 
 @injected
 @setup(ICDMSyncronizer, name='poCDMSync')
@@ -90,7 +91,7 @@ class poCDMSyncronyzer(ICDMSyncronizer):
         if timestamp > cdmTimestamp:
             self.cdmLocale.publishFromFile(path, self._toPOFile(content))
             dbMetadata = {'timestamp': timestamp}
-            self.cdmLocale.publishMetadata(path, self._toMetadataFile(dbMetadata))
+            self.cdmLocale.publishMetadata(path, dbMetadata)
         return path
           
     def asReference(self, path, protocol):
@@ -98,20 +99,6 @@ class poCDMSyncronyzer(ICDMSyncronizer):
         returns reference to CDM path using scheme
         '''
         return self.cdmLocale.getURI(path, protocol)
-    
-    def _toMetadataFile(self, content):
-        '''
-        Encode content as JSON and store it in a file like object
-          
-        @param content: any
-            Content to be converted to JSON
-        @return: file read object
-            A file like object to read the content file from.
-        '''
-        fileObj = BytesIO()
-        fileObj.write(bytes(JSONEncoder().encode(content), 'utf-8'))
-        fileObj.seek(0)
-        return fileObj
     
     def _toPOFile(self, catalog):
         '''
@@ -128,33 +115,33 @@ class poCDMSyncronyzer(ICDMSyncronizer):
         write_po(fileObj, catalog, **self.write_po_config)
         fileObj.seek(0)
         return fileObj
-#  
-# def asDict(self, catalog):
-#     '''
-#     Convert the catalog to a dictionary.
-#     Format description: @see IPOFileManager.getGlobalAsDict
-#  
-#     @param catalog: Catalog
-#         The catalog to convert to a dictionary.
-#     @return: dict
-#         The dictionary in the format specified above.
-#     '''
-#     assert isinstance(catalog, Catalog), 'Invalid catalog %s' % catalog
-#  
-#     d = { }
-#     d[''] = { 'lang' : catalog.locale.language, 'plural-forms' : catalog.plural_forms }
-#     for msg in catalog:
-#         if not msg or msg.id == '': continue
-#         if isinstance(msg.id, (list, tuple)):
-#             key, key_plural = msg.id
-#             singular, plural = msg.string[0], msg.string[1]
-#         else:
-#             key, key_plural = msg.id, ''
-#             singular, plural = msg.string, ''
-#         singular = singular if singular is not None else ''
-#         plural = plural if plural is not None else ''
-#         key = key if not msg.context else "%s:%s" % (msg.context, key)
-#         d[key] = [ key_plural, singular, plural ]
-#     return { domain : d }
-#  
+  
+def asDict(self, catalog):
+    '''
+    Convert the catalog to a dictionary.
+    Format description: @see IPOFileManager.getGlobalAsDict
+  
+    @param catalog: Catalog
+        The catalog to convert to a dictionary.
+    @return: dict
+        The dictionary in the format specified above.
+    '''
+    assert isinstance(catalog, Catalog), 'Invalid catalog %s' % catalog
+  
+    d = { }
+    d[''] = { 'lang' : catalog.locale.language, 'plural-forms' : catalog.plural_forms }
+    for msg in catalog:
+        if not msg or msg.id == '': continue
+        if isinstance(msg.id, (list, tuple)):
+            key, key_plural = msg.id
+            singular, plural = msg.string[0], msg.string[1]
+        else:
+            key, key_plural = msg.id, ''
+            singular, plural = msg.string, ''
+        singular = singular if singular is not None else ''
+        plural = plural if plural is not None else ''
+        key = key if not msg.context else "%s:%s" % (msg.context, key)
+        d[key] = [ key_plural, singular, plural ]
+    return { 'domain' : d }
+  
 

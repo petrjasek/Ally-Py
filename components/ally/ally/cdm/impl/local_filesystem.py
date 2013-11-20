@@ -286,34 +286,6 @@ class LocalFileSystemCDM(ICDM):
                 (isdir(srcFilePath) and isdir(dstFilePath))) \
                 and os.stat(srcFilePath).st_mtime < os.stat(dstFilePath).st_mtime
 
-    def _copyZipDir(self, zipFilePath, inDirPath, path):
-        '''
-        Copy a directory from a ZIP archive to a filesystem directory
-
-        @param zipFilePath: string
-            The path of the ZIP archive
-        @param inDirPath: string
-            The path to the file in the ZIP archive
-        @param path: string
-            Destination path where the ZIP directory is copied
-        '''
-        # make sure the ZIP file path is normalized and uses the OS separator
-        zipFilePath = normOSPath(zipFilePath)
-        # make sure the ZIP file path is normalized and uses the ZIP separator
-        inDirPath = normZipPath(inDirPath)
-        zipFile = ZipFile(zipFilePath)
-        entries = [ent for ent in zipFile.namelist() if ent.startswith(inDirPath)]
-        tmpDir = TemporaryDirectory()
-        zipFile.extractall(tmpDir.name, entries)
-        tmpDirPath = join(tmpDir.name, normOSPath(inDirPath))
-        if not isdir(path): os.makedirs(path)
-        for entry in os.listdir(tmpDirPath):
-            dstPath = join(path, entry)
-            if isfile(dstPath): os.remove(dstPath)
-            elif isdir(dstPath): rmtree(dstPath)
-            move(join(tmpDirPath, entry), path)
-
-
 @injected
 class LocalFileSystemLinkCDM(LocalFileSystemCDM):
     '''

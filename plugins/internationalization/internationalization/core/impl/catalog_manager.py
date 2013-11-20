@@ -98,7 +98,7 @@ class CatalogManager(IPOFileManager):
         @see: IPOFileManager.getPluginPOTCatalog
         '''
         content = self.getData(name)
-        catalog = self._getCatalog(content)
+        catalog = self._getCatalog(content, self.default_charset)
         return catalog or False
     
     def updateGlobalPO(self, locale, poFile):
@@ -152,13 +152,15 @@ class CatalogManager(IPOFileManager):
         Validate content and return PO messages catalog from it.
         '''
         try:
-            catalog = read_po(content, charset=encoding)
+            catalog = read_po(content)
             return catalog
-        except:
+        except Exception as e:
+            assert log.debug('Error reading po file: %s' % e) or True
             try:
-                catalog = read_po(BytesIO(content), charset=encoding)
+                catalog = read_po(BytesIO(content))
                 return catalog
-            except:
+            except Exception as e:
+                assert log.debug('Error reading po file: %s' % e) or True
                 assert log.debug('content not a PO file!', exc_info=1) or True
                 return
     

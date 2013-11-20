@@ -25,6 +25,7 @@ import logging
 import os
 from json.encoder import JSONEncoder
 from json.decoder import JSONDecoder
+from babel.compat import BytesIO
 # --------------------------------------------------------------------
 
 log = logging.getLogger(__name__)
@@ -121,15 +122,6 @@ class LocalFileSystemCDM(ICDM):
         if not isdir(dstDir):
             os.makedirs(dstDir)
         if not isfile(filePath):
-            # not a file, see if it's a entry in a zip file
-            zipFilePath, inFilePath = getZipFilePath(filePath, self.delivery.getRepositoryPath())
-            zipFile = ZipFile(zipFilePath)
-            fileInfo = zipFile.getinfo(inFilePath)
-            if fileInfo.filename.endswith(ZIPSEP):
-                raise IOError('Trying to publish a file from a ZIP directory path: %s' % fileInfo.filename)
-            if not self._isSyncFile(zipFilePath, dstFilePath):
-                copyfileobj(zipFile.open(inFilePath), open(dstFilePath, 'w+b'))
-                assert log.debug('Success publishing ZIP file %s (%s) to path %s', inFilePath, zipFilePath, path) or True
             return
         assert os.access(filePath, os.R_OK), 'Unable to read the file path %s' % filePath
         if not self._isSyncFile(filePath, dstFilePath):
@@ -144,11 +136,6 @@ class LocalFileSystemCDM(ICDM):
         assert isinstance(dirPath, str), 'Invalid directory path value %s' % dirPath
         path, fullPath = self._validatePath(path)
         if not isdir(dirPath):
-            # not a directory, see if it's a entry in a zip file
-            zipFilePath, inDirPath = getZipFilePath(dirPath, self.delivery.getRepositoryPath())
-            if not inDirPath.endswith(ZIPSEP): inDirPath = inDirPath + ZIPSEP
-            self._copyZipDir(zipFilePath, inDirPath, fullPath)
-            assert log.debug('Success publishing ZIP dir %s (%s) to path %s', inDirPath, zipFilePath, path) or True
             return
         dirPath = normpath(dirPath)
         assert os.access(dirPath, os.R_OK), 'Unable to read the directory path %s' % dirPath
@@ -181,10 +168,10 @@ class LocalFileSystemCDM(ICDM):
         metadataPath = path + '.cdmmeta'
         oldMetadata = self.getMetadata(path)
         if oldMetadata:
-            metadata = JSONEncoder.encode(oldMeta.update(metadata))
+            metadata = JSONEncoder().encode(oldMeta.update(metadata))
         else:
-            metadata = JSONEncoder.encode(metadata)
-        self.publishContent(path, metadata)
+            metadata = JSONEncoder().encode(metadata)
+        self.publishFromFile(path, BytesIO(bytes(metadata, 'utf-8')))
         assert log.debug('Success publishing metadata for path %s', path) or True
 
     def republish(self, oldPath, newPath):

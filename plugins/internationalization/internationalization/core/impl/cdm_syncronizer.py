@@ -91,7 +91,7 @@ class poCDMSyncronyzer(ICDMSyncronizer):
         if timestamp > cdmTimestamp:
             self.cdmLocale.publishFromFile(path, self._toPOFile(content))
             dbMetadata = {'timestamp': timestamp}
-            self.cdmLocale.publishMetadata(path, dbMetadata)
+            self.cdmLocale.updateMetadata(path, dbMetadata)
         return path
           
     def asReference(self, path, protocol):

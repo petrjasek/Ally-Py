@@ -61,7 +61,7 @@ class POFileService(IInternationlizationFileService):
                     raise IdError('No global PO file available. Upload one before trying to get one!')
                 else: timestamp = self.poFileManager.getLatestTimestampForPO(name='application', locale=locale)
             else:
-                timestamp = self.poFileManager.getLatestTimestampForPO(name='application', locale=locale)
+                timestamp = self.poFileManager.getLatestTimestampForPO(name=name, locale=locale)
         path = self.cdmSync.publish(result, name, locale,  timestamp)
         return self.cdmSync.asReference(path, scheme)
 

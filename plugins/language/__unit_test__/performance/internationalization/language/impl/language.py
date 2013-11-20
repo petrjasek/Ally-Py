@@ -18,8 +18,8 @@ if True:
 
 from ally.container import ioc
 from profile import Profile
-from superdesk.language.api.language import QLanguage
-from superdesk.language.impl.language import LanguageServiceBabelAlchemy
+from internationalization.language.api.language import QLanguage
+from internationalization.language.impl.language import LanguageServiceBabelAlchemy
 import pstats
 import unittest
 

@@ -8,8 +8,11 @@ Created on Oct 10, 2013
  
 Simple implementation for publishing components/plugins on pypi.
 '''
-from ally.distribution.util import PYTHON_CLI, SETUP_FILENAME, BUILD_EGG, runCmd
+
 import logging
+from ally.distribution.util import PYTHON_CLI, SETUP_FILENAME, BUILD_EGG, runCmd
+
+# --------------------------------------------------------------------
 
 OFFICIAL_REP = '-r pypi'
 REGISTER = 'register'

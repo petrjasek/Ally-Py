@@ -11,7 +11,10 @@ Provides the services setup for distribution.
 
 from ally.container import ioc, deploy
 from ally.distribution.packaging.broker import Broker
-from ally.design.priority import PRIORITY_LAST, PRIORITY_FIRST
+from ally.distribution.packaging.packager import Packager
+from ally.distribution.packaging.builder import Builder
+from ally.distribution.packaging.publisher import Publisher
+from ally.distribution.packaging.scanner import Scanner
 
 # --------------------------------------------------------------------
 
@@ -52,9 +55,18 @@ def actions_bucket():
     return {}
 # --------------------------------------------------------------------
 
+@ioc.entity
+def actionWorker():
+    return {'package' : Packager,
+             'build'   : Builder,
+             'publish' : Publisher,
+             'scan'    : Scanner,
+            }
+
 @deploy.start
 def runBroker():
     b = Broker()
     b.actions = actions_bucket()
     b.path_ui = path_ui()
     b.process()
+    

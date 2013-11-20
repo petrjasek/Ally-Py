@@ -52,13 +52,13 @@ class ICDM(metaclass=abc.ABCMeta):
         '''
         
     @abc.abstractmethod
-    def publishMetadata(self, path, metadata):
+    def updateMetadata(self, path, metadata):
         '''
         Publish metadata for the item provided by path
         @param path: string
             The path of the content item. This is a unique identifier of the item.
-        @param content: json
-            The json containing metadata
+        @param content: dict
+            The dict containing metadata as key:value pairs
         '''
         
 

@@ -57,11 +57,21 @@ class Packager:
         '''
         do nothing
         '''
-#         assert isinstance(self.packagePath, str), 'Invalid path provided %s' % self.packagePath
-#         assert isinstance(self.folderType, str), 'Invalid folderType provided %s' % self.folderType
-#         assert isinstance(self.destFolder, str), 'Invalid destFolder provided %s' % self.destFolder
-#         self.destFolder = os.path.abspath(self.destFolder)
         
+    def package(self):      
+        assert log.info('-' * 50) or True
+        assert log.info('*** Package name *** {0} ***'.format(self.packageName)) or True
+        module = self._getPackageInfoModule()
+        self._constructModuleInfo(module)
+        self.info['name'] = self.packageName
+        assert log.info('*** Setup info import from module {0} *** OK'.format(module.__name__)) or True
+        try:
+            self.writeSetupFile()
+            self.writeSetupCfgFile()
+            assert log.info('*** Setup file succesfully writen *** {0} *** OK'.format(self.packagePath)) or True
+        except:
+            assert log.info('*** Setup file writing failed *** {0} *** NOK'.format(self.packageName)) or True
+    
     def _constructModuleInfo(self, module):
         '''
         returns the dict containing information contained in __init__ file
@@ -87,7 +97,6 @@ class Packager:
             for attribute in self.info:
                 f.write(' '*5 + attribute + '=' + repr(self.info[attribute]) + ',\n')
             f.write(SETUP_TEMPLATE_END)
-        f.close()
         
     def _writeSetupCfgFile(self):
         '''
@@ -96,7 +105,6 @@ class Packager:
         filename = os.path.abspath(os.path.join(self.packagePath, SETUP_CFG_FILENAME))
         with open(filename, 'w') as f:
             f.write(SETUP_CFG_TEMPLATE.format(self.destFolder))
-        f.close()
         
     def _getPackageInfoModule(self):
         '''
@@ -124,18 +132,3 @@ class Packager:
                         return module
                     except:
                         assert log.warning('*** Loading of setup module failed! ***')
-
-    
-    def package(self):      
-        assert log.info('-' * 50) or True
-        assert log.info('*** Package name *** {0} ***'.format(self.packageName)) or True
-        module = self._getPackageInfoModule()
-        self._constructModuleInfo(module)
-        self.info['name'] = self.packageName
-        assert log.info('*** Setup info import from module {0} *** OK'.format(module.__name__)) or True
-        try:
-            self.writeSetupFile()
-            self.writeSetupCfgFile()
-            assert log.info('*** Setup file succesfully writen *** {0} *** OK'.format(self.packagePath)) or True
-        except:
-            assert log.info('*** Setup file writing failed *** {0} *** NOK'.format(self.packageName)) or True

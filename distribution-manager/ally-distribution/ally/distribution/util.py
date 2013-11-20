@@ -39,14 +39,12 @@ def writeFile(filename, content):
     '''
     with open(filename, 'w') as f:
         f.write(content)
-    f.close()
     
 def checkPathExists(path):
     '''
     checks if destination folder exists, and creates it if not
     '''
-    if not os.path.isdir(path):
-        return os.mkdir(path)
+    if not os.path.isdir(path): os.mkdirs(path)
     
 def createSymLink(source, dest):
     '''

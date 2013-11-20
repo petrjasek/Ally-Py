@@ -22,8 +22,3 @@ def binders(): return [bindApplicationSession]
 
 @ioc.before(metas)
 def updateMetasForInternationalization(): metas().append(meta)
-
-# @ioc.replace(database_url)
-# def database_url():
-#     '''This database URL is used for the internationalization tables'''
-#     return 'sqlite:///workspace/shared/internationalization.db'

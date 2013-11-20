@@ -18,7 +18,6 @@ log = logging.getLogger(__name__)
 
 # --------------------------------------------------------------------
 
-@injected
 class Builder:
     
     packagePath = str
@@ -39,4 +38,3 @@ class Builder:
         
         cmd = ' '.join([PYTHON_CLI, SETUP_FILENAME, BUILD_EGG]) 
         runCmd(self.packagePath, cmd)
-        

@@ -13,32 +13,21 @@ from configparser import SafeConfigParser
 import os
 import sys
 
+# --------------------------------------------------------------------
+
 class Config:
     '''
     Class used for generating configuration files.
     '''
     packagePath = str
-    #path to the current package
+    # path to the current package
     packageName = str
-    #The name of the current package
+    # The name of the current package
     
     def __init__(self):
         '''
         do nothing
         '''
-        
-    def _generateParser(self, configOptions):
-        '''
-        Generates content to be written from configOptions dictionary
-        '''
-        parser = SafeConfigParser()
-        for section, content in configOptions.items():
-            parser.add_section(section)
-            if isinstance(content, dict):
-                for option, value in content.items():
-                    value = value.format(inputPath=self.packageName) if 'inputPath' in value else value
-                    parser.set(section, option, value)
-        return parser 
         
     def writeCfgFiles(self, configOptions):
         '''
@@ -50,4 +39,16 @@ class Config:
             with open(filename, 'w') as f:
                 parser = self._generateParser(content)
                 parser.write(f)
-            f.close()
+    
+    def _generateParser(self, configOptions):
+        '''
+        Generates content to be written from configOptions dictionary
+        '''
+        parser = SafeConfigParser()
+        for section, content in configOptions.items():
+            parser.add_section(section)
+            if isinstance(content, dict):
+                for option, value in content.items():
+                    value = value.format(inputPath=self.packageName) if 'inputPath' in value else value
+                    parser.set(section, option, value)
+        return parser

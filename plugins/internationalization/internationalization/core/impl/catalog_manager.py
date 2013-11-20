@@ -18,7 +18,11 @@ from babel.messages.pofile import read_po, write_po
 from babel.compat import BytesIO
 from internationalization.core.spec import IPOFileManager
 
+# --------------------------------------------------------------------
+
 log = logging.getLogger(__name__)
+
+# --------------------------------------------------------------------
 
 class CatalogManager(IPOFileManager):
     '''
@@ -85,8 +89,7 @@ class CatalogManager(IPOFileManager):
         '''
         pots = self.getAllPOTs()
         template = Catalog()
-        for result in pots:
-            (name, ) = result
+        for name, in pots:
             template.update(self._getCatalog(self.getData(name), self.default_charset))
         return template or False
     
@@ -106,7 +109,7 @@ class CatalogManager(IPOFileManager):
         encoding = poFile.charSet or self.default_charset
         poFile = codecs.getreader(encoding)(poFile)
         newCatalog = self._getCatalog(poFile, encoding)
-        if newCatalog == None: raise UnicodeDecodeError
+        if not newCatalog: raise DevelError('Invalid po file provided. Please check')
         oldCatalog = self._getCatalog(self.getData(name=name, locale=locale))
         if oldCatalog:
             catalog = oldCatalog.update(newCatalog)
@@ -123,7 +126,7 @@ class CatalogManager(IPOFileManager):
         try: poFile = codecs.getreader(encoding)(poFile)
         except UnicodeDecodeError: raise DevelError('Improper PO file')
         newCatalog = self._getCatalog(poFile, encoding)
-        if newCatalog == None: raise UnicodeDecodeError
+        if not newCatalog: raise DevelError('Invalid po file provided. Please check')
         oldCatalog = self.getPluginPOCatalog(name=name, locale=locale)
         if oldCatalog:
             catalog = oldCatalog.update(newCatalog)

@@ -21,8 +21,6 @@ from internationalization.core.spec import IPOFileManager, InvalidLocaleError,\
     ICDMSyncronizer
 from babel.core import Locale, UnknownLocaleError
 import logging
-from internationalization.core.impl.po_file_manager import DBPOFileManager
-
 
 # --------------------------------------------------------------------
 

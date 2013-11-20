@@ -173,13 +173,14 @@ class LocalFileSystemCDM(ICDM):
             copyfileobj(content, dstFile)
             assert log.debug('Success publishing content to path %s', path) or True
 
-    def publishMetadata(self, path, metadata):
+    def updateMetadata(self, path, metadata):
         '''
-        @see ICDM.publishMetadata
+        @see ICDM.updateMetadata
         '''
         assert isinstance(path, str), 'Invalid content path %s' % path
-        metadataPath = path + '.meta'
-        self.publishFromFile(metadataPath, metadata)
+        metadataPath = path + '.cdmmeta'
+        oldMeta = self.getMetadata(path)
+        self.publishFromFile(metadataPath, oldMeta.update(metadata))
         assert log.debug('Success publishing metadata for path %s', path) or True
 
     def republish(self, oldPath, newPath):
@@ -248,7 +249,7 @@ class LocalFileSystemCDM(ICDM):
         if isdir(itemPath) or isfile(itemPath):
             metaItemPath = itemPath + '.meta'
             try:
-                metaFile = open(itemPath + '.meta', 'r')
+                metaFile = open(itemPath + '.cdmmeta', 'r')
                 metaInfo = JSONDecoder().decode(metaFile.read())
                 metaFile.close()
                 return metaInfo

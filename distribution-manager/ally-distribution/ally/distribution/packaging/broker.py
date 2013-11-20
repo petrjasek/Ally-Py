@@ -27,10 +27,10 @@ action_worker = {'package' : Packager,
                  'scan'    : Scanner,
                 }
 
+@injected
 class Broker:
         
     actions = dict
-    #TODO: update description
     #actions to be performed with information
     path_ui = str
     #The path to the ui source folder
@@ -39,6 +39,8 @@ class Broker:
         '''
         Constructor
         '''
+        assert isinstance(self.actions, dict), 'Invalid actions dictionary %s' % self.actions
+        assert isinstance(self.path_ui, str), 'Invalid ui plugins source path %s' % self.path_ui
         
     def preparePackage(self, path):
         '''

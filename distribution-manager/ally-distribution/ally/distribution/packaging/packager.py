@@ -35,6 +35,9 @@ ATTRIBUTE_MAPPING = {'VERSION'         : 'version',
                      }
 EXTRA_DICT_ATT = '__extra__'
 
+INIT_FOLDER_PLUGIN = '__plugin__'
+INIT_FOLDER_CORE = '__setup__'
+
 # --------------------------------------------------------------------
 
 class Packager:
@@ -46,10 +49,6 @@ class Packager:
     #path to the current package
     packageName = str
     #name of the package
-    folderType = str
-    # type of folder to look for configuration __init__ file 
-    # __setup__ for components
-    # __plugin__ for plugins
     destFolder = str
     # destination folder to deploy distribution
     
@@ -61,21 +60,23 @@ class Packager:
         assert isinstance(packageName, str), 'Invalid package name provided %s' % packageName
         self.packageName = packageName
         self.packagePath = packagePath
+        self.info = {}
         
     def package(self):      
         assert log.info('-' * 50) or True
         assert log.info('*** Package name *** {0} ***'.format(self.packageName)) or True
         module = self._getPackageInfoModule()
-        self._constructModuleInfo(module)
-        self.info['name'] = self.packageName
-        assert log.info('*** Setup info import from module {0} *** OK'.format(module.__name__)) or True
-        try:
-            self._writeSetupFile()
-            self._writeSetupCfgFile()
-            assert log.info('*** Setup file succesfully writen *** {0} *** OK'.format(self.packagePath)) or True
-        except Exception as e:
-            assert log.info('*** Setup file writing failed *** {0} *** NOK'.format(self.packageName)) or True
-            assert log.error('Error while writing setup files for {0}: {1}'.format(self.packageName, e)) or True
+        if module: 
+            self._constructModuleInfo(module)
+            self.info['name'] = self.packageName
+            assert log.info('*** Setup info import from module {0} *** OK'.format(module.__name__)) or True
+            try:
+                self._writeSetupFile()
+                self._writeSetupCfgFile()
+                assert log.info('*** Setup file succesfully writen *** {0} *** OK'.format(self.packagePath)) or True
+            except Exception as e:
+                assert log.info('*** Setup file writing failed *** {0} *** NOK'.format(self.packageName)) or True
+                assert log.error('Error while writing setup files for {0}: {1}'.format(self.packageName, e)) or True
     
 # --------------------------------------------------------------------    
 
@@ -85,7 +86,6 @@ class Packager:
         '''
         
         assert isinstance(module, ModuleType), 'Invalid module name %s' % module
-        self.info = {}
         for attribute, value in ATTRIBUTE_MAPPING.items():
             if hasattr(module, attribute):
                 self.info[value] = getattr(module, attribute)
@@ -116,8 +116,14 @@ class Packager:
         '''
         Finds __init__.py file in the component/plugin folder
         '''
-        if self.folderType in getDirs(self.packagePath):
-            setupPath = os.path.join(self.packagePath, self.folderType)
+        folderType = None
+        dirs = getDirs(self.packagePath)
+        if INIT_FOLDER_PLUGIN in dirs:
+            folderType = INIT_FOLDER_PLUGIN
+        if INIT_FOLDER_CORE in dirs:
+            folderType = INIT_FOLDER_CORE
+        if folderType:
+            setupPath = os.path.join(self.packagePath, folderType)
             setupDirs = getDirs(setupPath)
             sys.path.append(os.path.abspath(setupPath))
             setupFilePath = os.path.join(self.packagePath, SETUP_FILENAME)
@@ -127,7 +133,6 @@ class Packager:
                                    '''.format(self.packageName)) or True
             else:
                 setupModule = setupDirs[0]
-
                 infoTimestamp = os.path.getmtime(os.path.join(setupPath, setupModule, INIT_FILENAME))
                 setupTimestamp = os.path.getmtime(setupFilePath) 
                 if infoTimestamp < setupTimestamp: 

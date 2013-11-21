@@ -58,9 +58,9 @@ def actions_bucket():
 @ioc.entity
 def actionWorker():
     return {'package' : Packager,
-             'build'   : Builder,
-             'publish' : Publisher,
-             'scan'    : Scanner,
+            'build'   : Builder,
+            'publish' : Publisher,
+            'scan'    : Scanner,
             }
 
 @deploy.start
@@ -68,5 +68,6 @@ def runBroker():
     b = Broker()
     b.actions = actions_bucket()
     b.path_ui = path_ui()
+    b.actionWorker = actionWorker()
     b.process()
     

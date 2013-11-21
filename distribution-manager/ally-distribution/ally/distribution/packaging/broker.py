@@ -14,7 +14,6 @@ import logging
 import os
 from ally.distribution.templates import SETUP_UI_TEMPLATE
 from ally.container.ioc import injected
-from ..general.service import actionWorker
 
 # --------------------------------------------------------------------
 
@@ -29,6 +28,8 @@ class Broker:
     #actions to be performed with information
     path_ui = str
     #The path to the ui source folder
+    actionWorker = dict
+    #the mapping of workers based on different actions
         
     def __init__(self):
         '''
@@ -36,6 +37,7 @@ class Broker:
         '''
         assert isinstance(self.actions, dict), 'Invalid actions dictionary %s' % self.actions
         assert isinstance(self.path_ui, str), 'Invalid ui plugins source path %s' % self.path_ui
+        assert isinstance(self.actionWorker, dict), 'Invalid actions workers dictionary %s' % self.actionWorker
         
     def preparePackage(self, path):
         '''
@@ -74,6 +76,6 @@ class Broker:
                     if target['type']=='plugins-ui': 
                         self.preparePluginUI(packagePath, packageName)
                     assert log.info('*** {name} *** {action} *** STARTED'.format(name=packageName, action=action)) or True
-                    worker = actionWorker[action](packageName, packagePath)
+                    worker = self.actionWorker[action](packageName, packagePath)
                     getattr(worker, action)()
                     assert log.info('*** {name} *** {action} *** DONE'.format(name=packageName, action=action)) or True

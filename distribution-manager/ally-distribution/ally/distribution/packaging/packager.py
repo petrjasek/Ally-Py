@@ -53,10 +53,14 @@ class Packager:
     destFolder = str
     # destination folder to deploy distribution
     
-    def __init__(self):
+    def __init__(self, packageName, packagePath):
         '''
         do nothing
         '''
+        assert isinstance(packagePath, str), 'Invalid package path provided %s' % packagePath
+        assert isinstance(packageName, str), 'Invalid package name provided %s' % packageName
+        self.packageName = packageName
+        self.packagePath = packagePath
         
     def package(self):      
         assert log.info('-' * 50) or True

@@ -34,19 +34,21 @@ class Scanner:
     packageName = str
     #name of the package
 
-    def __init__(self):
+    def __init__(self, packageName, packagePath):
         '''
         do nothing
         '''
+        assert isinstance(packagePath, str), 'Invalid package path provided %s' % packagePath
+        assert isinstance(packageName, str), 'Invalid package name provided %s' % packageName
+        self.packageName = packageName
+        self.packagePath = packagePath
     
     def prepareUIPlugin(self):
         '''
         Prepares the env for ui plugin actions
         '''
         assert log.info('*** {name} *** Configuration *** STARTED'.format(name=self.packageName)) or True
-        cfg = Config()
-        cfg.packageName = self.packageName
-        cfg.packagePath = self.packagePath
+        cfg = Config(self.packageName, self.packagePath)
         configuration = SETUP_CFG_UI_OPTIONS
         configuration.update(BABEL_CFG_OPTIONS)
         cfg.writeCfgFiles(configuration)

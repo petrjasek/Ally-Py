@@ -10,7 +10,6 @@ Functionality for building eggs.
 '''
 import logging
 from ally.distribution.util import SETUP_FILENAME, PYTHON_CLI, BUILD_EGG, runCmd
-from ally.container.ioc import injected
 
 # --------------------------------------------------------------------
 
@@ -25,10 +24,14 @@ class Builder:
     packageName = str
     #name of the package
     
-    def __init__(self):
+    def __init__(self, packageName, packagePath):
         '''
         do nothing
         '''
+        assert isinstance(packagePath, str), 'Invalid package path provided %s' % packagePath
+        assert isinstance(packageName, str), 'Invalid package name provided %s' % packageName
+        self.packageName = packageName
+        self.packagePath = packagePath
                 
     def build(self):
         '''

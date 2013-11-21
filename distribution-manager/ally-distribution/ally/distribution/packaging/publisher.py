@@ -33,10 +33,14 @@ class Publisher:
     packageName = str
     #name of the package
     
-    def __init__(self):
+    def __init__(self, packageName, packagePath):
         '''
         do nothing
         '''
+        assert isinstance(packagePath, str), 'Invalid package path provided %s' % packagePath
+        assert isinstance(packageName, str), 'Invalid package name provided %s' % packageName
+        self.packageName = packageName
+        self.packagePath = packagePath
         
     def publish(self):
         '''

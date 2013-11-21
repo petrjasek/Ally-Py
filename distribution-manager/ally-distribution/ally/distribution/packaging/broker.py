@@ -16,8 +16,8 @@ from ally.distribution.packaging.publisher import Publisher
 from ally.distribution.packaging.scanner import Scanner
 import logging
 import os
-from ally.distribution.packaging.config import Config
 from ally.distribution.templates import SETUP_UI_TEMPLATE
+from ally.container.ioc import injected
 
 log = logging.getLogger(__name__)
 
@@ -79,8 +79,6 @@ class Broker:
                     if target['type']=='plugins-ui': 
                         self.preparePluginUI(packagePath, packageName)
                     assert log.info('*** {name} *** {action} *** STARTED'.format(name=packageName, action=action)) or True
-                    worker = action_worker[action]()
-                    worker.packagePath = packagePath
-                    worker.packageName = packageName
+                    worker = action_worker[action](packageName, packagePath)
                     getattr(worker, action)()
                     assert log.info('*** {name} *** {action} *** DONE'.format(name=packageName, action=action)) or True

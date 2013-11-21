@@ -24,10 +24,14 @@ class Config:
     packageName = str
     # The name of the current package
     
-    def __init__(self):
+    def __init__(self, packageName, packagePath):
         '''
         do nothing
         '''
+        assert isinstance(packagePath, str), 'Invalid package path provided %s' % packagePath
+        assert isinstance(packageName, str), 'Invalid package name provided %s' % packageName
+        self.packageName = packageName
+        self.packagePath = packagePath
         
     def writeCfgFiles(self, configOptions):
         '''

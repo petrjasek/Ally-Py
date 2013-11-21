@@ -44,7 +44,7 @@ def checkPathExists(path):
     '''
     checks if destination folder exists, and creates it if not
     '''
-    if not os.path.isdir(path): os.mkdirs(path)
+    if not os.path.isdir(path): os.makedirs(path)
     
 def createSymLink(source, dest):
     '''

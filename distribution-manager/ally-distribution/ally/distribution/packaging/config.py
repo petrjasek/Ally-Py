@@ -44,6 +44,7 @@ class Config:
                 parser = self._generateParser(content)
                 parser.write(f)
     
+# --------------------------------------------------------------------
     def _generateParser(self, configOptions):
         '''
         Generates content to be written from configOptions dictionary

@@ -70,12 +70,14 @@ class Packager:
         self.info['name'] = self.packageName
         assert log.info('*** Setup info import from module {0} *** OK'.format(module.__name__)) or True
         try:
-            self.writeSetupFile()
-            self.writeSetupCfgFile()
+            self._writeSetupFile()
+            self._writeSetupCfgFile()
             assert log.info('*** Setup file succesfully writen *** {0} *** OK'.format(self.packagePath)) or True
         except:
             assert log.info('*** Setup file writing failed *** {0} *** NOK'.format(self.packageName)) or True
     
+# --------------------------------------------------------------------    
+
     def _constructModuleInfo(self, module):
         '''
         returns the dict containing information contained in __init__ file
@@ -136,3 +138,4 @@ class Packager:
                         return module
                     except:
                         assert log.warning('*** Loading of setup module failed! ***')
+                        

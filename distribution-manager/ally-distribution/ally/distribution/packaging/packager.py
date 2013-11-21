@@ -73,15 +73,15 @@ class Packager:
             self._writeSetupFile()
             self._writeSetupCfgFile()
             assert log.info('*** Setup file succesfully writen *** {0} *** OK'.format(self.packagePath)) or True
-        except:
+        except Exception as e:
             assert log.info('*** Setup file writing failed *** {0} *** NOK'.format(self.packageName)) or True
+            assert log.error('Error while writing setup files for {0}: {1}'.format(self.packageName, e)) or True
     
 # --------------------------------------------------------------------    
 
     def _constructModuleInfo(self, module):
         '''
         returns the dict containing information contained in __init__ file
-        @purpose: setuptools 
         '''
         
         assert isinstance(module, ModuleType), 'Invalid module name %s' % module

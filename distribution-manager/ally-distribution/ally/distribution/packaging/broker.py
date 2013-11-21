@@ -10,22 +10,17 @@ Broker used for different actions needed by the distribution manager.
 '''
 from ally.distribution.util import getDirs, checkPathExists, createSymLink,\
     SETUP_FILENAME
-from ally.distribution.packaging.packager import Packager
-from ally.distribution.packaging.builder import Builder
-from ally.distribution.packaging.publisher import Publisher
-from ally.distribution.packaging.scanner import Scanner
 import logging
 import os
 from ally.distribution.templates import SETUP_UI_TEMPLATE
 from ally.container.ioc import injected
+from ..general.service import actionWorker
+
+# --------------------------------------------------------------------
 
 log = logging.getLogger(__name__)
 
-action_worker = {'package' : Packager,
-                 'build'   : Builder,
-                 'publish' : Publisher,
-                 'scan'    : Scanner,
-                }
+# --------------------------------------------------------------------
 
 @injected
 class Broker:
@@ -79,6 +74,6 @@ class Broker:
                     if target['type']=='plugins-ui': 
                         self.preparePluginUI(packagePath, packageName)
                     assert log.info('*** {name} *** {action} *** STARTED'.format(name=packageName, action=action)) or True
-                    worker = action_worker[action](packageName, packagePath)
+                    worker = actionWorker[action](packageName, packagePath)
                     getattr(worker, action)()
                     assert log.info('*** {name} *** {action} *** DONE'.format(name=packageName, action=action)) or True

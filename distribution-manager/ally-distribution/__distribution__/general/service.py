@@ -69,5 +69,6 @@ def runBroker():
     b.actions = actions_bucket()
     b.path_ui = path_ui()
     b.actionWorker = actionWorker()
+    b.destFolder = package_location()
     b.process()
     

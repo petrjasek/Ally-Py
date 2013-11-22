@@ -18,6 +18,7 @@ from ally.distribution.util import getDirs, SETUP_FILENAME, SETUP_CFG_FILENAME,\
     INIT_FILENAME
 from ally.distribution.templates import SETUP_TEMPLATE_BEGIN, SETUP_TEMPLATE_END,\
     SETUP_CFG_TEMPLATE
+import errno
 # --------------------------------------------------------------------
 
 log = logging.getLogger(__name__)
@@ -77,6 +78,7 @@ class Packager:
             except Exception as e:
                 assert log.info('*** Setup file writing failed *** {0} *** NOK'.format(self.packageName)) or True
                 assert log.error('Error while writing setup files for {0}: {1}'.format(self.packageName, e)) or True
+        assert log.info('-' * 50) or True
     
 # --------------------------------------------------------------------    
 
@@ -127,20 +129,24 @@ class Packager:
             setupDirs = getDirs(setupPath)
             sys.path.append(os.path.abspath(setupPath))
             setupFilePath = os.path.join(self.packagePath, SETUP_FILENAME)
-            if (len(setupDirs) != 1) or (not os.path.isfile(setupFilePath)):
+            if (len(setupDirs) != 1):
                 assert log.info('''No setup module to configure or more than one setup module in this package! 
                                    *** SKIPING *** {0} ***
                                    '''.format(self.packageName)) or True
             else:
                 setupModule = setupDirs[0]
                 infoTimestamp = os.path.getmtime(os.path.join(setupPath, setupModule, INIT_FILENAME))
-                setupTimestamp = os.path.getmtime(setupFilePath) 
-                if infoTimestamp < setupTimestamp: 
-                    assert log.info('*** SKIPPED (no new info found) ***') or True
-                else:
-                    try:
-                        module = imp.load_source(setupModule, os.path.join(setupPath, setupModule, INIT_FILENAME))
-                        return module
-                    except:
-                        assert log.warning('*** Loading of setup module failed! ***', exc_info=1)
-                        
+                try:
+                    setupTimestamp = os.path.getmtime(setupFilePath)
+                except:
+                    assert log.info('No setup.py file available. Writing new.') or True 
+                    setupTimestamp = -1 
+                    if infoTimestamp < setupTimestamp: 
+                        assert log.info('*** SKIPPED (no new info found) ***') or True
+                    else:
+                        try:
+                            module = imp.load_source(setupModule, os.path.join(setupPath, setupModule, INIT_FILENAME))
+                            return module
+                        except:
+                            assert log.warning('*** Loading of setup module failed! ***', exc_info=1)
+                            

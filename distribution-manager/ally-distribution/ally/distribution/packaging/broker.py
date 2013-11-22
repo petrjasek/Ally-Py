@@ -29,6 +29,8 @@ class Broker:
     #The path to the ui source folder
     actionWorker = dict
     #the mapping of workers based on different actions
+    destFolder = str
+    #destination folder to copy eggs
         
     def __init__(self):
         '''
@@ -37,6 +39,7 @@ class Broker:
         assert isinstance(self.actions, dict), 'Invalid actions dictionary %s' % self.actions
         assert isinstance(self.path_ui, str), 'Invalid ui plugins source path %s' % self.path_ui
         assert isinstance(self.actionWorker, dict), 'Invalid actions workers dictionary %s' % self.actionWorker
+        assert isinstance(self.destFolder, str), 'Invalid destination folder for eggs dictionary %s' % self.destFolder
         
     def preparePackage(self, path):
         '''
@@ -76,5 +79,7 @@ class Broker:
                         self.preparePluginUI(packagePath, packageName)
                     assert log.info('*** {name} *** {action} *** STARTED'.format(name=packageName, action=action)) or True
                     worker = self.actionWorker[action](packageName, packagePath)
+                    if action == 'package':
+                        worker.destFolder = self.destFolder
                     getattr(worker, action)()
                     assert log.info('*** {name} *** {action} *** DONE'.format(name=packageName, action=action)) or True

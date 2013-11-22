@@ -11,7 +11,7 @@ Collection of Utilities used in distribution manager.
 import os
 
 IGNORE_DIRS = ['__pycache__']
-PYTHON_CLI = 'python3'
+PYTHON_CLI = 'python3.2'
 SETUP_FILENAME = 'setup.py'
 SETUP_CFG_FILENAME = 'setup.cfg'
 INIT_FILENAME = '__init__.py'

@@ -17,7 +17,7 @@ setup(
     name="superdesk_language",
     version="1.0",
     packages=find_packages(),
-    install_requires=['ally_api >= 1.0', 'ally_core_sqlalchemy >= 1.0', 'superdesk >= 1.0'],
+    install_requires=['ally-api >= 1.0', 'support-sqlalchemy >= 1.0', 'superdesk >= 1.0'],
     platforms=['all'],
     test_suite='test',
     zip_safe=True,

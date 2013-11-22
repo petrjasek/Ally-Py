@@ -32,7 +32,7 @@ class IInternationlizationFileService:
     '''
     The PO/POT file management service.
     '''
-    @call
+    @call(webName='Messages')
     def getPOFile(self, locale:Language.Code, scheme:Scheme, name:PO.Name=None) -> PO.Reference:
         '''
         Provides the PO file for the plugin and the given locale. If name is None, global PO file will be provided.
@@ -46,7 +46,7 @@ class IInternationlizationFileService:
             The reference to the content of the PO file.
         '''
 
-    @call
+    @call(webName='Messages')
     def updatePOFile(self, locale:Language.Code, content:Content, name:PO.Name=None) -> bool:
         '''
         Update a PO file for specified locale or upload new locale if doesn't exist. If name is None, file will be uploaded a global PO file.

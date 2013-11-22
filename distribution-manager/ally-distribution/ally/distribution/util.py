@@ -32,25 +32,3 @@ def runCmd(path, command):
     os.chdir(path)
     os.system(command + ' > log.txt')
     
-def writeFile(filename, content):
-    '''
-    Writes file to path
-    filename - full path of file to be written 
-    '''
-    with open(filename, 'w') as f:
-        f.write(content)
-    
-def checkPathExists(path):
-    '''
-    checks if destination folder exists, and creates it if not
-    '''
-    if not os.path.isdir(path): os.makedirs(path)
-    
-def createSymLink(source, dest):
-    '''
-    creates symlink for source in dest
-    '''
-    try:
-        os.symlink(source, dest)
-    except:
-        return True

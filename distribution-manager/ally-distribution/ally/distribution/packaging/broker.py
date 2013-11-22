@@ -8,8 +8,7 @@ Created on Oct 31, 2013
  
 Broker used for different actions needed by the distribution manager.
 '''
-from ally.distribution.util import getDirs, checkPathExists, createSymLink,\
-    SETUP_FILENAME
+from ally.distribution.util import getDirs, SETUP_FILENAME
 import logging
 import os
 from ally.distribution.templates import SETUP_UI_TEMPLATE
@@ -53,10 +52,10 @@ class Broker:
             - creates symlink to the source folder
              
         '''
-        checkPathExists(packagePath)
-        symlink = os.path.join(packagePath, packageName)
+        if not os.path.isdir(packagePath): os.makedirs(packagePath)
+        destSymlink = os.path.join(packagePath, packageName)
         sourcePath = os.path.abspath(os.path.join(self.path_ui, packageName))
-        createSymLink(source=sourcePath, dest=symlink)
+        os.symlink(sourcePath, destSymlink)
         filename = os.path.join(packagePath, SETUP_FILENAME)
         if not os.path.isfile(filename):
             with open(filename, 'w') as f:
@@ -69,7 +68,7 @@ class Broker:
         '''
         for action, targets in self.actions.items():
             for target in targets:
-                checkPathExists(target['path'])
+                if not os.path.isdir(target['path']): os.makedirs(target['path'])
                 packagesPaths = getDirs(target['path']) if not target['type']=='plugins-ui' else getDirs(self.path_ui)
                 for packageName in packagesPaths:
                     packagePath = os.path.abspath(os.path.join(target['path'], packageName))

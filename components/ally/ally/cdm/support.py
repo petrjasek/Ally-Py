@@ -81,12 +81,6 @@ class ExtendPathCDM(ICDM):
         '''
         return self.wrapped.getURI(self.format % path, protocol)
 
-    def getTimestamp(self, path):
-        '''
-        @see: ICDM.getTimestamp
-        '''
-        return self.wrapped.getTimestamp(self.format % path)
-
     def getMetadata(self, path):
         '''
         @see ICDM.getMetadata

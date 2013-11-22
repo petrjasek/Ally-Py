@@ -27,7 +27,7 @@ def getDirs(path):
 
 def runCmd(path, command):
     '''
-    runs an os command from the provided path 
+    runs an os command from the provided path
     '''
     os.chdir(path)
     os.system(command + ' > log.txt')

@@ -36,9 +36,9 @@ class POMapped(Base, PO):
     __tablename__ = 'localization_po'
     __table_args__ = dict(mysql_engine='InnoDB', mysql_charset='utf8')
     
-    Name = Column('Name', String(20), nullable=False, unique=True)
+    Name = Column('Name', String(20), nullable=False)
     # Non REST model attribute --------------------------------------    
     id = Column('id', INTEGER(unsigned=True), primary_key=True)
     timestamp = Column('timestamp', INTEGER(unsigned=True), nullable=False)
-    Locale = Column('Locale', String(20), nullable=False, unique=True)
+    Locale = Column('Locale', String(20), nullable=False)
     file = Column('file', LargeBinary())

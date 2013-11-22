@@ -17,7 +17,6 @@ from internationalization.core.impl.catalog_manager import CatalogManager
 from sql_alchemy.support.util_service import SessionSupport
 from internationalization.meta.db_mapping import POTMapped, POMapped
 from sqlalchemy.sql.expression import and_
-from sqlalchemy.orm.exc import NoResultFound
 from datetime import datetime
 
 # --------------------------------------------------------------------

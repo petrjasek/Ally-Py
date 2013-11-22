@@ -142,5 +142,5 @@ class Packager:
                         module = imp.load_source(setupModule, os.path.join(setupPath, setupModule, INIT_FILENAME))
                         return module
                     except:
-                        assert log.warning('*** Loading of setup module failed! ***')
+                        assert log.warning('*** Loading of setup module failed! ***', exc_info=1)
                         

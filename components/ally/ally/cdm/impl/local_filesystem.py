@@ -26,6 +26,7 @@ import os
 from json.encoder import JSONEncoder
 from json.decoder import JSONDecoder
 from babel.compat import BytesIO
+from ally.core.error import DevelError
 # --------------------------------------------------------------------
 
 log = logging.getLogger(__name__)
@@ -166,12 +167,14 @@ class LocalFileSystemCDM(ICDM):
         '''
         assert isinstance(path, str), 'Invalid content path %s' % path
         metadataPath = path + '.cdmmeta'
-        oldMetadata = self.getMetadata(path)
+        oldMetadata = self.getMetadata(metadataPath)
+        if 'lastModified' in metadata.keys():
+            assert log.warning('Metadata update: lastModifed field is read-only. Cannot be updated by user') or True
+            metadata.pop('lastModified', None)
         if oldMetadata:
-            metadata = JSONEncoder().encode(oldMeta.update(metadata))
-        else:
-            metadata = JSONEncoder().encode(metadata)
-        self.publishFromFile(path, BytesIO(bytes(metadata, 'utf-8')))
+            metadata.update(oldMetadata)
+        metadata['lastModified'] = int(datetime.now().strftime('%s'))
+        self.publishFromFile(metadataPath, BytesIO(bytes(JSONEncoder().encode(metadata), 'utf-8')))
         assert log.debug('Success publishing metadata for path %s', path) or True
 
     def republish(self, oldPath, newPath):
@@ -220,16 +223,6 @@ class LocalFileSystemCDM(ICDM):
             return abspath(self._getItemPath(path))
         raise UnsupportedProtocol(protocol)
 
-    def getTimestamp(self, path):
-        '''
-        @see ICDM.getTimestamp
-        '''
-        assert isinstance(path, str), 'Invalid content path %s' % path
-        path, itemPath = self._validatePath(path)
-        if not isdir(itemPath) and not isfile(itemPath):
-            raise PathNotFound(path)
-        return datetime.fromtimestamp(os.stat(itemPath).st_mtime)
-
     def getMetadata(self, path):
         '''
         @see ICDM.getMetadata
@@ -244,7 +237,8 @@ class LocalFileSystemCDM(ICDM):
                 metaInfo = JSONDecoder().decode(metaFile.read())
                 metaFile.close()
                 return metaInfo
-            except: 
+            except:
+                assert log.warning('No CDM metadata found for path {0).'.format(path))
                 return {}
         
     def _publishFromFileObj(self, path, fileObj):
@@ -371,36 +365,6 @@ class LocalFileSystemLinkCDM(LocalFileSystemCDM):
             path, dstFilePath = self._validatePath(path)
             return abspath(dstFilePath)
         raise UnsupportedProtocol(protocol)
-
-    def getTimestamp(self, path):
-        '''
-        @see ICDM.getTimestamp
-        '''
-        assert isinstance(path, str), 'Invalid content path %s' % path
-        path, entryPath = self._validatePath(path)
-        if isdir(entryPath) or isfile(entryPath):
-            return datetime.fromtimestamp(os.stat(entryPath).st_mtime)
-
-        linkPath = entryPath
-        repPathLen = len(self.delivery.getRepositoryPath())
-        while len(linkPath.lstrip(os.sep)) > repPathLen:
-            linkFile = linkPath + self._linkExt
-            if isfile(linkFile):
-                subPath = entryPath[len(linkPath):].lstrip(os.sep)
-                with open(linkFile) as f:
-                    links = json.load(f)
-                    for link in links:
-                        if link[0] == self._fsHeader and self._isValidFSLink(link, subPath):
-                            fullPath = join(link[1], subPath) if subPath else link[1]
-                            return datetime.fromtimestamp(os.stat(fullPath).st_mtime)
-                        elif link[0] == self._zipHeader and self._isValidZIPLink(link, subPath):
-                            return datetime.fromtimestamp(os.stat(link[1]).st_mtime)
-                    raise PathNotFound(path)
-            nextLinkPath = dirname(linkPath)
-            if nextLinkPath == linkPath: break
-            linkPath = nextLinkPath
-        else:
-            raise PathNotFound(path)
 
     def _createDelMark(self, path):
         '''

@@ -68,7 +68,7 @@ class CatalogManager(IPOFileManager):
             template = self.getGlobalPOTCatalog()
             if template: catalog.update(template)
             else: assert log.debug('Global POT file could not be generated. Check if you have any POTs in db') or True
-        return catalog or False
+        return catalog or None
 
     def getPluginPOCatalog(self, name, locale):
         '''
@@ -81,7 +81,7 @@ class CatalogManager(IPOFileManager):
             if template: 
                 catalog.update(template)
             else: assert log.debug('No POT file found for plugin {name}. Delivering not updated PO'.format(name=name)) or True
-        return catalog or False
+        return catalog or None
 
     def getGlobalPOTCatalog(self):
         '''
@@ -91,7 +91,7 @@ class CatalogManager(IPOFileManager):
         template = Catalog()
         for name, in pots:
             template.update(self._getCatalog(self.getData(name), self.default_charset))
-        return template or False
+        return template or None
     
     def getPluginPOTCatalog(self, name):
         '''
@@ -99,7 +99,7 @@ class CatalogManager(IPOFileManager):
         '''
         content = self.getData(name)
         catalog = self._getCatalog(content, self.default_charset)
-        return catalog or False
+        return catalog or None
     
     def updateGlobalPO(self, locale, poFile):
         '''
@@ -112,7 +112,7 @@ class CatalogManager(IPOFileManager):
         if not newCatalog: raise DevelError('Invalid po file provided. Please check')
         oldCatalog = self._getCatalog(self.getData(name=name, locale=locale))
         if oldCatalog:
-            catalog = oldCatalog.update(newCatalog)
+            catalog = newCatalog.update(oldCatalog)
         else:
             catalog = newCatalog
         content = self._toFile(catalog)
@@ -129,7 +129,7 @@ class CatalogManager(IPOFileManager):
         if not newCatalog: raise DevelError('Invalid po file provided. Please check')
         oldCatalog = self.getPluginPOCatalog(name=name, locale=locale)
         if oldCatalog:
-            catalog = oldCatalog.update(newCatalog)
+            catalog = newCatalog.update(oldCatalog)
         else:
             catalog = newCatalog
         content = self._toFile(catalog)

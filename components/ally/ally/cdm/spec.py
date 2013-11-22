@@ -102,19 +102,6 @@ class ICDM(metaclass=abc.ABCMeta):
         @return: string
             The URI of the content
         '''
-
-    @abc.abstractmethod
-    def getTimestamp(self, path):
-        '''
-        Returns the time stamp of a certain content identified by the unique
-        path.
-
-        @param path: string
-            The path of the content item. This is a unique identifier of the item.
-        @return: datetime
-            The last modification time for the content in path.
-        @raise PathNotFound: in case the path does not exist in the CDM.
-        '''
         
     @abc.abstractmethod
     def getMetadata(self, path):

@@ -16,7 +16,6 @@ from ally.zip.util_zip import ZIPSEP, normOSPath, normZipPath, getZipFilePath, \
 from datetime import datetime
 from os.path import isdir, isfile, join, dirname, normpath, relpath, abspath
 from shutil import copyfile, copyfileobj, move, rmtree
-from tempfile import TemporaryDirectory
 from urllib.parse import urljoin
 from zipfile import ZipFile
 import abc
@@ -26,7 +25,7 @@ import os
 from json.encoder import JSONEncoder
 from json.decoder import JSONDecoder
 from babel.compat import BytesIO
-from ally.core.error import DevelError
+from ally.container import wire
 # --------------------------------------------------------------------
 
 log = logging.getLogger(__name__)
@@ -106,11 +105,13 @@ class LocalFileSystemCDM(ICDM):
 
     delivery = IDelivery
     # The delivery protocol
+    meta_ext = '.~metadata~'; wire.config('cdm_meta_extension', doc='''Extension for cdm metadata files''')
+    #Metadata extension
 
     def __init__(self):
         assert isinstance(self.delivery, IDelivery), 'Invalid delivery protocol %s' % self.delivery
 
-    def publishFromFile(self, path, filePath):
+    def publishFromFile(self, path, filePath, metadata=None):
         '''
         @see ICDM.publishFromFile
         '''
@@ -122,11 +123,11 @@ class LocalFileSystemCDM(ICDM):
         dstDir = dirname(dstFilePath)
         if not isdir(dstDir):
             os.makedirs(dstDir)
-        if not isfile(filePath):
-            return
-        assert os.access(filePath, os.R_OK), 'Unable to read the file path %s' % filePath
+        if not os.access(filePath, os.R_OK):
+            raise IOError('Unable to read the file path %s' % filePath)
         if not self._isSyncFile(filePath, dstFilePath):
             copyfile(filePath, dstFilePath)
+            self.updateMetadata(filePath, metadata)
             assert log.debug('Success publishing file %s to path %s', filePath, path) or True
 
     def publishFromDir(self, path, dirPath):
@@ -135,11 +136,10 @@ class LocalFileSystemCDM(ICDM):
         '''
         assert isinstance(path, str) and len(path) > 0, 'Invalid content path %s' % path
         assert isinstance(dirPath, str), 'Invalid directory path value %s' % dirPath
-        path, fullPath = self._validatePath(path)
-        if not isdir(dirPath):
-            return
+        path, _fullPath = self._validatePath(path)
         dirPath = normpath(dirPath)
-        assert os.access(dirPath, os.R_OK), 'Unable to read the directory path %s' % dirPath
+        if not os.access(dirPath, os.R_OK):
+            raise IOError('Unable to read the directory path %s' % dirPath)
         for root, _dirs, files in os.walk(dirPath):
             relPath = relpath(root, dirPath)
             for file in files:
@@ -166,13 +166,16 @@ class LocalFileSystemCDM(ICDM):
         @see ICDM.updateMetadata
         '''
         assert isinstance(path, str), 'Invalid content path %s' % path
-        metadataPath = path + '.cdmmeta'
+        metadataPath = path + self.meta_ext
         oldMetadata = self.getMetadata(metadataPath)
-        if 'lastModified' in metadata.keys():
-            assert log.warning('Metadata update: lastModifed field is read-only. Cannot be updated by user') or True
-            metadata.pop('lastModified', None)
-        if oldMetadata:
-            metadata.update(oldMetadata)
+        if metadata == None:
+            metadata = oldMetadata if oldMetadata else {}
+        if metadata:
+            if 'lastModified' in metadata.keys():
+                assert log.warning('Metadata update: lastModifed field is read-only. Cannot be updated by user') or True
+                metadata.pop('lastModified', None)
+            if oldMetadata:
+                metadata = oldMetadata.update(metadata)
         metadata['lastModified'] = int(datetime.now().strftime('%s'))
         self.publishFromFile(metadataPath, BytesIO(bytes(JSONEncoder().encode(metadata), 'utf-8')))
         assert log.debug('Success publishing metadata for path %s', path) or True
@@ -231,9 +234,9 @@ class LocalFileSystemCDM(ICDM):
         assert isinstance(path, str), 'Invalid content path %s' % path
         path, itemPath = self._validatePath(path)
         if isdir(itemPath) or isfile(itemPath):
-            metaItemPath = itemPath + '.cdmmeta'
+            metaItemPath = itemPath + self.meta_ext
             try:
-                metaFile = open(itemPath, 'r')
+                metaFile = open(metaItemPath, 'r')
                 metaInfo = JSONDecoder().decode(metaFile.read())
                 metaFile.close()
                 return metaInfo

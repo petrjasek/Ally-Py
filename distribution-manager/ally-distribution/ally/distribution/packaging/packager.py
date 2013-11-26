@@ -18,7 +18,6 @@ from ally.distribution.util import getDirs, SETUP_FILENAME, SETUP_CFG_FILENAME,\
     INIT_FILENAME
 from ally.distribution.templates import SETUP_TEMPLATE_BEGIN, SETUP_TEMPLATE_END,\
     SETUP_CFG_TEMPLATE
-import errno
 # --------------------------------------------------------------------
 
 log = logging.getLogger(__name__)

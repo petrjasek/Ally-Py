@@ -30,17 +30,6 @@ class ICDM(metaclass=abc.ABCMeta):
         '''
 
     @abc.abstractmethod
-    def publishFromDir(self, path, dirPath):
-        '''
-        Publish content from a file.
-
-        @param path: string
-            The path of the content item. This is a unique identifier of the item.
-        @param dirPath: string
-            The path of the directory on the file system.
-        '''
-
-    @abc.abstractmethod
     def publishContent(self, path, content):
         '''
         Publish content from a string.

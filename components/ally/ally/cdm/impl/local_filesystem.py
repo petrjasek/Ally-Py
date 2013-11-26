@@ -130,25 +130,25 @@ class LocalFileSystemCDM(ICDM):
             self.updateMetadata(filePath, metadata)
             assert log.debug('Success publishing file %s to path %s', filePath, path) or True
 
-    def publishFromDir(self, path, dirPath):
-        '''
-        @see ICDM.publishFromDir
-        '''
-        assert isinstance(path, str) and len(path) > 0, 'Invalid content path %s' % path
-        assert isinstance(dirPath, str), 'Invalid directory path value %s' % dirPath
-        path, _fullPath = self._validatePath(path)
-        dirPath = normpath(dirPath)
-        if not os.access(dirPath, os.R_OK):
-            raise IOError('Unable to read the directory path %s' % dirPath)
-        for root, _dirs, files in os.walk(dirPath):
-            relPath = relpath(root, dirPath)
-            for file in files:
-                publishPath = join(normOSPath(path), relPath.lstrip(os.sep), file)
-                filePath = join(root, file)
-                self.publishFromFile(publishPath, filePath)
-            assert log.debug('Success publishing directory %s to path %s', dirPath, path) or True
+#     def publishFromDir(self, path, dirPath):
+#         '''
+#         @see ICDM.publishFromDir
+#         '''
+#         assert isinstance(path, str) and len(path) > 0, 'Invalid content path %s' % path
+#         assert isinstance(dirPath, str), 'Invalid directory path value %s' % dirPath
+#         path, _fullPath = self._validatePath(path)
+#         dirPath = normpath(dirPath)
+#         if not os.access(dirPath, os.R_OK):
+#             raise IOError('Unable to read the directory path %s' % dirPath)
+#         for root, _dirs, files in os.walk(dirPath):
+#             relPath = relpath(root, dirPath)
+#             for file in files:
+#                 publishPath = join(normOSPath(path), relPath.lstrip(os.sep), file)
+#                 filePath = join(root, file)
+#                 self.publishFromFile(publishPath, filePath)
+#             assert log.debug('Success publishing directory %s to path %s', dirPath, path) or True
 
-    def publishContent(self, path, content):
+    def publishContent(self, path, content, metadata=None):
         '''
         @see ICDM.publishContent
         '''
@@ -159,6 +159,7 @@ class LocalFileSystemCDM(ICDM):
             os.makedirs(dstDir)
         with open(dstFilePath, 'w+b') as dstFile:
             copyfileobj(content, dstFile)
+            self.updateMetadata(dstFilePath, metadata)
             assert log.debug('Success publishing content to path %s', path) or True
 
     def updateMetadata(self, path, metadata):

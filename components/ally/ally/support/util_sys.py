@@ -287,7 +287,7 @@ def searchPaths(pattern):
         else: importers = [(keyPack[0], keyPack[1], get_importer(path)) for keyPack, paths in parent.items() for path in paths]
     else:
         name = pattern
-        importers = [(True, '', imp) for imp in iter_importers()]
+        importers = [(True, '', imp) for imp in iter_importers() if imp]
 
     for isPackage, package, importer in importers:
         if isPackage:

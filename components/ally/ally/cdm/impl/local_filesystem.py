@@ -16,14 +16,16 @@ from ally.zip.util_zip import ZIPSEP, normOSPath, normZipPath, getZipFilePath, \
 from datetime import datetime
 from os.path import isdir, isfile, join, dirname, normpath, relpath, abspath
 from shutil import copyfile, copyfileobj, move, rmtree
-from tempfile import TemporaryDirectory
 from urllib.parse import urljoin
 from zipfile import ZipFile
 import abc
 import json
 import logging
 import os
-
+from json.encoder import JSONEncoder
+from json.decoder import JSONDecoder
+from babel.compat import BytesIO
+from ally.container import wire
 # --------------------------------------------------------------------
 
 log = logging.getLogger(__name__)
@@ -103,11 +105,13 @@ class LocalFileSystemCDM(ICDM):
 
     delivery = IDelivery
     # The delivery protocol
+    meta_ext = '.~metadata~'; wire.config('cdm_meta_extension', doc='''Extension for cdm metadata files''')
+    #Metadata extension
 
     def __init__(self):
         assert isinstance(self.delivery, IDelivery), 'Invalid delivery protocol %s' % self.delivery
 
-    def publishFromFile(self, path, filePath):
+    def publishFromFile(self, path, filePath, metadata=None):
         '''
         @see ICDM.publishFromFile
         '''
@@ -119,47 +123,32 @@ class LocalFileSystemCDM(ICDM):
         dstDir = dirname(dstFilePath)
         if not isdir(dstDir):
             os.makedirs(dstDir)
-        if not isfile(filePath):
-            # not a file, see if it's a entry in a zip file
-            zipFilePath, inFilePath = getZipFilePath(filePath, self.delivery.getRepositoryPath())
-            zipFile = ZipFile(zipFilePath)
-            fileInfo = zipFile.getinfo(inFilePath)
-            if fileInfo.filename.endswith(ZIPSEP):
-                raise IOError('Trying to publish a file from a ZIP directory path: %s' % fileInfo.filename)
-            if not self._isSyncFile(zipFilePath, dstFilePath):
-                copyfileobj(zipFile.open(inFilePath), open(dstFilePath, 'w+b'))
-                assert log.debug('Success publishing ZIP file %s (%s) to path %s', inFilePath, zipFilePath, path) or True
-            return
-        assert os.access(filePath, os.R_OK), 'Unable to read the file path %s' % filePath
+        if not os.access(filePath, os.R_OK):
+            raise IOError('Unable to read the file path %s' % filePath)
         if not self._isSyncFile(filePath, dstFilePath):
             copyfile(filePath, dstFilePath)
+            self.updateMetadata(filePath, metadata)
             assert log.debug('Success publishing file %s to path %s', filePath, path) or True
 
-    def publishFromDir(self, path, dirPath):
-        '''
-        @see ICDM.publishFromDir
-        '''
-        assert isinstance(path, str) and len(path) > 0, 'Invalid content path %s' % path
-        assert isinstance(dirPath, str), 'Invalid directory path value %s' % dirPath
-        path, fullPath = self._validatePath(path)
-        if not isdir(dirPath):
-            # not a directory, see if it's a entry in a zip file
-            zipFilePath, inDirPath = getZipFilePath(dirPath, self.delivery.getRepositoryPath())
-            if not inDirPath.endswith(ZIPSEP): inDirPath = inDirPath + ZIPSEP
-            self._copyZipDir(zipFilePath, inDirPath, fullPath)
-            assert log.debug('Success publishing ZIP dir %s (%s) to path %s', inDirPath, zipFilePath, path) or True
-            return
-        dirPath = normpath(dirPath)
-        assert os.access(dirPath, os.R_OK), 'Unable to read the directory path %s' % dirPath
-        for root, _dirs, files in os.walk(dirPath):
-            relPath = relpath(root, dirPath)
-            for file in files:
-                publishPath = join(normOSPath(path), relPath.lstrip(os.sep), file)
-                filePath = join(root, file)
-                self.publishFromFile(publishPath, filePath)
-            assert log.debug('Success publishing directory %s to path %s', dirPath, path) or True
+#     def publishFromDir(self, path, dirPath):
+#         '''
+#         @see ICDM.publishFromDir
+#         '''
+#         assert isinstance(path, str) and len(path) > 0, 'Invalid content path %s' % path
+#         assert isinstance(dirPath, str), 'Invalid directory path value %s' % dirPath
+#         path, _fullPath = self._validatePath(path)
+#         dirPath = normpath(dirPath)
+#         if not os.access(dirPath, os.R_OK):
+#             raise IOError('Unable to read the directory path %s' % dirPath)
+#         for root, _dirs, files in os.walk(dirPath):
+#             relPath = relpath(root, dirPath)
+#             for file in files:
+#                 publishPath = join(normOSPath(path), relPath.lstrip(os.sep), file)
+#                 filePath = join(root, file)
+#                 self.publishFromFile(publishPath, filePath)
+#             assert log.debug('Success publishing directory %s to path %s', dirPath, path) or True
 
-    def publishContent(self, path, content):
+    def publishContent(self, path, content, metadata=None):
         '''
         @see ICDM.publishContent
         '''
@@ -170,8 +159,27 @@ class LocalFileSystemCDM(ICDM):
             os.makedirs(dstDir)
         with open(dstFilePath, 'w+b') as dstFile:
             copyfileobj(content, dstFile)
+            self.updateMetadata(dstFilePath, metadata)
             assert log.debug('Success publishing content to path %s', path) or True
 
+    def updateMetadata(self, path, metadata):
+        '''
+        @see ICDM.updateMetadata
+        '''
+        assert isinstance(path, str), 'Invalid content path %s' % path
+        metadataPath = path + self.meta_ext
+        oldMetadata = self.getMetadata(metadataPath)
+        if metadata == None:
+            metadata = oldMetadata if oldMetadata else {}
+        if metadata:
+            if 'lastModified' in metadata.keys():
+                assert log.warning('Metadata update: lastModifed field is read-only. Cannot be updated by user') or True
+                metadata.pop('lastModified', None)
+            if oldMetadata:
+                metadata = oldMetadata.update(metadata)
+        metadata['lastModified'] = int(datetime.now().strftime('%s'))
+        self.publishFromFile(metadataPath, BytesIO(bytes(JSONEncoder().encode(metadata), 'utf-8')))
+        assert log.debug('Success publishing metadata for path %s', path) or True
 
     def republish(self, oldPath, newPath):
         '''
@@ -219,16 +227,24 @@ class LocalFileSystemCDM(ICDM):
             return abspath(self._getItemPath(path))
         raise UnsupportedProtocol(protocol)
 
-    def getTimestamp(self, path):
+    def getMetadata(self, path):
         '''
-        @see ICDM.getTimestamp
+        @see ICDM.getMetadata
         '''
+        
         assert isinstance(path, str), 'Invalid content path %s' % path
         path, itemPath = self._validatePath(path)
-        if not isdir(itemPath) and not isfile(itemPath):
-            raise PathNotFound(path)
-        return datetime.fromtimestamp(os.stat(itemPath).st_mtime)
-
+        if isdir(itemPath) or isfile(itemPath):
+            metaItemPath = itemPath + self.meta_ext
+            try:
+                metaFile = open(metaItemPath, 'r')
+                metaInfo = JSONDecoder().decode(metaFile.read())
+                metaFile.close()
+                return metaInfo
+            except:
+                assert log.warning('No CDM metadata found for path {0).'.format(path))
+                return {}
+        
     def _publishFromFileObj(self, path, fileObj):
         '''
         Publish content from a file object
@@ -267,34 +283,6 @@ class LocalFileSystemCDM(ICDM):
         return ((isfile(srcFilePath) and isfile(dstFilePath)) or \
                 (isdir(srcFilePath) and isdir(dstFilePath))) \
                 and os.stat(srcFilePath).st_mtime < os.stat(dstFilePath).st_mtime
-
-    def _copyZipDir(self, zipFilePath, inDirPath, path):
-        '''
-        Copy a directory from a ZIP archive to a filesystem directory
-
-        @param zipFilePath: string
-            The path of the ZIP archive
-        @param inDirPath: string
-            The path to the file in the ZIP archive
-        @param path: string
-            Destination path where the ZIP directory is copied
-        '''
-        # make sure the ZIP file path is normalized and uses the OS separator
-        zipFilePath = normOSPath(zipFilePath)
-        # make sure the ZIP file path is normalized and uses the ZIP separator
-        inDirPath = normZipPath(inDirPath)
-        zipFile = ZipFile(zipFilePath)
-        entries = [ent for ent in zipFile.namelist() if ent.startswith(inDirPath)]
-        tmpDir = TemporaryDirectory()
-        zipFile.extractall(tmpDir.name, entries)
-        tmpDirPath = join(tmpDir.name, normOSPath(inDirPath))
-        if not isdir(path): os.makedirs(path)
-        for entry in os.listdir(tmpDirPath):
-            dstPath = join(path, entry)
-            if isfile(dstPath): os.remove(dstPath)
-            elif isdir(dstPath): rmtree(dstPath)
-            move(join(tmpDirPath, entry), path)
-
 
 @injected
 class LocalFileSystemLinkCDM(LocalFileSystemCDM):
@@ -381,36 +369,6 @@ class LocalFileSystemLinkCDM(LocalFileSystemCDM):
             path, dstFilePath = self._validatePath(path)
             return abspath(dstFilePath)
         raise UnsupportedProtocol(protocol)
-
-    def getTimestamp(self, path):
-        '''
-        @see ICDM.getTimestamp
-        '''
-        assert isinstance(path, str), 'Invalid content path %s' % path
-        path, entryPath = self._validatePath(path)
-        if isdir(entryPath) or isfile(entryPath):
-            return datetime.fromtimestamp(os.stat(entryPath).st_mtime)
-
-        linkPath = entryPath
-        repPathLen = len(self.delivery.getRepositoryPath())
-        while len(linkPath.lstrip(os.sep)) > repPathLen:
-            linkFile = linkPath + self._linkExt
-            if isfile(linkFile):
-                subPath = entryPath[len(linkPath):].lstrip(os.sep)
-                with open(linkFile) as f:
-                    links = json.load(f)
-                    for link in links:
-                        if link[0] == self._fsHeader and self._isValidFSLink(link, subPath):
-                            fullPath = join(link[1], subPath) if subPath else link[1]
-                            return datetime.fromtimestamp(os.stat(fullPath).st_mtime)
-                        elif link[0] == self._zipHeader and self._isValidZIPLink(link, subPath):
-                            return datetime.fromtimestamp(os.stat(link[1]).st_mtime)
-                    raise PathNotFound(path)
-            nextLinkPath = dirname(linkPath)
-            if nextLinkPath == linkPath: break
-            linkPath = nextLinkPath
-        else:
-            raise PathNotFound(path)
 
     def _createDelMark(self, path):
         '''

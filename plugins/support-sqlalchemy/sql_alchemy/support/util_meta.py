@@ -77,7 +77,7 @@ def relationshipModel(mappedId, *spec):
     rtype = typeFor(mappedId.class_)
     assert isinstance(rtype, TypeModel), 'Invalid class %s' % mappedId.class_
     assert isinstance(rtype.propertyId, TypeProperty), 'No property id for %s' % rtype
-    assert rtype.propertyId.name != mappedId.property.key, 'Same database id with the model id \'%s\' for %s' % mappedId.class_
+    assert rtype.propertyId.name != mappedId.property.key, 'Same database id with the model id \'%s\' for %s' % (rtype.propertyId.name, mappedId.property.key) 
     
     column = target = None
     if spec:

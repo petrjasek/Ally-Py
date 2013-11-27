@@ -30,17 +30,6 @@ class ICDM(metaclass=abc.ABCMeta):
         '''
 
     @abc.abstractmethod
-    def publishFromDir(self, path, dirPath):
-        '''
-        Publish content from a file.
-
-        @param path: string
-            The path of the content item. This is a unique identifier of the item.
-        @param dirPath: string
-            The path of the directory on the file system.
-        '''
-
-    @abc.abstractmethod
     def publishContent(self, path, content):
         '''
         Publish content from a string.
@@ -50,6 +39,17 @@ class ICDM(metaclass=abc.ABCMeta):
         @param content: input stream
             The content as input stream
         '''
+        
+    @abc.abstractmethod
+    def updateMetadata(self, path, metadata):
+        '''
+        Publish metadata for the item provided by path
+        @param path: string
+            The path of the content item. This is a unique identifier of the item.
+        @param content: dict
+            The dict containing metadata as key:value pairs
+        '''
+        
 
     @abc.abstractmethod
     def republish(self, oldPath, newPath):
@@ -91,19 +91,18 @@ class ICDM(metaclass=abc.ABCMeta):
         @return: string
             The URI of the content
         '''
-
+        
     @abc.abstractmethod
-    def getTimestamp(self, path):
+    def getMetadata(self, path):
         '''
-        Returns the time stamp of a certain content identified by the unique
-        path.
-
+        Returns the metadata (json like content) for the path item
+        
         @param path: string
-            The path of the content item. This is a unique identifier of the item.
-        @return: datetime
-            The last modification time for the content in path.
-        @raise PathNotFound: in case the path does not exist in the CDM.
+            The path to the item in cdm
+        @return: json
+            The value of the metadata for the stored item 
         '''
+    
 
 class PathNotFound(Exception):
     '''

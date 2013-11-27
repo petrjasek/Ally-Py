@@ -50,6 +50,12 @@ class ExtendPathCDM(ICDM):
         @see: ICDM.publishContent
         '''
         self.wrapped.publishContent(self.format % path, content)
+        
+    def updateMetadata(self, path, metadata):
+        '''
+        @see: ICDM.publishMetadata
+        '''
+        self.wrapped.updateMetadata(self.format % path, metadata)
 
     def republish(self, oldPath, newPath):
         '''
@@ -75,8 +81,8 @@ class ExtendPathCDM(ICDM):
         '''
         return self.wrapped.getURI(self.format % path, protocol)
 
-    def getTimestamp(self, path):
+    def getMetadata(self, path):
         '''
-        @see: ICDM.getTimestamp
+        @see ICDM.getMetadata
         '''
-        return self.wrapped.getTimestamp(self.format % path)
+        return self.wrapped.getMetadata(self.format % path)

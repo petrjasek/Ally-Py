@@ -22,177 +22,108 @@ class InvalidLocaleError(Exception):
 
 class IPOFileManager(metaclass=abc.ABCMeta):
     '''
-    The PO file manager: processes and returns the PO global, component or plugin
-    PO files.
+    The PO file manager: processes and returns the global or plugin
+    PO/POT files content from anywhere.
     '''
 
     @abc.abstractmethod
-    def getGlobalPOTimestamp(self, locale):
+    def getLatestTimestampForPO(self, name, locale):
         '''
-        Returns the timestamp of the last update for the PO file identified by
-        the given locale.
-
-        @param locale: string
-            The locale identifying the translation file.
-        @return: datetime
-            The last modification.
+        Provides latest timestamp for PO file
         '''
-
+        
     @abc.abstractmethod
-    def getComponentPOTimestamp(self, component, locale):
+    def getLatestTimestampForPOT(self, name):
         '''
-        Returns the timestamp of the last update for the PO file identified by
-        the given component and locale.
-
-        @param component: string
-            The component id identifying the translation file.
-        @param locale: string
-            The locale identifying the translation file.
-        @return: datetime
-            The last modification.
+        Provides latest timestamp for POT file
         '''
-
+        
     @abc.abstractmethod
-    def getPluginPOTimestamp(self, plugin, locale):
+    def getGlobalPOCatalog(self, locale):
         '''
-        Returns the timestamp of the last update for the PO file identified by
-        the given plugin and locale.
-
-        @param plugin: string
-            The plugin id identifying the translation file.
-        @param locale: string
-            The locale identifying the translation file.
-        @return: datetime
-            The last modification.
-        '''
-
-    # ----------------------------------------------------------------
-
-    @abc.abstractmethod
-    def getGlobalPOFile(self, locale):
-        '''
-        Provides the messages for the whole application and the given locale.
+        Provides the global messages catalog for the given locale.
+        
 
         @param locale: string
             The locale for which to return the translation.
-        @return: bytes file like object
-            The PO file containing the translation.
+        @return: catalog
+            The PO file catalog containing the translation.
         '''
-
+    
     @abc.abstractmethod
-    def getGlobalAsDict(self, locale):
+    def getPluginPOCatalog(self, name, locale):
         '''
-        Provides the messages for the whole application and the given locale in the
-        form of a dictionary. The dictionary has the following structure:
-        {
-            "mydomain" : {
-                // po header fields
-                "" : {
-                    "plural-forms" : "...",
-                    "lang" : "en",
-                },
-                // all the msgid strings and translations
-                "context:msgid" : [ "msgid_plural", "translation", "plural_translation" ],
-            },
-        }
+        Provides the messages catalog for the specified plugin and the given locale.
 
         @param locale: string
             The locale for which to return the translation.
-        @return: dict
-            The dictionary containing the translation.
+        @return: catalog
+            The PO file catalog containing the translation.
         '''
 
     @abc.abstractmethod
-    def getComponentPOFile(self, component, locale):
+    def getGlobalPOTCatalog(self):
         '''
-        Provides the messages for the given component and the given locale.
-
-        @param component: string
-            The component id for which to return the translation.
-        @param locale: string
-            The locale for which to return the translation.
-        @return: bytes file like object
-            The PO file containing the translation.
+        Provides the POT file messages catalog for the whole application
+        
+        @return: catalog
+            The global POT file catalog.
+        '''
+    
+    @abc.abstractmethod
+    def getPluginPOTCatalog(self, name):
+        '''
+        Provides the POT file messages catalog for the specified plugin
+        
+        @param name: string
+            The name of the plugin for which the POT file is needed.
+        @return: catalog
+            The PO file catalog containing the translations for the specified plugin.
         '''
 
     @abc.abstractmethod
-    def getComponentAsDict(self, component, locale):
+    def updateGlobalPO(self, locale, poFile):
         '''
-        Provides the messages for the given component and the given locale in the
-        form of a dictionary. For dictionary structure:
-        @see IPOFileManager.getGlobalAsDict
-
-        @param component: string
-            The component id for which to return the translation.
-        @param locale: string
-            The locale for which to return the translation.
-        @return: bytes file like object
-            The dictionary containing the translation.
-        '''
-
-    @abc.abstractmethod
-    def getPluginPOFile(self, plugin, locale):
-        '''
-        Provides the messages for the given plugin and the given locale.
-
-        @param plugin: string
-            The plugin id for which to return the translation.
-        @param locale: string
-            The locale for which to return the translation.
-        @return: bytes  file like object
-            The PO file containing the translation.
-        '''
-
-    @abc.abstractmethod
-    def getPluginAsDict(self, plugin, locale):
-        '''
-        Provides the messages for the given component and the given locale in the
-        form of a dictionary. For dictionary structure:
-        @see IPOFileManager.getGlobalAsDict
-
-        @param plugin: string
-            The plugin id for which to return the translation.
-        @param locale: string
-            The locale for which to return the translation.
-        @return: bytes file like object
-            The dictionary containing the translation.
-        '''
-
-    # ----------------------------------------------------------------
-
-    @abc.abstractmethod
-    def updateGlobalPOFile(self, locale, poFile):
-        '''
-        Updates the messages for all components / plugins and the given locale.
+        Updates the global PO file for the provided locale. 
         
         @param locale: string
-            The locale for which to update the translation.
-        @param poFile: text file like object
-            The source PO file from which to read the translation.
+            The locale for which to return translation
         '''
-
+    
     @abc.abstractmethod
-    def updateComponentPOFile(self, component, locale, poFile):
+    def updatePluginPO(self, name, locale, poFile):
         '''
-        Updates the messages for the given component and the given locale.
-
-        @param component: Component.Id
-            The component for which to update the translation.
-        @param locale: string
-            The locale for which to update the translation.
-        @param poFile: text file like object
-            The source PO file from which to read the translation.
-        '''
-
-    @abc.abstractmethod
-    def updatePluginPOFile(self, plugin, locale, poFile):
-        '''
-        Updates the messages for the given plugin and the given locale.
+        Updates the plugin PO file for the provided locale. 
         
-        @param plugin: string
-            The plugin id for which to update the translation.
         @param locale: string
-            The locale for which to update the translation.
-        @param poFile: text file like object
-            The source PO file from which to read the translation.
+            The locale for which to return translation
+        '''
+    
+    @abc.abstractmethod
+    def updatePluginPOT(self, name, potFile):
+        '''
+        Updates the plugin POT file. 
+        
+        @param locale: string
+            The locale for which to return translation
+        '''
+
+class ICDMSyncronizer(metaclass=abc.ABCMeta):
+    '''
+    CDM syncronization
+    '''
+    
+    @abc.abstractmethod
+    def publish(self, content, name, locale, timestamp):
+        '''
+        Publishes content to the CDM
+        
+        @param content: Catalog
+        @param name: string
+        @param name: string
+        '''
+    @abc.abstractmethod
+    def asReference(self, path, protocol):
+        '''
+        returns path as reference
         '''

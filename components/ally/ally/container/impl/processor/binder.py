@@ -1,12 +1,12 @@
 '''
 Created on Oct 16, 2013
 
-@package: support sqlalchemy
+@package: ally base
 @copyright: 2012 Sourcefabric o.p.s.
 @license: http://www.gnu.org/licenses/gpl-3.0.txt
 @author: Gabriel Nistor
 
-Provides the proxy binder for SQL alchemy.
+Provides the proxy binder support.
 '''
 
 import logging
@@ -35,7 +35,7 @@ class Bind(Context):
 @injected
 class BinderHandler:
     '''
-    Implementation for a processor that provides the SQL Alchemy session proxy binding.
+    Implementation for a processor that provides the proxy binder support.
     '''
     
     bindAssembly = Assembly

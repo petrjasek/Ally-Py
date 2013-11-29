@@ -15,7 +15,6 @@ from itertools import chain
 from sqlalchemy.orm.attributes import InstrumentedAttribute
 from sqlalchemy.orm.exc import NoResultFound
 from sqlalchemy.orm.interfaces import PropComparator
-from sqlalchemy.orm.mapper import Mapper
 
 from ally.api.criteria import AsLike, AsOrdered, AsBoolean, AsEqual, AsDate, \
     AsTime, AsDateTime, AsRange, AsRangeInt
@@ -26,7 +25,7 @@ from ally.api.type import typeFor
 from ally.support.api.util_service import namesFor
 from ally.support.util import modifyFirst
 
-from .mapper import MappedSupport, mappingFor, tableFor
+from .mapper import MappedSupport, tableFor
 from .session import openSession
 
 
@@ -169,16 +168,16 @@ def buildQuery(sql, query, Mapped, only=None, exclude=None, orderBy=None, autoJo
                 else:
                     unordered.append((column, crt.ascending, None))
 
-        if ordered or unordered:
-            if ordered: ordered.sort(key=lambda pack: pack[2])
-            for column, asc, _priority in chain(ordered, unordered):
-                if asc: sql = sql.order_by(column)
-                else: sql = sql.order_by(column.desc())
-        elif orderBy is not None: sql.order_by(orderBy)
+    if ordered or unordered:
+        if ordered: ordered.sort(key=lambda pack: pack[2])
+        for column, asc, _priority in chain(ordered, unordered):
+            if asc: sql = sql.order_by(column)
+            else: sql = sql.order_by(column.desc())
+    elif orderBy is not None: sql.order_by(orderBy)
 
     return sql
 
-def iterateObjectCollection(sql, offset=None, limit=None, withTotal=False, factorySlice=IterSlice):
+def iterateObjectCollection(sql, offset=None, limit=None, withTotal=False, _factorySlice=IterSlice):
     '''
     Iterates the collection of objects from the sql query based on the provided parameters.
     
@@ -191,9 +190,9 @@ def iterateObjectCollection(sql, offset=None, limit=None, withTotal=False, facto
         The obtained collection of objects.
     '''
     if withTotal:
+        if limit <= 0: return _factorySlice((), sql.count())
         sqlLimit = buildLimits(sql, offset, limit)
-        if limit <= 0: return factorySlice((), sql.count())
-        return factorySlice(sqlLimit.yield_per(10), sql.count(), offset, limit)
+        return _factorySlice(sqlLimit.yield_per(10), sql.count(), offset, limit)
     return sql.yield_per(10)
 
 def iterateCollection(sql, offset=None, limit=None, withTotal=False, _factorySlice=IterSlice):
@@ -209,8 +208,8 @@ def iterateCollection(sql, offset=None, limit=None, withTotal=False, _factorySli
         The obtained collection of values.
     '''
     if withTotal:
-        sqlLimit = buildLimits(sql, offset, limit)
         if limit == 0: return _factorySlice((), sql.count())
+        sqlLimit = buildLimits(sql, offset, limit)
         return _factorySlice((value for value, in sqlLimit.all()), sql.count(), offset, limit)
     return (value for value, in sql.all())
 
@@ -233,9 +232,8 @@ def insertModel(Mapped, model, **data):
     assert isinstance(Mapped, MappedSupport), 'Invalid mapped class %s' % Mapped
     if isinstance(model, Mapped): dbModel = model
     else:
-        typ, mapper = typeFor(Mapped), mappingFor(Mapped)
+        typ = typeFor(Mapped)
         assert isinstance(typ, TypeModel), 'Invalid model class %s' % Mapped
-        assert isinstance(mapper, Mapper), 'Invalid mapper %s' % mapper
         
         dbModel = Mapped()
         for name, prop in typ.properties.items():

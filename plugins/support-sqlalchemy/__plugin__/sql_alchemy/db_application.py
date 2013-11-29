@@ -13,11 +13,11 @@ from ally.container import ioc, support
 from ally.design.processor.assembly import Assembly
 from ally.design.processor.handler import Handler
 from sql_alchemy import database_config
-from sql_alchemy.core.impl.binder import BinderHandler
 from sql_alchemy.core.impl.processor.binder.error_translator import \
     ErrorTranslatorHandler
 from sql_alchemy.core.impl.processor.binder.session import BindSessionHandler
 from sql_alchemy.database_config import alchemySessionCreator, metas
+from ally.container.impl.processor.binder import BinderHandler
 
 
 # --------------------------------------------------------------------

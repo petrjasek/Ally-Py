@@ -18,7 +18,7 @@ if True:
 
 from ally.api.config import model
 from ally.api.type import typeFor
-from sql_alchemy.support.mapper import DeclarativeMetaModel, validate,\
+from sql_alchemy.support.mapper import DeclarativeMetaModel, validate, \
     mapperSimple
 from sqlalchemy.dialects.mysql.base import INTEGER
 from sqlalchemy.engine import create_engine

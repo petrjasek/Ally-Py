@@ -336,7 +336,10 @@ def processQuery(collection, clazz, query, fetcher=None):
 
                 if regex is not None:
                     filtered = ((item, getattr(get(item), pname)) for item in filtered)
-                    filtered = [item for item, value in filtered if value is not None and regex.match(value)]
+                    if isinstance(regex, str):
+                        filtered = [item for item, value in filtered if value is not None and value == regex]
+                    else:
+                        filtered = [item for item, value in filtered if value is not None and regex.match(value)]
             elif isinstance(cvalue, AsEqual):
                 assert isinstance(cvalue, AsEqual)
                 if AsEqual.equal in cvalue:
@@ -409,9 +412,11 @@ def likeAsRegex(like, caseInsensitive=True):
     '''
     assert isinstance(like, str), 'Invalid like %s' % like
     assert isinstance(caseInsensitive, bool), 'Invalid case insensitive %s' % caseInsensitive
+    
     likeRegex = like.split('%')
     likeRegex = '.*'.join(re.escape(n) for n in likeRegex)
-    likeRegex += '$'
+    likeRegex = '^%s$' % likeRegex
+
     if caseInsensitive: likeRegex = re.compile(likeRegex, re.IGNORECASE)
     else: likeRegex = re.compile(likeRegex)
     return likeRegex

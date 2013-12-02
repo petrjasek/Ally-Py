@@ -42,7 +42,7 @@ from .parsing_rendering import CATEGORY_CONTENT_OBJECT, CATEGORY_CONTENT_XML
 from ally.core.impl.processor.decoder.validation.auto_id import ValidateAutoId
 from ally.core.impl.processor.decoder.validation.mandatory import ValidateMandatory
 from ally.core.impl.processor.decoder.validation.read_only import ValidateReadOnly
-from ally.core.impl.processor.decoder.validation.max_len import ValidateMaxLen
+from ally.core.impl.processor.decoder.validation.length import ValidateLen
 
 
 # --------------------------------------------------------------------
@@ -227,7 +227,7 @@ def validateAutoId() -> Handler: return ValidateAutoId()
 def validateMandatory() -> Handler: return ValidateMandatory()
 
 @ioc.entity
-def validateMaxLen() -> Handler: return ValidateMaxLen()
+def validateLen() -> Handler: return ValidateLen()
 
 # --------------------------------------------------------------------
 
@@ -283,7 +283,7 @@ def updateAssemblyDecodePropertyOfModel():
 @ioc.before(assemblyDecodeModel)
 def updateAssemblyDecodeModel():
     assemblyDecodeModel().add(validationPropertyProvider(), validateReadOnly(), validateAutoId(), validateMandatory(),
-                              validateMaxLen(),
+                              validateLen(),
                               propertyOfModelDecode(), listDecode(), dictDecode(), primitiveDecode(),
                               definitionXMLCreate(), definitionContentXML(), definitionIndex(), definitionObjectCreate(),
                               definitionContentObject(), definitionIndex())

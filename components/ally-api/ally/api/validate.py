@@ -96,6 +96,23 @@ class AutoId(ValidationProperty):
         '''
         super().__init__(prop)
 
+class MinLen(ValidationProperty):
+    '''
+    String property minimum length type validation.
+    '''
+    
+    def __init__(self, prop, length):
+        '''
+        @see: Validation
+        
+        @param length: integer
+            The minimum length.
+        '''
+        assert isinstance(length, int), 'Invalid length %s' % length
+        super().__init__(prop)
+        
+        self.length = length
+        
 class MaxLen(ValidationProperty):
     '''
     String property maximum length type validation.

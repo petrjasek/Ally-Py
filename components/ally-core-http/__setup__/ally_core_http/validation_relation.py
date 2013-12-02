@@ -16,7 +16,7 @@ from ally.design.processor.assembly import Assembly
 from ally.design.processor.handler import Handler
 
 from ..ally_core.decode import updateAssemblyDecodeModel, assemblyDecodeModel, \
-    validateMaxLen, updateAssemblyDecodeContentExport, assemblyDecodeContentExport
+    validateLen, updateAssemblyDecodeContentExport, assemblyDecodeContentExport
 from ..ally_core.processor import invoking
 from .processor import methodInvoker
 
@@ -45,7 +45,7 @@ def updateAssemblyValidationInvoking():
 
 @ioc.after(updateAssemblyDecodeModel)
 def updateAssemblyDecodeModelForValidation():
-    assemblyDecodeModel().add(validateRelation(), before=validateMaxLen())
+    assemblyDecodeModel().add(validateRelation(), before=validateLen())
 
 @ioc.before(updateAssemblyDecodeContentExport)
 def updateAssemblyDecodeContentExportForValidation():

@@ -25,7 +25,7 @@ log = logging.getLogger(__name__)
 
 try:
     from __setup__ import ally_core  # @UnusedImport
-except ImportError: log.info('No ally core component available, thus no need to apply the transaction patch')
+except ImportError: log.info('No ally core component available, thus no need to apply the transaction/validation patch')
 else:
     from __setup__.ally_core.processor import invoking
     from __setup__.ally_core_http.processor import assemblyResources, updateAssemblyResources

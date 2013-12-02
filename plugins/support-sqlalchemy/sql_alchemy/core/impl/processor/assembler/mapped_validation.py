@@ -84,6 +84,7 @@ class MappedValidationHandler(HandlerProcessor):
         assert isinstance(mapper, Mapper), 'Invalid mapped class %s' % mapped
         assert isinstance(model, TypeModel), 'Invalid model class %s' % mapped
 
+        # TODO: Gabriel: check if polymorphic will still be handled as validation
         mappers = [(True, model, mapper)]
         for mapper in mapper.polymorphic_iterator():
             pmodel = typeFor(mapper.class_)

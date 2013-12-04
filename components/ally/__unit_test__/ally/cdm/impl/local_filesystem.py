@@ -58,9 +58,9 @@ class TestHTTPDelivery(unittest.TestCase):
             dstPath = 'testdir1/tempfile.txt'
             cdm.publishFromFile(dstPath, srcTmpFile.name)
             dstFilePath = join(d.getRepositoryPath(), normOSPath(dstPath))
+            
             self.assertTrue(isfile(dstFilePath))
-            self.assertEqual(datetime.fromtimestamp(stat(dstFilePath).st_mtime),
-                             cdm.getTimestamp(dstPath))
+            self.assertEqual(cdm.getMetadata(dstPath)['lastModified'], stat(dstFilePath).st_mtime)
         finally:
             rmtree(dirname(dstFilePath))
             remove(srcTmpFile.name)
@@ -89,8 +89,8 @@ class TestHTTPDelivery(unittest.TestCase):
             for dir in dirs:
                 dstFilePath = join(dstDirPath, dir, 'text.html')
                 self.assertTrue(isfile(dstFilePath))
-                self.assertEqual(datetime.fromtimestamp(stat(dstFilePath).st_mtime),
-                                 cdm.getTimestamp(join('testdir3', dir, 'text.html')))
+                self.assertEqual(cdm.getMetadata(join('testdir3', dir, 'text.html'))['lastModified'], 
+                                 stat(dstFilePath).st_mtime)
             # test remove path
             filePath = 'testdir3/test1/subdir1/text.html'
             self.assertTrue(isfile(join(d.getRepositoryPath(), filePath)))

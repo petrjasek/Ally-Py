@@ -160,12 +160,13 @@ class LocalFileSystemCDM(ICDM):
             os.makedirs(dstDir)
         if not os.access(filePath, os.R_OK):
             raise IOError('Unable to read the file path %s' % filePath)
+        
         if not self._isSyncFile(filePath, dstFilePath):
             copyfile(filePath, dstFilePath)
             assert log.debug('Success publishing file %s to path %s', filePath, path) or True
         if metadata:
             self.updateMetadata(path, metadata)
-
+    
     def publishContent(self, path, content, metadata):
         '''
         @see ICDM.publishContent
@@ -187,7 +188,7 @@ class LocalFileSystemCDM(ICDM):
         '''
         assert isinstance(path, str), 'Invalid content path %s' % path
         metadataPath = path + self.cdm_meta_extension
-        oldMetadata = self.getMetadata(metadataPath)
+        oldMetadata = self.getMetadata(path)
         if oldMetadata: 
             oldMetadata.update(metadata)
             metadata = oldMetadata

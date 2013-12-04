@@ -78,7 +78,7 @@ class BindSessionHandler(HandlerProcessor, IProxyHandler):
                 session = openSession()
                 try:
                     session.flush()
-                    session.expunge_all()
+                    #TODO: check to see how we can manage this: session.expunge_all()
                     endCurrent(commit)
                 except:
                     endCurrent(rollback)

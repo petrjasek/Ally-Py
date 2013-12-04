@@ -125,11 +125,13 @@ class LocalFileSystemCDM(ICDM):
             os.makedirs(dstDir)
         if not os.access(filePath, os.R_OK):
             raise IOError('Unable to read the file path %s' % filePath)
+        
         if not self._isSyncFile(filePath, dstFilePath):
             copyfile(filePath, dstFilePath)
-            self.updateMetadata(filePath, metadata)
             assert log.debug('Success publishing file %s to path %s', filePath, path) or True
-
+        self.updateMetadata(path, metadata)
+    
+    
 #     def publishFromDir(self, path, dirPath):
 #         '''
 #         @see ICDM.publishFromDir
@@ -159,7 +161,7 @@ class LocalFileSystemCDM(ICDM):
             os.makedirs(dstDir)
         with open(dstFilePath, 'w+b') as dstFile:
             copyfileobj(content, dstFile)
-            self.updateMetadata(dstFilePath, metadata)
+            self.updateMetadata(path, metadata)
             assert log.debug('Success publishing content to path %s', path) or True
 
     def updateMetadata(self, path, metadata):
@@ -168,15 +170,16 @@ class LocalFileSystemCDM(ICDM):
         '''
         assert isinstance(path, str), 'Invalid content path %s' % path
         metadataPath = path + self.meta_ext
-        oldMetadata = self.getMetadata(metadataPath)
+        oldMetadata = self.getMetadata(path)
         if metadata == None:
             metadata = oldMetadata if oldMetadata else {}
-        if metadata:
+        else:
             if 'lastModified' in metadata.keys():
                 assert log.warning('Metadata update: lastModifed field is read-only. Cannot be updated by user') or True
                 metadata.pop('lastModified', None)
             if oldMetadata:
-                metadata = oldMetadata.update(metadata)
+                oldMetadata.update(metadata)
+                metadata = oldMetadata
         metadata['lastModified'] = int(datetime.now().strftime('%s'))
         self.publishFromFile(metadataPath, BytesIO(bytes(JSONEncoder().encode(metadata), 'utf-8')))
         assert log.debug('Success publishing metadata for path %s', path) or True
@@ -242,7 +245,7 @@ class LocalFileSystemCDM(ICDM):
                 metaFile.close()
                 return metaInfo
             except:
-                assert log.warning('No CDM metadata found for path {0).'.format(path))
+                assert log.warning('No CDM metadata found for path {0}.'.format(path)) or True
                 return {}
         
     def _publishFromFileObj(self, path, fileObj):

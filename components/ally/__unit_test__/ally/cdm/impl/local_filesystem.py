@@ -58,9 +58,9 @@ class TestHTTPDelivery(unittest.TestCase):
             dstPath = 'testdir1/tempfile.txt'
             cdm.publishFromFile(dstPath, srcTmpFile.name)
             dstFilePath = join(d.getRepositoryPath(), normOSPath(dstPath))
+            
             self.assertTrue(isfile(dstFilePath))
-            self.assertEqual(datetime.fromtimestamp(stat(dstFilePath).st_mtime),
-                             cdm.getTimestamp(dstPath))
+            self.assertEqual(cdm.getMetadata(dstPath)['lastModified'], stat(dstFilePath).st_mtime)
         finally:
             rmtree(dirname(dstFilePath))
             remove(srcTmpFile.name)
@@ -89,8 +89,8 @@ class TestHTTPDelivery(unittest.TestCase):
             for dir in dirs:
                 dstFilePath = join(dstDirPath, dir, 'text.html')
                 self.assertTrue(isfile(dstFilePath))
-                self.assertEqual(datetime.fromtimestamp(stat(dstFilePath).st_mtime),
-                                 cdm.getTimestamp(join('testdir3', dir, 'text.html')))
+                self.assertEqual(cdm.getMetadata(join('testdir3', dir, 'text.html'))['lastModified'], 
+                                 stat(dstFilePath).st_mtime)
             # test remove path
             filePath = 'testdir3/test1/subdir1/text.html'
             self.assertTrue(isfile(join(d.getRepositoryPath(), filePath)))
@@ -171,8 +171,8 @@ class TestHTTPDelivery(unittest.TestCase):
                 self.assertIsInstance(links, list)
                 self.assertEqual(links[0][0], 'FS')
                 self.assertEqual(srcTmpFile.name, links[0][1])
-                self.assertEqual(datetime.fromtimestamp(stat(srcTmpFile.name).st_mtime),
-                                 cdm.getTimestamp('testdir7/tempfile.txt'))
+                
+                self.assertEqual(cdm.getMetadata('testdir7/tempfile.txt')['lastModified'], stat(srcTmpFile.name).st_mtime)
         finally:
             rmtree(dirname(dstLinkPath))
 
@@ -191,8 +191,9 @@ class TestHTTPDelivery(unittest.TestCase):
                 inPath = normOSPath(links[0][2], True)
                 linkPath = join(zipPath, inPath)
                 self.assertEqual(normpath(linkPath), normpath(srcFilePath))
-                self.assertEqual(datetime.fromtimestamp(stat(join(dirname(__file__), 'test.zip')).st_mtime),
-                                 cdm.getTimestamp('testdir8/tempfile2.txt'))
+                
+                self.assertEqual(cdm.getMetadata('testdir8/tempfile2.txt')['lastModified'], 
+                                 stat(join(dirname(__file__), 'test.zip')).st_mtime)
         finally:
             rmtree(dirname(dstLinkPath))
 
@@ -210,8 +211,9 @@ class TestHTTPDelivery(unittest.TestCase):
                 links = json.load(f)
                 self.assertEqual(links[0][0], 'FS')
                 self.assertEqual(srcTmpDir.name, links[0][1])
-                self.assertEqual(datetime.fromtimestamp(stat(join(srcTmpDir.name, 'test1/subdir1/text.html')).st_mtime),
-                                 cdm.getTimestamp('testlink1/test1/subdir1/text.html'))
+                
+                self.assertEqual(cdm.getMetadata('testlink1/test1/subdir1/text.html')['lastModified'], 
+                                 stat(join(srcTmpDir.name, 'test1/subdir1/text.html')).st_mtime)
             # test path remove
             delPath1 = 'testlink1/test1/subdir1/text.html'
             cdm.remove(delPath1)
@@ -236,8 +238,9 @@ class TestHTTPDelivery(unittest.TestCase):
                 inPath = normOSPath(links[0][2], True)
                 link = join(zipPath, inPath)
                 self.assertEqual(link, srcFilePath)
-                self.assertEqual(datetime.fromtimestamp(stat(join(dirname(__file__), 'test.zip')).st_mtime),
-                                 cdm.getTimestamp('testlink2/subdir1/file1.txt'))
+                
+                self.assertEqual(cdm.getMetadata('testlink2/subdir1/file1.txt')['lastModified'], 
+                                 stat(join(dirname(__file__), 'test.zip')).st_mtime)
             # test path remove
             delPath1 = 'testlink2/subdir1/file1.txt'
             cdm.remove(delPath1)

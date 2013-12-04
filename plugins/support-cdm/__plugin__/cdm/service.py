@@ -14,6 +14,7 @@ from os import path
 from ally.cdm.impl.local_filesystem import IDelivery, HTTPDelivery, LocalFileSystemCDM
 from ally.cdm.spec import ICDM
 from ally.container import ioc
+from ally.cdm.support import VersioningCDM
 
 # --------------------------------------------------------------------
 
@@ -32,6 +33,11 @@ def use_linked_cdm():
     ''' Set to true when the files should not be copied into cdm'''
     return True
 
+@ioc.config
+def use_versioning_cdm():
+    ''' Set to true to use file versioning in cdm'''
+    return True
+
 # --------------------------------------------------------------------
 # Creating the content delivery managers
 
@@ -46,4 +52,6 @@ def delivery() -> IDelivery:
 def contentDeliveryManager() -> ICDM:
     cdm = LocalFileSystemCDM()
     cdm.delivery = delivery()
+    if use_versioning_cdm():
+        return VersioningCDM(cdm)
     return cdm

@@ -45,13 +45,12 @@ class TestCdmVersioning(unittest.TestCase):
             cdm.publishFromFile(dstPath, srcTmpFile.name)
             cdm.publishFromFile(dstPath, srcTmpFile.name)
             
-            uri = cdm.getURI(dstPath)
-            
-            #TODO: test that the uri points to the last version of the file
-            #also test that there is only one last-version of the file
-            
             self.assertTrue(isfile(dstFilePath))
             self.assertEqual(cdm.getMetadata(dstPath)['lastModified'], stat(dstFilePath).st_mtime)
+            
+            uri = cdm.getURI(dstPath)
+            self.assertTrue(len(re.findall('testdir1\/tempfile_[0-9]*\.txt', uri)) == 1, 'Last version of the file was not saved properly.')
+            
         finally:
             rmtree(dirname(dstFilePath))
             remove(srcTmpFile.name)

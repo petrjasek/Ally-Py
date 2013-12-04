@@ -16,7 +16,7 @@ from ally.container import wire
 from babel.messages.catalog import Catalog
 from ally.core.error import DevelError
 from babel.messages.pofile import read_po, write_po
-from babel.compat import BytesIO
+from babel._compat import BytesIO
 from internationalization.core.spec import ICatalogManager
 
 # --------------------------------------------------------------------
@@ -64,13 +64,12 @@ class CatalogManager(ICatalogManager):
         '''
         @see: IPOFileManager.getGlobalPOCatalog
         '''
-        name = self.globalMessagesName
-        content = self.getData(name=name, locale=locale)
+        content = self.getData(name=self.global_messages_name, locale=locale)
         catalog = self._getCatalog(content, self.default_charset)
         if catalog:
             template = self.getGlobalPOTCatalog()
             if template: catalog.update(template)
-            else: assert log.debug('Global POT file could not be generated. Check if you have any POTs in db') or True
+            else: assert log.debug('Global POT file could not be generated.') or True
         return catalog or None
 
     def getPluginPOCatalog(self, name, locale):
@@ -79,11 +78,12 @@ class CatalogManager(ICatalogManager):
         '''
         content = self.getData(name=name, locale=locale)
         catalog = self._getCatalog(content, self.default_charset)
+        globalContent = self.getData(name=self.global_messages_name, locale=locale)
+        globalCatalog = self._getCatalog(globalContent, self.default_charset)
         if catalog:
-            template = self._getCatalog(self.getData(name=name), self.default_charset)
-            if template: 
-                catalog.update(template)
-            else: assert log.debug('No POT file found for plugin {name}. Delivering not updated PO'.format(name=name)) or True
+            if globalCatalog: catalog.update(globalCatalog)
+            template = self.getPluginPOTCatalog(name)
+            if template: catalog.update(template)
         return catalog or None
 
     def getGlobalPOTCatalog(self):
@@ -108,7 +108,7 @@ class CatalogManager(ICatalogManager):
         '''
         @see IPOFileManager.updateGlobalPO
         '''
-        name = self.globalMessagesName
+        name = self.global_messages_name
         encoding = poFile.charSet or self.default_charset
         poFile = codecs.getreader(encoding)(poFile)
         newCatalog = self._getCatalog(poFile, encoding)
@@ -128,13 +128,10 @@ class CatalogManager(ICatalogManager):
         encoding = poFile.charSet or self.default_charset
         try: poFile = codecs.getreader(encoding)(poFile)
         except UnicodeDecodeError: raise DevelError('Improper PO file')
-        newCatalog = self._getCatalog(poFile, encoding)
-        if not newCatalog: raise DevelError('Invalid po file provided. Please check')
+        catalog = self._getCatalog(poFile, encoding)
+        if not catalog: raise DevelError('Invalid po file provided. Please check')
         oldCatalog = self.getPluginPOCatalog(name=name, locale=locale)
-        if oldCatalog:
-            catalog = newCatalog.update(oldCatalog)
-        else:
-            catalog = newCatalog
+        if oldCatalog: catalog.update(oldCatalog)
         content = self._toFile(catalog)
         return self.storeData(name=name, locale=locale, content=content.getvalue())
 
@@ -145,8 +142,8 @@ class CatalogManager(ICatalogManager):
         encoding = poFile.charSet or self.default_charset
         try: poFile = codecs.getreader(encoding)(poFile)
         except UnicodeDecodeError: raise DevelError('Invalid template provided') 
-        newTemplate = self._getCatalog(poFile, encoding)
-        content = self._toFile(newTemplate)
+        template = self._getCatalog(poFile, encoding)
+        content = self._toFile(template)
         return self.storeData(name=name, content=content.getvalue())
             
     # --------------------------------------------------------------------

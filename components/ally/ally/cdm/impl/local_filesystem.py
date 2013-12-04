@@ -1,3 +1,4 @@
+
 '''
 Created on Jan 5, 2012
 
@@ -20,7 +21,7 @@ import logging
 import os
 from json.encoder import JSONEncoder
 from json.decoder import JSONDecoder
-from babel.compat import BytesIO
+from babel._compat import BytesIO
 from ally.container import wire
 # --------------------------------------------------------------------
 
@@ -139,10 +140,10 @@ class LocalFileSystemCDM(ICDM):
                     metadata = JSONDecoder().decode(metaFile.read())
                 return metadata
             except:
-                assert log.warning('No CDM metadata found for path {0).'.format(path), exc_info=1) or True
+                assert log.debug('No CDM metadata found for path {0}.'.format(path), exc_info=1) or True
                 return {'createdOn': os.path.getctime(itemPath),
                         'lastModified': os.path.getmtime(itemPath)}
-
+        return {}
     # --------------------------------------------------------------------
 
     def publishFromFile(self, path, filePath, metadata):
@@ -162,8 +163,8 @@ class LocalFileSystemCDM(ICDM):
         if not self._isSyncFile(filePath, dstFilePath):
             copyfile(filePath, dstFilePath)
             assert log.debug('Success publishing file %s to path %s', filePath, path) or True
-        if metadata: 
-            self.updateMetadata(filePath, metadata)
+        if metadata:
+            self.updateMetadata(path, metadata)
 
     def publishContent(self, path, content, metadata):
         '''
@@ -177,8 +178,8 @@ class LocalFileSystemCDM(ICDM):
         with open(dstFilePath, 'w+b') as dstFile:
             copyfileobj(content, dstFile)
             assert log.debug('Success publishing content to path %s', path) or True
-        if metadata: 
-            self.updateMetadata(dstFilePath, metadata)
+        if metadata:
+            self.updateMetadata(path, metadata)
 
     def updateMetadata(self, path, metadata):
         '''
@@ -187,8 +188,10 @@ class LocalFileSystemCDM(ICDM):
         assert isinstance(path, str), 'Invalid content path %s' % path
         metadataPath = path + self.cdm_meta_extension
         oldMetadata = self.getMetadata(metadataPath)
-        metadata = oldMetadata.update(metadata)
-        metadata['lastModified'] = os.path.getmtime(path)
+        if oldMetadata: 
+            oldMetadata.update(metadata)
+            metadata = oldMetadata
+        if os.path.exists(path): metadata['lastModified'] = os.path.getmtime(path)
         self.publishFromFile(metadataPath, BytesIO(bytes(JSONEncoder().encode(metadata), 'utf-8')), metadata=None)
         assert log.debug('Success publishing metadata for path %s', path) or True
 
@@ -245,7 +248,7 @@ class LocalFileSystemCDM(ICDM):
             copyfileobj(fileObj, dstFile)
             assert log.debug('Success publishing stream to path %s', path) or True
         if metadata:
-            self.updateMetadata(dstFilePath, metadata)
+            self.updateMetadata(path, metadata)
 
     def _getItemPath(self, path):
         return join(self.delivery.getRepositoryPath(), normOSPath(path.lstrip(os.sep), True))

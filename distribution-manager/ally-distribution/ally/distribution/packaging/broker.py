@@ -59,7 +59,7 @@ class Broker:
         if not os.path.isdir(packagePath): os.makedirs(packagePath)
         destSymlink = os.path.join(packagePath, packageName)
         sourcePath = os.path.abspath(os.path.join(self.path_ui, packageName))
-        os.symlink(sourcePath, destSymlink)
+        if not os.path.exists(destSymlink): os.symlink(sourcePath, destSymlink)
         filename = os.path.join(packagePath, SETUP_FILENAME)
         if not os.path.isfile(filename):
             with open(filename, 'w') as f:

@@ -102,14 +102,22 @@ class ICDMSyncronizer(metaclass=abc.ABCMeta):
     '''
     
     @abc.abstractmethod
-    def publish(self, content, name, locale, timestamp):
+    def publishNeeded(self, name, locale, timestamp):
         '''
-        Publishes content to the CDM
+        verifies if publishing content to the CDM is needed
         
-        @param content: Catalog
         @param name: string
-        @param name: string
+        @param locale: string
+        @param timestamp: int
+        @return path: path in CDM
         '''
+        
+    @abc.abstractmethod
+    def publish(self, content, name, locale, metadata):
+        '''
+        publishes content to path
+        '''
+    
     @abc.abstractmethod
     def asReference(self, path, protocol):
         '''

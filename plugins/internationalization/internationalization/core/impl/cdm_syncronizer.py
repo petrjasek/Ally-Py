@@ -15,7 +15,7 @@ from ally.container.support import setup
 from ally.cdm.spec import ICDM
 from ally.container import wire
 from os.path import join
-from babel.compat import BytesIO
+from babel._compat import BytesIO
 from babel.messages.catalog import Catalog
 from babel.messages.pofile import write_po
   
@@ -74,25 +74,29 @@ class POCDMSyncronyzer(ICDMSyncronizer):
         '''
         '''
         
-    def publish(self, content, name, locale, timestamp):
+    def publishNeeded(self, name, locale, timestamp):
         '''
-        Publish content to path in CDM if content changed
+        check if content has changed and return path to publish to. Else return None
         '''
         if locale:
             path = self.cdm_po_file_path.format(name=name, locale=locale)
         else:
             path = self.cdm_pot_file_path.format(name=name)
         cdmMetadata = self.cdmLocale.getMetadata(path)
-        cdmTimestamp = -1 if not cdmMetadata else cdmMetadata['timestamp']
+        cdmTimestamp = -1 if not 'timestamp' in cdmMetadata else cdmMetadata['timestamp']
         if timestamp > cdmTimestamp:
-            self.cdmLocale.publishFromFile(path, self._toPOFile(content))
-            dbMetadata = {'timestamp': timestamp}
-            self.cdmLocale.updateMetadata(path, dbMetadata)
-        return path
-          
+            return (path, True)
+        else: return (path, False)
+    
+    def publish(self, content, path, metadata):
+        '''
+        @see ICDMSyncronizer.publish
+        '''
+        self.cdmLocale.publishFromFile(path, self._toPOFile(content), metadata)
+    
     def asReference(self, path, protocol):
         '''
-        returns reference to CDM path using scheme
+        @see ICDMSyncronizer.asReference 
         '''
         return self.cdmLocale.getURI(path, protocol)
     

@@ -71,10 +71,14 @@ class IInternationlizationFileService:
         '''
     
     @call(webName='Template')
-    def insertPOTFile(self, name:PO.Name, content: Content) -> bool:
+    def updatePOTFile(self, name:PO.Name, content: Content) -> PO.Name:
         '''
         Insert a POT file for the specified plugin, overwrite if exists.
         
         @param name: string
             The name of the plugin
+        @param content: Content
+            The content of POT file
+        @return name: string
+            The name of inserted POT
         '''

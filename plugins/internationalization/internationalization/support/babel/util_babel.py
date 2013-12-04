@@ -11,7 +11,7 @@ Contains Babel utils
 
 from functools import reduce
 from babel.messages.catalog import Message, Catalog
-from babel.compat import BytesIO
+from babel._compat import BytesIO
 from babel.messages.pofile import write_po
 
 def msgId(msg):

@@ -25,6 +25,7 @@ from ..ally_core.definition import descriptions
 from ..ally_core.resources import assemblyAssembler, injectorAssembly, register
 from ..ally_core_http import definition_header, definition_parameter
 from ..ally_core_http.definition_header import parameterHeaderVerifier
+from ally.documentation.core.impl.processor.mapping import MappingDumpHandler
 
 
 # --------------------------------------------------------------------
@@ -67,6 +68,13 @@ def pattern_generate():
     '''
     return '(?!^\_)'
 
+@ioc.config
+def path_mapping():
+    '''
+    The file path where the mapping will be placed.
+    '''
+    return 'mapping.txt'
+
 # --------------------------------------------------------------------
 
 @ioc.entity
@@ -75,6 +83,13 @@ def assemblyDocumentation() -> Assembly:
     The assembly containing the documentation handling.
     '''
     return Assembly('Documentation')
+
+@ioc.entity
+def assemblyMapping() -> Assembly:
+    '''
+    The assembly containing the mapping handling.
+    '''
+    return Assembly('Mapping')
 
 # --------------------------------------------------------------------
 
@@ -122,6 +137,12 @@ def generator() -> Handler:
     b.patternGenerate = pattern_generate()
     return b
 
+@ioc.entity
+def mappingDump() -> Handler:
+    b = MappingDumpHandler()
+    b.pathMapping = path_mapping()
+    return b
+
 # --------------------------------------------------------------------
 
 @ioc.before(assemblyAssembler)
@@ -133,10 +154,21 @@ def updateAssemblyDocumentation():
     assemblyDocumentation().add(injectorAssembly(), indexAPI(), indexHeader(), indexHeaderParameters(),
                                 indexParameter(), template(), generator())
 
+@ioc.before(assemblyMapping)
+def updateAssemblyMapping():
+    assemblyMapping().add(injectorAssembly(), mappingDump())
+    
 # --------------------------------------------------------------------
 
 def createDocumentation():
     processing = assemblyDocumentation().create()
+    assert isinstance(processing, Processing), 'Invalid processing %s' % processing
+    
+    register()
+    processing.execute(FILL_ALL)
+    
+def createMapping():
+    processing = assemblyMapping().create()
     assert isinstance(processing, Processing), 'Invalid processing %s' % processing
     
     register()

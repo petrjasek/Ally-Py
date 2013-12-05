@@ -43,7 +43,7 @@ def access_group():
 @ioc.config
 def gui_configuration():
     ''' The URI pattern (can have * for dynamic path elements) where the XML configurations can be found.'''
-    return ['file://../superdesk/ui/*/config.xml', 'file://../superdesk/ui/superdesk/*/config.xml']
+    return ['file://../ui/*/config.xml', 'file://../ui/superdesk/*/config.xml']
 
 # --------------------------------------------------------------------
 

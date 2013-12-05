@@ -11,9 +11,8 @@ if True:
 # --------------------------------------------------------------------
 from ally.cdm.support import VersioningCDM
 from ally.cdm.impl.local_filesystem import HTTPDelivery, LocalFileSystemCDM
-from ally.cdm.spec import PathNotFound
 from ally.zip.util_zip import normOSPath
-from os import makedirs, remove, sep, stat
+from os import remove, stat
 from os.path import join, dirname, isfile
 from shutil import rmtree
 from tempfile import NamedTemporaryFile, TemporaryDirectory

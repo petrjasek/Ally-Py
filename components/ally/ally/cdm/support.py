@@ -10,7 +10,7 @@ Provide support classes for the CDM handling.
 '''
 
 from .spec import ICDM
-from os.path import join, dirname, isfile, isdir
+from os.path import join, isfile
 import os
 import time
 from shutil import copyfile

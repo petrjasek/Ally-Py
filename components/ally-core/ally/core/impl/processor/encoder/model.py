@@ -34,12 +34,30 @@ log = logging.getLogger(__name__)
 
 # --------------------------------------------------------------------
 
+class Register(Context):
+    '''
+    The register context.
+    '''
+    # ---------------------------------------------------------------- Required
+    polymorphs = requires(dict)
+    polymorphed = requires(dict)
+                          
 class Invoker(Context):
     '''
     The invoker context.
     '''
     # ---------------------------------------------------------------- Required
     hideProperties = requires(bool)
+    isCollection = requires(bool)
+
+class Polymorph(Context):
+    '''
+    The polymorph context.
+    '''
+    # ---------------------------------------------------------------- Required
+    target = requires(TypeModel)
+    parents = requires(list)
+    values = requires(dict)
     
 # --------------------------------------------------------------------
 
@@ -63,16 +81,18 @@ class ModelEncode(HandlerBranching):
         'Invalid model extra encode assembly %s' % self.modelExtraEncodeAssembly
         assert isinstance(self.typeOrders, list), 'Invalid type orders %s' % self.typeOrders
         super().__init__(Branch(self.propertyEncodeAssembly).included().using(create=RequestEncoderNamed),
-                         Branch(self.modelExtraEncodeAssembly).included().using(create=RequestEncoder))
+                         Branch(self.modelExtraEncodeAssembly).included().using(create=RequestEncoder), Polymorph=Polymorph)
         
         self.typeOrders = [typeFor(typ) for typ in self.typeOrders]
         
-    def process(self, chain, processing, modelExtraProcessing, invoker:Invoker, create:DefineEncoder, **keyargs):
+    def process(self, chain, processing, modelExtraProcessing, register:Register,
+                invoker:Invoker, create:DefineEncoder, **keyargs):
         '''
         @see: HandlerBranching.process
         
         Create the model encoder.
         '''
+        assert isinstance(register, Register), 'Invalid register %s' % register
         assert isinstance(invoker, Invoker), 'Invalid invoker %s' % invoker
         assert isinstance(create, DefineEncoder), 'Invalid create %s' % create
         
@@ -82,22 +102,55 @@ class ModelEncode(HandlerBranching):
         # The type is not for a model, nothing to do, just move along
         assert isinstance(create.objType, TypeModel)
         
-        keyargs.update(invoker=invoker)
-        extra, properties = None, []
-        if not invoker.hideProperties:
-            for prop in self.sortedTypes(create.objType):
-                assert isinstance(prop, TypeProperty), 'Invalid property type %s' % prop
-                encoder = createEncoderNamed(processing, prop.name, prop, **keyargs)
-                if encoder is None:
-                    log.error('Cannot encode %s', prop)
-                    raise Abort(create)
-                properties.append((prop.name, encoder))
+        name = create.objType.name
+        if register.polymorphs and not invoker.isCollection:
+            polymorph = register.polymorphs.get(create.objType)
+            if polymorph and polymorph.parents:
+                assert isinstance(polymorph, Polymorph)
+                name = polymorph.parents[-1].name
         
+        keyargs.update(register=register, invoker=invoker)
+        specifiers = encoderSpecifiers(create)
+        if not invoker.hideProperties:
+            properties = self.encodeProperties(processing, create.objType, keyargs)
+            if properties is None: raise Abort(create)
             if modelExtraProcessing: extra = createEncoder(modelExtraProcessing, create.objType, **keyargs)
+            else: extra = None
+            base = EncoderModel(encoderName(create, name), properties, extra, specifiers)
             
-        create.encoder = EncoderModel(encoderName(create, create.objType.name), properties, extra, encoderSpecifiers(create))
+            if register.polymorphed and create.objType in register.polymorphed:
+                routings = []
+                for polymorph in register.polymorphed[create.objType]:
+                    assert isinstance(polymorph, Polymorph), 'Invalid polymorph %s' % polymorph
+                     
+                    properties = self.encodeProperties(processing, polymorph.target, keyargs)
+                    if properties is None: raise Abort(create)
+                    if modelExtraProcessing: extra = createEncoder(modelExtraProcessing, polymorph.target, **keyargs)
+                    else: extra = None
+                    encoder = EncoderModel(encoderName(create, name), properties, extra, specifiers)
+                     
+                    routings.append((polymorph, encoder))
+                 
+                create.encoder = EncoderPolymorph(base, routings)
+            else:
+                create.encoder = base
+        else:
+            create.encoder = EncoderModel(encoderName(create, self.nameFor(register, create.objType)),
+                                          [], specifiers=specifiers)
 
     # --------------------------------------------------------------------
+    
+    def encodeProperties(self, processing, typeModel, keyargs):
+        ''' Encode the properties of the model type.'''
+        properties = []
+        for prop in self.sortedTypes(typeModel):
+            assert isinstance(prop, TypeProperty), 'Invalid property type %s' % prop
+            encoder = createEncoderNamed(processing, prop.name, prop, **keyargs)
+            if encoder is None:
+                log.error('Cannot encode %s', prop)
+                return
+            properties.append((prop.name, encoder))
+        return properties
     
     def sortedTypes(self, model):
         '''
@@ -160,3 +213,32 @@ class EncoderModel(TransfromWithSpecifiers):
             if self.extra: self.extra.transform(value, target, support)
                 
         target.end()
+
+class EncoderPolymorph(ITransfrom):
+    '''
+    Implementation for a @see: ITransfrom for polymorphed models.
+    '''
+    
+    def __init__(self, base, routings):
+        '''
+        Construct the property encoder.
+        '''
+        assert isinstance(base, ITransfrom), 'Invalid base transform %s' % base
+        assert isinstance(routings, list), 'Invalid routings %s' % routings
+        self.base = base
+        self.routings = routings
+        
+    def transform(self, value, target, support):
+        '''
+        @see: ITransfrom.transform
+        '''
+        encoder = self.base
+        for polymorph, pencoder in self.routings:
+            assert isinstance(polymorph, Polymorph), 'Invalid polymorph %s' % polymorph
+            for prop, pvalue in polymorph.values.items():
+                if getattr(value, prop, None) != pvalue: break
+            else:
+                encoder = pencoder
+                break
+                
+        encoder.transform(value, target, support)

@@ -95,7 +95,9 @@ class Header:
         assert isinstance(headers, dict), 'Invalid headers %s' % headers
         for hname in list(headers.keys()):
             assert isinstance(hname, str), 'Invalid header name %s' % hname
-            if hname.lower() == self.nameLower: headers.pop(hname)
+            if hname.lower() == self.nameLower:
+                headers.pop(hname)
+                break
 
 class HeaderRaw(Header):
     '''

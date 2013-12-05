@@ -9,10 +9,6 @@ Created on Jun 1, 2012
 Provides the configurations for the resources.
 '''
 
-from ..ally_core.encode import assemblyEncodeExport
-from ..ally_core.resources import processMethod, updateAssemblyAssembler, \
-    assemblyAssembler
-from .encode import updateAssemblyEncodeExportForPath
 from ally.container import ioc
 from ally.core.http.impl.processor.assembler.conflict_replace import \
     ConflictReplaceHandler
@@ -46,8 +42,13 @@ from ally.core.http.impl.processor.assembler.path_web_name import \
 from ally.core.http.impl.processor.scheme import AssemblerSchemeHandler
 from ally.design.processor.handler import Handler
 
-# --------------------------------------------------------------------
+from ..ally_core.encode import assemblyEncodeExport
+from ..ally_core.resources import decoding, updateAssemblyAssembler, \
+    assemblyAssembler
+from .encode import updateAssemblyEncodeExportForPath
 
+
+# --------------------------------------------------------------------
 @ioc.entity
 def methodHTTP() -> Handler: return MethodHTTPHandler()
 
@@ -109,8 +110,8 @@ def updateAssemblyAssemblerForHTTPCore():
     assemblyAssembler().add(methodHTTP(), pathInput(), pathUpdate(), invokerShadow(), pathTarget(),
                             pathDomain(), pathWebName(), invokerResources(), invokerNode(), conflictShadow(),
                             conflictReplace(), conflictResolve(), pathGetModel(), pathGetAccesible(),
-                            requiredShadow(), pathSlash(), assemblerScheme(), encodingPath(), after=processMethod())
-
+                            requiredShadow(), pathSlash(), assemblerScheme(), encodingPath(), before=decoding())
+    
 @ioc.after(updateAssemblyEncodeExportForPath)
 def updateAssemblyEncodeExportForEncodingPath():
     assemblyEncodeExport().add(encodingPathExport)

@@ -105,7 +105,7 @@ class EncodingHandler(HandlerBranching):
                 elif isModelId(invoker.output): invoker.hideProperties = True
             
             try: arg = processing.execute(FILL_ALL, create=processing.ctx.create(objType=invoker.output),
-                                          node=invoker.node, invoker=invoker, **keyargs)
+                                          register=register, node=invoker.node, invoker=invoker, **keyargs)
             except Abort:
                 log.error('Cannot use because cannot create encoder for %s, at:%s', invoker.output, invoker.location)
                 aborted.append(invoker)

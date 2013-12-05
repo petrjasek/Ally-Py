@@ -27,6 +27,7 @@ class Invoker(Context):
     # ---------------------------------------------------------------- Required
     invokerGet = requires(Context)
     doEncodePath = requires(IDo)
+    hideProperties = requires(bool)
 
 class Create(Context):
     '''
@@ -67,12 +68,13 @@ class ModelPathAttributeEncode(HandlerProcessor):
         assert isinstance(create, Create), 'Invalid create %s' % create
         
         if not invoker.invokerGet: return  # No get model invokers available
+        # if not invoker.hideProperties: return  # The full model is rendered so no need for reference.
         assert isinstance(invoker.invokerGet, Invoker), 'Invalid invoker %s' % invoker.invokerGet
         if Create.encoder in create and create.encoder is not None: return 
         # There is already an encoder, nothing to do.
        
         if create.specifiers is None: create.specifiers = []
-        create.specifiers.append(AttributeModelPath(self.nameRef, invoker.invokerGet))
+        create.specifiers.append(AttributeModelPath(self.nameRef, invoker.invokerGet, not invoker.hideProperties))
 
 # --------------------------------------------------------------------
 
@@ -81,7 +83,7 @@ class AttributeModelPath(ISpecifier):
     Implementation for a @see: ISpecifier for paths.
     '''
     
-    def __init__(self, nameRef, invoker):
+    def __init__(self, nameRef, invoker, onlyAttribute):
         '''
         Construct the paths attributes.
         '''
@@ -91,6 +93,7 @@ class AttributeModelPath(ISpecifier):
         
         self.nameRef = nameRef
         self.invoker = invoker
+        self.onlyAttribute = onlyAttribute
         
     def populate(self, obj, specifications, support):
         '''
@@ -102,6 +105,8 @@ class AttributeModelPath(ISpecifier):
         if attributes is None: attributes = specifications['attributes'] = {}
         assert isinstance(attributes, dict), 'Invalid attributes %s' % attributes
         attributes[self.nameRef] = self.invoker.doEncodePath(support)
+        
+        if self.onlyAttribute: return
         
         specifications['indexBlock'] = NAME_BLOCK_REST
         indexAttributesCapture = specifications.get('indexAttributesCapture')

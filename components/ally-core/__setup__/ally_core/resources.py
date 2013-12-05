@@ -38,6 +38,7 @@ from .definition import definitions
 from .encode import assemblyEncode
 from ally.core.impl.processor.assembler.check_validation import CheckValidationHandler
 from ally.core.impl.processor.assembler.polymorph import PolymorphHandler
+from ally.core.impl.processor.assembler.polymorph_query import PolymorphQueryHandler
 
 
 # --------------------------------------------------------------------
@@ -73,6 +74,9 @@ def invokerService() -> Handler: return InvokerServiceHandler()
 
 @ioc.entity
 def polymorph() -> Handler: return PolymorphHandler()
+
+@ioc.entity
+def polymorphQuery() -> Handler: return PolymorphQueryHandler()
 
 @ioc.entity
 def processMethod() -> Handler: return ProcessMethodHandler()
@@ -111,8 +115,8 @@ def definition() -> Handler:
 
 @ioc.before(assemblyAssembler)
 def updateAssemblyAssembler():
-    assemblyAssembler().add(invokerService(), polymorph(), processMethod(), decoding(), encoding(), assemblerContent(),
-                            validateSolved(), validateHints(), checkValidation(), definition())
+    assemblyAssembler().add(invokerService(), processMethod(), polymorph(), polymorphQuery(), decoding(), encoding(),
+                            assemblerContent(), validateSolved(), validateHints(), checkValidation(), definition())
 
 @ioc.after(updateAssemblyDecodeExport)
 def updateAssemblyDecodeExportForDecoding():

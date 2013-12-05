@@ -130,7 +130,12 @@ class AssemblerHandler(HandlerProcessor, IAlter):
         name = modifier.fetch(ACTION_NAME)
         if name is None: bnode = None
         else: bnode = content.node.requests.get(name)
-        if bnode is None: bnode = content.node.requests.get('*')
+        
+        if bnode is None:
+            bnode = content.node.requests.get('*')
+            isGeneral = True
+        else: isGeneral = False
+        
         if bnode is None:
             if content.isTrimmed: modifier.register(ACTION_DISCARD)
             return
@@ -141,6 +146,7 @@ class AssemblerHandler(HandlerProcessor, IAlter):
         if not bnode.requests:
             check = modifier.fetch(ACTION_CHECK_CLOB)
             if not check: return  # Is probably and indexed reference so without requests we continue.
+            if isGeneral: return  # If is a general * request we will not fetch the blobs.
             
         response = content.doRequest(reference, bnode.parameters)
         assert isinstance(response, ContentResponse), 'Invalid content %s' % response

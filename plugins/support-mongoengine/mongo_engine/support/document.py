@@ -13,23 +13,6 @@ from mongoengine.queryset.manager import QuerySetManager
 from mongoengine.document import Document
 
 # --------------------------------------------------------------------
-# 
-# class MappedSupportDocument(type):
-#     '''
-#     Meta class for document base support.
-#     '''
-#     
-#     def __new__(cls, name, bases, namespace):
-#         if name == 'Base' and namespace.get('__module__') == __name__:
-#             return type.__new__(cls, name, bases, namespace)
-#         
-#         meta = namespace.get('meta')
-#         if meta is None: meta = dict(Base.meta)
-#         else: meta.update(Base.meta)
-#         dbases = list(bases)
-#         dbases.remove(Base)
-#         dbases.insert(0, Document)
-#         return type(name, tuple(dbases), namespace)
 
 class Base(Document):
     '''

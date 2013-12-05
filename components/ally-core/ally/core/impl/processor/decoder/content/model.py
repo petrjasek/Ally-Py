@@ -29,7 +29,14 @@ import logging
 log = logging.getLogger(__name__)
 
 # --------------------------------------------------------------------
-
+# TODO: Gbariel: integrate decode polymorph.
+# class Invoker(Context):
+#     '''
+#     The invoker context.
+#     '''
+#     # ---------------------------------------------------------------- Required
+#     polymorphed = requires(list)
+    
 class Decoding(Context):
     '''
     The model decoding context.

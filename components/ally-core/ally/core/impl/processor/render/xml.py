@@ -343,7 +343,6 @@ class RenderXML(XMLGenerator, IRender):
         if self._adjust:
             self.startDocument()  # Start the document
             if indexBlock is None:
-                assert indexBlock is None, 'No index block expected, but got %s' % indexBlock
                 assert not indexAttributesCapture, 'No attributes capture expected, but got %s' % indexAttributesCapture
                 index = self._index(NAME_XML_START_ADJUST)
                 index(IND_DECL)
@@ -385,7 +384,7 @@ class RenderXML(XMLGenerator, IRender):
                     self._write(' %s=' % nameAttr)
                     index(PSIND_ATTR_CAPTURE % iname, offset=1)  # offset +1 for the comma
                     self._write(quoteattr(valueAttr))
-                    index(PEIND_ATTR_CAPTURE % iname, offset= -1)  # offset -1 for the comma
+                    index(PEIND_ATTR_CAPTURE % iname, offset=-1)  # offset -1 for the comma
                 else: self._write(' %s=%s' % (nameAttr, quoteattr(valueAttr)))
         if index: index(EIND_ATTRS)
                 

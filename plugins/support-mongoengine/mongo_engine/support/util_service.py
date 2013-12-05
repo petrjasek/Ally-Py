@@ -65,7 +65,7 @@ def buildQuery(objects, query, Mapped, only=None, exclude=None, orderBy=None, **
         The field or objects build callable mappings provided for criteria name.
     '''
     assert query is not None, 'A query object is required'
-     
+    
     fields = {}
     for name in namesFor(Mapped):
         field = getattr(Mapped, name)
@@ -195,7 +195,7 @@ def iterateCollection(objects, field, offset=None, limit=None, withTotal=False, 
         if limit == 0: return _factorySlice((), objects.count())
         objectsLimit = buildLimits(objects, offset, limit)
         return _factorySlice((getattr(item, field) for item in objectsLimit), objects.count(), offset, limit)
-    return (getattr(item, field) for item in objectsLimit)
+    return (getattr(item, field) for item in objects)
 
 # --------------------------------------------------------------------
 

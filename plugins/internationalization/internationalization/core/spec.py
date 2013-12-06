@@ -20,23 +20,11 @@ class InvalidLocaleError(Exception):
 
 # --------------------------------------------------------------------
 
-class IPOFileManager(metaclass=abc.ABCMeta):
+class ICatalogManager(metaclass=abc.ABCMeta):
     '''
     The PO file manager: processes and returns the global or plugin
     PO/POT files content from anywhere.
     '''
-
-    @abc.abstractmethod
-    def getLatestTimestampForPO(self, name, locale):
-        '''
-        Provides latest timestamp for PO file
-        '''
-        
-    @abc.abstractmethod
-    def getLatestTimestampForPOT(self, name):
-        '''
-        Provides latest timestamp for POT file
-        '''
         
     @abc.abstractmethod
     def getGlobalPOCatalog(self, locale):
@@ -114,14 +102,22 @@ class ICDMSyncronizer(metaclass=abc.ABCMeta):
     '''
     
     @abc.abstractmethod
-    def publish(self, content, name, locale, timestamp):
+    def publishNeeded(self, name, locale, timestamp):
         '''
-        Publishes content to the CDM
+        verifies if publishing content to the CDM is needed
         
-        @param content: Catalog
         @param name: string
-        @param name: string
+        @param locale: string
+        @param timestamp: int
+        @return path: path in CDM
         '''
+        
+    @abc.abstractmethod
+    def publish(self, content, name, locale, metadata):
+        '''
+        publishes content to path
+        '''
+    
     @abc.abstractmethod
     def asReference(self, path, protocol):
         '''

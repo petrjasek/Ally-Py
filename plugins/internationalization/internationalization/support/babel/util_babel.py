@@ -11,7 +11,7 @@ Contains Babel utils
 
 from functools import reduce
 from babel.messages.catalog import Message, Catalog
-from babel.compat import BytesIO
+from babel._compat import BytesIO
 from babel.messages.pofile import write_po
 
 def msgId(msg):
@@ -96,18 +96,3 @@ def fixBabelCatalogAddBug(msg, numPlurals):
                     string.append('')
             msg.string = tuple(string)
             
-def catalogToFile(catalog, config):
-        '''
-        Convert the catalog to a PO file like object.
-    
-        @param catalog: Catalog
-            The catalog to convert to a file.
-        @return: file read object
-            A file like object to read the PO file from.
-        '''
-        assert isinstance(catalog, Catalog), 'Invalid catalog %s' % catalog
-    
-        fileObj = BytesIO()
-        write_po(fileObj, catalog, **config)
-        fileObj.seek(0)
-        return fileObj

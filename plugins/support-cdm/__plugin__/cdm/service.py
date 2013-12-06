@@ -11,8 +11,7 @@ Configuration for cdm service
 
 from os import path
 
-from ally.cdm.impl.local_filesystem import IDelivery, HTTPDelivery, \
-    LocalFileSystemLinkCDM, LocalFileSystemCDM
+from ally.cdm.impl.local_filesystem import IDelivery, HTTPDelivery, LocalFileSystemCDM
 from ally.cdm.spec import ICDM
 from ally.container import ioc
 from ally.cdm.support import VersioningCDM
@@ -51,7 +50,7 @@ def delivery() -> IDelivery:
 
 @ioc.entity
 def contentDeliveryManager() -> ICDM:
-    cdm = LocalFileSystemLinkCDM() if use_linked_cdm() else LocalFileSystemCDM()
+    cdm = LocalFileSystemCDM()
     cdm.delivery = delivery()
     if use_versioning_cdm():
         return VersioningCDM(cdm)

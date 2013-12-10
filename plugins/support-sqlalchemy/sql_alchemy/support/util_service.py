@@ -139,7 +139,8 @@ def buildQuery(sql, query, Mapped, only=None, exclude=None, orderBy=None, autoJo
         if column is None: continue
         if autoJoin:
             ctable = tableFor(column)
-            if ctable != table: sql = sql.join(ctable)
+            #TODO: Gabriel: Fix this quick hack
+            if ctable != table and ctable.name not in str(sql): sql = sql.join(ctable)
 
         crt = getattr(query, criteria)
         if isinstance(crt, AsBoolean):

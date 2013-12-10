@@ -12,13 +12,11 @@
 
 *.pyo
 *.pyc
-*.properties
-*.properties.bak
+*.properties*
 .settings
 
 .project
-.pydevproject
-.pydevproject~
+.pydevproject*
 /.metadata/
 
 /superdesk/

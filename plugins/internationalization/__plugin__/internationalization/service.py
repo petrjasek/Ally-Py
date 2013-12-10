@@ -28,7 +28,7 @@ SERVICES = 'internationalization.api.**.I*Service'
 # --------------------------------------------------------------------
 
 bind.bindToEntities('internationalization.impl.**.*Alchemy', POCDMSyncronyzer, DBPOFileManager, binders=binders)
-support.createEntitySetup('internationalization.impl.**.*', 'internationalization.*.impl.**.*')
+support.createEntitySetup('internationalization.impl.**.*', 'internationalization.core.impl.**.*')
 support.listenToEntities(SERVICES, listeners=registerService, beforeBinding=False)
 support.loadAllEntities(SERVICES)
 

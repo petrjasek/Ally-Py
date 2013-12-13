@@ -36,7 +36,9 @@ class Converter:
         assert isinstance(type, Type), 'Invalid object type %s' % type
         assert value is not None, 'Provide an object value'
         
-        if type.isOf(str): return value
+        #if type.isOf(str): return value
+        #TODO: this is a hack for fixing issue with MetaInfo request: http://localhost:8080/resources/Archive/MetaInfo/1 gives error
+        if type.isOf(str): return str(value)
         if type.isOf(int) or type.isOf(float): return str(value)
         if type.isOf(bool): return 'true' if value is True else 'false'
         if type.isOf(datetime):

@@ -12,7 +12,7 @@ Provides utility methods for SQL alchemy meta definitions.
 from collections import OrderedDict
 from inspect import isclass
 import json
-from operator import attrgetter
+from operator import attrgetter, setitem
 from sqlalchemy.ext.compiler import compiles
 from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy.orm import relationship, mapper, column_property
@@ -57,13 +57,15 @@ def hybrid(*args, fset=None, fdel=None, expr=None):
     if not args: return decorator
     return decorator(*args)
 
-def relationshipModel(mappedId, *spec):
+def relationshipModel(mappedId, *spec, cls=None):
     '''
     Creates a relationship with the model, this should only be used in case the mapped model database id is different from the
     actual model id.
     
     @param mappedId: InstrumentedAttribute
         The mapped model id to create the relation with.
+    @param cls: class
+        The mapped class to put the relation ship on.
     @param spec: arguments containing
         column: string
             The column name containing the foreign key relation, attention if target is provided then
@@ -72,9 +74,16 @@ def relationshipModel(mappedId, *spec):
             The SQL alchemy relationship target name, if None provided it will create one automatically.
     '''
     assert isinstance(mappedId, InstrumentedAttribute), 'Invalid mapped id %s' % mappedId
-    register = callerLocals()
-    assert '__module__' in register, 'This function should only be used inside meta class definitions'
-    rtype = typeFor(mappedId.class_)
+    if cls is None:
+        register = callerLocals()
+        assert '__module__' in register, 'This function should only be used inside meta class definitions'
+        rtype = typeFor(mappedId.class_)
+        setter = lambda name, value: setitem(register, name, value)
+    else:
+        assert isclass(cls), 'Invalid class %s' % cls
+        rtype = typeFor(cls)
+        setter = lambda name, value: setattr(register, name, value)
+        
     assert isinstance(rtype, TypeModel), 'Invalid class %s' % mappedId.class_
     assert isinstance(rtype.propertyId, TypeProperty), 'No property id for %s' % rtype
     assert rtype.propertyId.name != mappedId.property.key, 'Same database id with the model id \'%s\' for %s' % (rtype.propertyId.name, mappedId.property.key) 
@@ -91,8 +100,9 @@ def relationshipModel(mappedId, *spec):
         target = modifyFirst(rtype.name, False)
         if column is None:
             column = '%sId' % target
-            register[column] = Column('fk_%s_id' % toUnderscore(target), ForeignKey(mappedId, ondelete='CASCADE'), nullable=False)
-        register[target] = relationship(mappedId.class_, uselist=False, lazy='joined', viewonly=True)
+            setter(column, Column('fk_%s_id' % toUnderscore(target), ForeignKey(mappedId, ondelete='CASCADE'),
+                                  nullable=False))
+        setter(target, relationship(mappedId.class_, uselist=False, lazy='joined', viewonly=True))
     
     def fget(self):
         rel = getattr(self, target)

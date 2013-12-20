@@ -57,7 +57,7 @@ class ParserHandler(HandlerProcessor):
         self.uriRepository = dict()
         self._inError = False
 
-    def process(self, chain, solicit:Solicit, Repository:Context, **keyargs):
+    def process(self, chain, solicit:Solicit, Repository:Context=None, **keyargs):
         '''
         @see: HandlerProcessor.process
         
@@ -65,6 +65,9 @@ class ParserHandler(HandlerProcessor):
         '''
         assert isinstance(chain, Chain), 'Invalid chain %s' % chain
         assert isinstance(solicit, Solicit), 'Invalid solicit %s' % solicit
+        if Repository is None:
+            log.error('No repository available to parse the \'%s\'', solicit.uri)
+            return
         
         #if there is no stream, just clean the repository for this URI (delete URI from self.uriRepository)
         if solicit.stream is None: self.uriRepository.pop(solicit.uri, None)

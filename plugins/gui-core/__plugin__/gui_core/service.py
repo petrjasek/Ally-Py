@@ -14,11 +14,9 @@ from ally.container import ioc, support
 from ally.design.processor.assembly import Assembly
 from ally.design.processor.handler import Handler
 from ally.xml.digester import Node, RuleRoot
-from gui.core.config.impl.processor.configuration_notifier import \
-    ConfigurationListeners
-from gui.core.config.impl.processor.xml.parser import ParserHandler
-from gui.core.config.impl.rules import AccessRule, MethodRule, URLRule, \
-    ActionRule, DescriptionRule, GroupRule, RightRule
+from ally.xml.parser import ParserHandler
+from ally.xml.rules import AccessRule, MethodRule, URLRule,ActionRule, DescriptionRule, GroupRule, RightRule
+from ally.notifier.impl.processor.configuration_notifier import ConfigurationListeners
 
 # --------------------------------------------------------------------
 # The synchronization processors
@@ -48,7 +46,7 @@ def gui_configuration():
 # --------------------------------------------------------------------
 
 @ioc.entity
-def assemblyConfiguration() -> Assembly:
+def assemblyGUIConfiguration() -> Assembly:
     return Assembly('GUI Configurations')
 
 @ioc.entity
@@ -62,10 +60,10 @@ def parserXML() -> Handler:
 
 @ioc.entity
 def configurationListeners() -> Handler:
-    b = ConfigurationListeners()
-    b.assemblyConfiguration = assemblyConfiguration()
-    b.patterns = gui_configuration()
-    return b
+    configGui = ConfigurationListeners()
+    configGui.assemblyConfiguration = assemblyGUIConfiguration()
+    configGui.patterns = gui_configuration()
+    return configGui
 
 # --------------------------------------------------------------------
 
@@ -90,12 +88,12 @@ def updateRootNodeXMLForGroups():
         addNodeDescription(node)
         if spec.get('hasActions', False): addNodeAction(node)
 
-@ioc.before(assemblyConfiguration)
+@ioc.before(assemblyGUIConfiguration)
 def updateAssemblyConfiguration():
-    assemblyConfiguration().add(parserXML(), synchronizeAction(), synchronizeGroups(), synchronizeRights(), 
+    assemblyGUIConfiguration().add(parserXML(), synchronizeAction(), synchronizeGroups(), synchronizeRights(), 
                                 synchronizeGroupActions(), synchronizeRightActions(), 
                                 prepareGroupAccesses(), prepareRightAccesses(), syncGroupAccesses(), syncRightAccesses())
-
+    
 @ioc.before(registersListeners)
 def updateRegistersListenersForConfiguration():
     registersListeners().append(configurationListeners())

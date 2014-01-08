@@ -17,6 +17,7 @@ from ally.xml.digester import Node, RuleRoot
 from ally.xml.parser import ParserHandler
 from ally.xml.rules import AccessRule, MethodRule, URLRule,ActionRule, DescriptionRule, GroupRule, RightRule
 from ally.notifier.impl.processor.configuration_notifier import ConfigurationListeners
+from ally.xml.uri_repository_caching import UriRepositoryCaching
 
 # --------------------------------------------------------------------
 # The synchronization processors
@@ -59,6 +60,11 @@ def parserXML() -> Handler:
     return b
 
 @ioc.entity
+def uriRepositoryCaching() -> Handler:
+    b = UriRepositoryCaching()
+    return b
+
+@ioc.entity
 def configurationListeners() -> Handler:
     configGui = ConfigurationListeners()
     configGui.assemblyConfiguration = assemblyGUIConfiguration()
@@ -90,10 +96,10 @@ def updateRootNodeXMLForGroups():
 
 @ioc.before(assemblyGUIConfiguration)
 def updateAssemblyConfiguration():
-    assemblyGUIConfiguration().add(parserXML(), synchronizeAction(), synchronizeGroups(), synchronizeRights(), 
+    assemblyGUIConfiguration().add(parserXML(), uriRepositoryCaching(), synchronizeAction(), synchronizeGroups(), synchronizeRights(), 
                                 synchronizeGroupActions(), synchronizeRightActions(), 
                                 prepareGroupAccesses(), prepareRightAccesses(), syncGroupAccesses(), syncRightAccesses())
-    
+
 @ioc.before(registersListeners)
 def updateRegistersListenersForConfiguration():
     registersListeners().append(configurationListeners())

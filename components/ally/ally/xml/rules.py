@@ -17,8 +17,7 @@ from ally.xml.digester import Rule, Digester
 from ally.xml.context import DigesterArg
 from ally.core.error import DevelError
 
-# --------------------------------------------------------------------
-
+# ----------------------------------------------------------------------------
 class WithTracking(Context):
     '''
     Context class with tracking info.

@@ -1,7 +1,7 @@
 '''
 Created on Aug 22, 2013
 
-@package: gui core
+@package: ally.xml
 @copyright: 2011 Sourcefabric o.p.s.
 @license: http://www.gnu.org/licenses/gpl-3.0.txt
 @author: Mihai Gociu
@@ -69,8 +69,8 @@ class ParserHandler(HandlerProcessor):
             log.error('No repository available to parse the \'%s\'', solicit.uri)
             return
         
-        #if there is no stream, just clean the repository for this URI (delete URI from self.uriRepository)
-        if solicit.stream is None: self.uriRepository.pop(solicit.uri, None)
+        #if there is no stream continue with None repository (repository caching will handle this case)
+        if solicit.stream is None: solicit.repository = None
         else:
             digester = DigesterArg(chain.arg, self.rootNode, acceptUnknownTags=False)
             digester.stack.append(Repository())
@@ -83,13 +83,5 @@ class ParserHandler(HandlerProcessor):
                 self._inError = True
                 chain.cancel()
                 return
-            self.uriRepository[solicit.uri] = digester.stack.pop()
-        
-        #will make a root repository that contains all the repositories created so far (from the parsed files)
-        root = chain.arg.Repository()
-        root.children = []
-        for repository in self.uriRepository.values():
-            root.children.append(repository)
-        
-        solicit.repository = root
+            solicit.repository = digester.stack.pop()
         

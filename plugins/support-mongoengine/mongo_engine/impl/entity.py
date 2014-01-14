@@ -126,7 +126,9 @@ class EntityCRUDServiceMongo(EntitySupportMongo):
         '''
         @see: IEntityCRUDPrototype.delete
         '''
-        return self.Mapped.delete()
+        obj = self.Mapped.objects(**{self.EntityId: identifier}).first()
+        if obj is not None: return obj.delete()
+        return False
  
 class EntityGetCRUDServiceMongo(EntityGetServiceMongo, EntityCRUDServiceMongo):
     '''
@@ -137,13 +139,13 @@ class EntityNQServiceMongo(EntityGetServiceMongo, EntityFindServiceMongo, Entity
     '''
     Generic implementation for @see: IEntityNQPrototype
     '''
- 
+
     def __init__(self, Entity):
         '''
         @see: EntitySupportAlchemy.__init__
         '''
         EntitySupportMongo.__init__(self, Entity)
- 
+
 class EntityServiceMongo(EntityGetServiceMongo, EntityQueryServiceMongo, EntityCRUDServiceMongo):
     '''
     Generic implementation for @see: IEntityPrototype

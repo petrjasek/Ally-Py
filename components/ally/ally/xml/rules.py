@@ -17,8 +17,7 @@ from ally.xml.digester import Rule, Digester
 from ally.xml.context import DigesterArg
 from ally.core.error import DevelError
 
-# --------------------------------------------------------------------
-
+# ----------------------------------------------------------------------------
 class WithTracking(Context):
     '''
     Context class with tracking info.
@@ -203,7 +202,7 @@ class ActionRule(Rule, IPrepare):
         assert issubclass(digester.arg.Repository, ActionRule.Repository), \
         'Invalid repository class %s' % digester.arg.Repository
         assert issubclass(digester.arg.Action, ActionRule.Action), \
-        'Invalid repository class %s' % digester.arg.Repository
+        'Invalid Action class %s' % digester.arg.Repository
         
         assert digester.stack, 'Expected a repository on the digester stack'
         repository = digester.stack[-1]

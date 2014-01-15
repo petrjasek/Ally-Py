@@ -25,9 +25,8 @@ from ally.design.processor.attribute import defines, requires
 from ally.design.processor.context import Context
 from ally.design.processor.execution import Processing, FILL_ALL
 from ally.xml.digester import RuleRoot, Node
-from gui.core.config.impl.processor.xml.parser import ParserHandler
-from gui.core.config.impl.rules import URLRule, ActionRule, MethodRule, \
-    AccessRule, GroupRule, DescriptionRule, RightRule
+from ally.xml.parser import ParserHandler
+from ally.xml.rules import URLRule, ActionRule, MethodRule, AccessRule, GroupRule, DescriptionRule, RightRule
 from ally.support.util_context import listBFS
 
 from gui.core.config.impl.processor.synchronize.category import RepositoryGroup, RepositoryRight,\

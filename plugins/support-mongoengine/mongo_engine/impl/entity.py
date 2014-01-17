@@ -121,15 +121,17 @@ class EntityCRUDServiceMongo(EntitySupportMongo):
         @see: IEntityCRUDPrototype.update
         '''
         updateModel(self.Mapped, entity)
- 
+
     def delete(self, identifier):
         '''
         @see: IEntityCRUDPrototype.delete
         '''
         obj = self.Mapped.objects(**{self.EntityId: identifier}).first()
-        if obj is not None: return obj.delete()
+        if obj is not None:
+            obj.delete()
+            return True
         return False
- 
+
 class EntityGetCRUDServiceMongo(EntityGetServiceMongo, EntityCRUDServiceMongo):
     '''
     Generic implementation for @see: IEntityGetCRUDPrototype

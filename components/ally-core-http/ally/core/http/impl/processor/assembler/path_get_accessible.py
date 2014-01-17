@@ -27,6 +27,7 @@ class Register(Context):
     '''
     # ---------------------------------------------------------------- Required
     nodes = requires(list)
+    polymorphs = requires(dict)
     
 class Invoker(Context):
     '''
@@ -55,9 +56,14 @@ class Node(Context):
     invokersGet = requires(dict)
     child = requires(Context)
     childByName = requires(dict)
+    properties = requires(set)
     # ---------------------------------------------------------------- Defined
     invokersAccessible = defines(list, doc='''
     @rtype: list[tuple(string, Context)]
+    The list of invokers tuples that are accessible for this node, the first entry in tuple is a generated invoker name.
+    ''')
+    invokersAccessiblePolymorph = defines(list, doc='''
+    @rtype: dict{TypeModel:[tuple(string, Context)]}
     The list of invokers tuples that are accessible for this node, the first entry in tuple is a generated invoker name.
     ''')
     
@@ -83,30 +89,45 @@ class PathGetAccesibleHandler(HandlerProcessor):
         for current in register.nodes:
             assert isinstance(current, Node), 'Invalid node %s' % current
             
-            for name, node in self.iterAvailable(current):
-                if node.invokers and HTTP_GET in node.invokers:
+            if current.invokers and HTTP_GET in current.invokers:
+                # The available paths are compiled only for nodes that have a get invoker that can use them.
+                target = None
+                invoker = current.invokers[HTTP_GET]
+                assert isinstance(invoker, Invoker)
+                if invoker.isModel and invoker.target: target = invoker.target
+                
+                for name, node in self.iterAvailable(current, invoker.isModel, target):
+                    if not node.invokers and HTTP_GET not in node.invokers: continue
                     if current.invokersAccessible is None: current.invokersAccessible = []
                     current.invokersAccessible.append((name, node.invokers[HTTP_GET]))
-           
+                        
+            elif register.polymorphs and current.properties:
+                for prop in current.properties:
+                    assert isinstance(prop, TypeProperty)
+                    target = prop.parent
+                    if target not in register.polymorphs: continue
+                    
+                    for name, node in self.iterAvailable(current, True, target):
+                        if not node.invokers and HTTP_GET not in node.invokers: continue
+                        if current.invokersAccessiblePolymorph is None: current.invokersAccessiblePolymorph = dict()
+                        accessible = current.invokersAccessiblePolymorph.get(target)
+                        if accessible is None: accessible = current.invokersAccessiblePolymorph[target] = []
+                        accessible.append((name, node.invokers[HTTP_GET]))
+    
     # ----------------------------------------------------------------
     
-    def iterAvailable(self, node):
+    def iterAvailable(self, node, isModel, target):
         '''
         Iterates all the available nodes for node.
         '''
         assert isinstance(node, Node), 'Invalid node %s' % node
-        target = None
-        if not node.invokers or HTTP_GET not in node.invokers: return
-        # The available paths are compiled only for nodes that have a get invoker that can use them.
-        invoker = node.invokers[HTTP_GET]
-        assert isinstance(invoker, Invoker), 'Invalid invoker %s' % invoker
-        if invoker.isModel and invoker.target: target = invoker.target
-            
+        assert target is None or isinstance(target, TypeModel), 'Invalid model %s' % target
+
         if target:
             for cname, cnode in self.iterTarget('', node, target): yield cname, cnode
         
         for cname, cnode in self.iterChildByName('', node):
-            if invoker.isModel:
+            if isModel:
                 if cnode.parent and findFirst(cnode.parent, Node.parent, Node.child): yield cname, cnode
             else: yield cname, cnode
             if target:

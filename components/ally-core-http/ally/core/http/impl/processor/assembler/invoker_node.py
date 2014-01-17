@@ -98,6 +98,10 @@ class NodeInvoker(Context):
     @rtype: Type
     The type represented by the child node.
     ''')
+    properties = defines(set, doc='''
+    @rtype: set[Context]
+    The properties associated with a node.
+    ''')
     
 # --------------------------------------------------------------------
 
@@ -163,6 +167,9 @@ class InvokerNodeHandler(HandlerProcessor):
                                                             for childName in node.childByName), el.property, invoker.location)
                             valid = False
                             break
+                        
+                        if node.properties is None: node.properties = set()
+                        node.properties.add(el.property)
                         
                         el.node = node
                         if node.child is None:

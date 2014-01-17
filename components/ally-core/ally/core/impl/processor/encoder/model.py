@@ -50,6 +50,13 @@ class Invoker(Context):
     hideProperties = requires(bool)
     isCollection = requires(bool)
 
+class Node(Context):
+    '''
+    The node context.
+    '''
+    # ---------------------------------------------------------------- Required
+    invokersGet = requires(dict)
+    
 class Polymorph(Context):
     '''
     The polymorph context.
@@ -85,7 +92,7 @@ class ModelEncode(HandlerBranching):
         
         self.typeOrders = [typeFor(typ) for typ in self.typeOrders]
         
-    def process(self, chain, processing, modelExtraProcessing, register:Register,
+    def process(self, chain, processing, modelExtraProcessing, register:Register, node:Node,
                 invoker:Invoker, create:DefineEncoder, **keyargs):
         '''
         @see: HandlerBranching.process
@@ -93,6 +100,7 @@ class ModelEncode(HandlerBranching):
         Create the model encoder.
         '''
         assert isinstance(register, Register), 'Invalid register %s' % register
+        assert isinstance(node, Node), 'Invalid node %s' % node
         assert isinstance(invoker, Invoker), 'Invalid invoker %s' % invoker
         assert isinstance(create, DefineEncoder), 'Invalid create %s' % create
         
@@ -109,7 +117,7 @@ class ModelEncode(HandlerBranching):
                 assert isinstance(polymorph, Polymorph)
                 name = polymorph.parents[-1].name
         
-        keyargs.update(register=register, invoker=invoker)
+        keyargs.update(register=register, node=node, invoker=invoker)
         specifiers = encoderSpecifiers(create)
         if not invoker.hideProperties:
             properties = self.encodeProperties(processing, create.objType, keyargs)
@@ -122,7 +130,8 @@ class ModelEncode(HandlerBranching):
                 routings = []
                 for polymorph in register.polymorphed[create.objType]:
                     assert isinstance(polymorph, Polymorph), 'Invalid polymorph %s' % polymorph
-                     
+                    assert isinstance(polymorph.target, TypeModel)
+                    
                     properties = self.encodeProperties(processing, polymorph.target, keyargs)
                     if properties is None: raise Abort(create)
                     if modelExtraProcessing: extra = createEncoder(modelExtraProcessing, polymorph.target, **keyargs)

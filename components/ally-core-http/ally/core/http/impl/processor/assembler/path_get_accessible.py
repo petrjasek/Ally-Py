@@ -97,10 +97,10 @@ class PathGetAccesibleHandler(HandlerProcessor):
                 if invoker.isModel and invoker.target: target = invoker.target
                 
                 for name, node in self.iterAvailable(current, invoker.isModel, target):
-                    if not node.invokers and HTTP_GET not in node.invokers: continue
+                    if not node.invokers or HTTP_GET not in node.invokers: continue
                     if current.invokersAccessible is None: current.invokersAccessible = []
                     current.invokersAccessible.append((name, node.invokers[HTTP_GET]))
-                        
+                
             elif register.polymorphs and current.properties:
                 for prop in current.properties:
                     assert isinstance(prop, TypeProperty)

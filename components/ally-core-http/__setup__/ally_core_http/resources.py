@@ -46,6 +46,7 @@ from ..ally_core.encode import assemblyEncodeExport
 from ..ally_core.resources import decoding, updateAssemblyAssembler, \
     assemblyAssembler
 from .encode import updateAssemblyEncodeExportForPath
+from ally.core.http.impl.processor.assembler.node_by_property import NodeByPropertyHandler
 
 
 # --------------------------------------------------------------------
@@ -92,6 +93,9 @@ def pathSlash() -> Handler: return PathSlashHandler()
 def pathGetModel() -> Handler: return PathGetModelHandler()
 
 @ioc.entity
+def nodeByProperty() -> Handler: return NodeByPropertyHandler()
+
+@ioc.entity
 def pathGetAccesible() -> Handler: return PathGetAccesibleHandler()
 
 @ioc.entity
@@ -109,7 +113,7 @@ def encodingPath() -> Handler: return EncodingPathHandler()
 def updateAssemblyAssemblerForHTTPCore():
     assemblyAssembler().add(methodHTTP(), pathInput(), pathUpdate(), invokerShadow(), pathTarget(),
                             pathDomain(), pathWebName(), invokerResources(), invokerNode(), conflictShadow(),
-                            conflictReplace(), conflictResolve(), pathGetModel(), pathGetAccesible(),
+                            conflictReplace(), conflictResolve(), pathGetModel(), nodeByProperty(), pathGetAccesible(),
                             requiredShadow(), pathSlash(), assemblerScheme(), encodingPath(), before=decoding())
     
 @ioc.after(updateAssemblyEncodeExportForPath)

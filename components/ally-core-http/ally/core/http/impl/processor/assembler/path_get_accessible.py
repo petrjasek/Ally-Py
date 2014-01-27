@@ -53,7 +53,7 @@ class Node(Context):
     # ---------------------------------------------------------------- Required
     parent = requires(Context)
     invokers = requires(dict)
-    invokersGet = requires(dict)
+    nodesByProperty = requires(dict)
     child = requires(Context)
     childByName = requires(dict)
     properties = requires(set)
@@ -62,7 +62,7 @@ class Node(Context):
     @rtype: list[tuple(string, Context)]
     The list of invokers tuples that are accessible for this node, the first entry in tuple is a generated invoker name.
     ''')
-    invokersAccessiblePolymorph = defines(list, doc='''
+    invokersAccessiblePolymorph = defines(dict, doc='''
     @rtype: dict{TypeModel:[tuple(string, Context)]}
     The list of invokers tuples that are accessible for this node, the first entry in tuple is a generated invoker name.
     ''')
@@ -106,12 +106,13 @@ class PathGetAccesibleHandler(HandlerProcessor):
                     assert isinstance(prop, TypeProperty)
                     target = prop.parent
                     if target not in register.polymorphs: continue
-                    
+
                     for name, node in self.iterAvailable(current, True, target):
                         if not node.invokers and HTTP_GET not in node.invokers: continue
                         if current.invokersAccessiblePolymorph is None: current.invokersAccessiblePolymorph = dict()
                         accessible = current.invokersAccessiblePolymorph.get(target)
                         if accessible is None: accessible = current.invokersAccessiblePolymorph[target] = []
+                        
                         accessible.append((name, node.invokers[HTTP_GET]))
     
     # ----------------------------------------------------------------
@@ -122,25 +123,27 @@ class PathGetAccesibleHandler(HandlerProcessor):
         '''
         assert isinstance(node, Node), 'Invalid node %s' % node
         assert target is None or isinstance(target, TypeModel), 'Invalid model %s' % target
-
+        
+        iterTarget = self.iterTargetNew
+        
         if target:
-            for cname, cnode in self.iterTarget('', node, target): yield cname, cnode
+            for cname, cnode in iterTarget('', node, target):
+                yield cname, cnode
         
         for cname, cnode in self.iterChildByName('', node):
             if isModel:
                 if cnode.parent and findFirst(cnode.parent, Node.parent, Node.child): yield cname, cnode
             else: yield cname, cnode
             if target:
-                for cname, cnode in self.iterTarget(cname, cnode, target): yield cname, cnode
+                for cname, cnode in iterTarget(cname, cnode, target): yield cname, cnode
         
-        if target and node.invokersGet:
+        if target and node.nodesByProperty:
             for parent in inheritedTypesFrom(target.clazz, TypeModel):
                 assert isinstance(parent, TypeModel), 'Invalid parent %s' % parent
                 if not parent.propertyId: continue
-                propInvoker = node.invokersGet.get(parent.propertyId)
-                if propInvoker and propInvoker.node:
-                    assert isinstance(propInvoker, Invoker), 'Invalid invoker %s' % propInvoker
-                    for cname, cnode in self.iterTarget('', propInvoker.node, parent): yield cname, cnode
+                pnode = node.nodesByProperty.get(parent.propertyId)
+                if pnode:
+                    for cname, cnode in iterTarget('', pnode, parent): yield cname, cnode
     
     def iterTarget(self, name, node, target):
         '''
@@ -150,6 +153,7 @@ class PathGetAccesibleHandler(HandlerProcessor):
         assert isinstance(node, Node), 'Invalid node %s' % node
         if not node.child: return
         assert isinstance(node.child, Node), 'Invalid node %s' % node.child
+        
         for cname, cnode in self.iterChildByName(name, node.child):
             assert isinstance(cnode, Node), 'Invalid node %s' % cnode
             if not cnode.invokers or not HTTP_GET in cnode.invokers: continue
@@ -165,7 +169,57 @@ class PathGetAccesibleHandler(HandlerProcessor):
                         for cname, cnode in self.iterChildByName(cname, cnode): yield cname, cnode
                     break
     
-    def iterChildByName(self, name, node):
+    def iterTargetNew(self, name, node, target):
+        '''
+        Iterates all the nodes that are made available by properties in the target.
+        '''
+        assert isinstance(target, TypeModel), 'Invalid target model %s' % target
+        assert isinstance(node, Node), 'Invalid node %s' % node
+        tnode = node.child or node
+        assert isinstance(tnode, Node), 'Invalid node %s' % tnode
+        
+        # TODO: remove
+#         if nodeName(tnode) == 'Person.child' and nodePath(tnode) == 'HR/Person/*':
+#             print('*', name, ', target:', str(target))
+#             print('*', sorted(cname for cname, _cnode in self.iterAccessibleByName(name, tnode) if cname.find('Person') != -1))
+        
+        for cname, cnode in self.iterAccessibleByName(name, tnode):
+            assert isinstance(cnode, Node), 'Invalid node %s' % cnode
+
+            if not cnode.invokers or not HTTP_GET in cnode.invokers:
+                if cnode.child and cnode.child.invokers and HTTP_GET in cnode.child.invokers: cnode = cnode.child
+                else: continue
+
+            # TODO: remove
+#             if nodeName(tnode) == 'Person.child' and nodePath(tnode) == 'HR/Person/*':
+#                 if cname.find('Person') != -1:
+#                     print('**', nodeName(cnode), ',', cname)
+            
+            invoker = cnode.invokers[HTTP_GET]
+            assert isinstance(invoker, Invoker), 'Invalid invoker %s' % invoker
+            for el in reversed(invoker.path):
+                assert isinstance(el, Element), 'Invalid element %s' % el
+                if not el.property: continue
+                assert isinstance(el.property, TypeProperty), 'Invalid property %s' % el.property
+                
+                if el.property.parent == target and el.property.name in target.properties:
+                    yield cname, cnode
+                    for ccname, ccnode in self.iterChildByName(cname, cnode): yield ccname, ccnode
+                else:
+                    if not tnode.invokers or HTTP_GET not in tnode.invokers: continue
+                    ninvoker = tnode.invokers[HTTP_GET]
+                    assert isinstance(ninvoker, Invoker), 'Invalid invoker %s' % ninvoker
+                    if not ninvoker.path: continue
+                    el = ninvoker.path[len(ninvoker.path)-1]
+                    
+                    if cnode.properties and el.property in cnode.properties and cnode.child:
+                        yield cname, cnode.child
+                        for ccname, ccnode in self.iterChildByName(cname, cnode.child):
+                            yield ccname, ccnode
+
+                break
+    
+    def iterChildByName(self, name, node, exclude=None):
         '''
         Iterates all the nodes that are directly available under the child by name attribute in the node.
         '''
@@ -175,9 +229,48 @@ class PathGetAccesibleHandler(HandlerProcessor):
         while stack:
             name, node = stack.popleft()
             assert isinstance(node, Node), 'Invalid node %s' % node
+            if exclude and exclude == node: continue
             if not node.childByName: continue
             for cname, cnode in node.childByName.items():
                 cname = ''.join((name, cname))
                 yield cname, cnode
                 stack.append((cname, cnode))
+    
+    def iterAccessibleByName(self, name, node):
+        '''
+        Iterates over nodes accessible from the given node.
+        '''
+        assert isinstance(node, Node), 'Invalid node %s' % node
+        for cname, cnode in self.iterChildByName(name, node):
+            yield cname, cnode
+        
+        current = node
+        while current:
+            assert isinstance(current, Node)
+            if not current.parent: return
+            parent = current.parent
+            if not parent.childByName:
+                current = parent.parent
+                continue
             
+            for pname, pnode in self.iterChildByName('', parent, node):
+                yield pname, pnode
+                
+            current = parent
+
+
+# TODO: remove
+def nodePath(node):
+    if node.invokers and HTTP_GET in node.invokers:
+        return '/'.join(el.name or '*' for el in node.invokers[HTTP_GET].path)
+
+def nodeName(node):
+    if not node.parent:
+        return 'root'
+    elif node.parent.childByName:
+        for cname, cnode in node.parent.childByName.items():
+            if cnode == node:
+                return cname
+    elif node.parent.child:
+        return nodeName(node.parent) + '.child'
+    return None

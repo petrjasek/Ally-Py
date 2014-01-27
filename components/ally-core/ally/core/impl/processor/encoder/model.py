@@ -55,7 +55,8 @@ class Node(Context):
     The node context.
     '''
     # ---------------------------------------------------------------- Required
-    invokersGet = requires(dict)
+    nodesByProperty = requires(dict)
+    invokersAccessiblePolymorph = requires(dict)
     
 class Polymorph(Context):
     '''
@@ -132,6 +133,12 @@ class ModelEncode(HandlerBranching):
                     assert isinstance(polymorph, Polymorph), 'Invalid polymorph %s' % polymorph
                     assert isinstance(polymorph.target, TypeModel)
                     
+                    if polymorph.target.propertyId:
+                        pnode = node.nodesByProperty.get(polymorph.target.propertyId)
+                        if pnode and pnode.invokersAccessiblePolymorph:
+                            assert isinstance(pnode, Node)
+                            accessible = pnode.invokersAccessiblePolymorph.get(polymorph.target.propertyId)
+                    
                     properties = self.encodeProperties(processing, polymorph.target, keyargs)
                     if properties is None: raise Abort(create)
                     if modelExtraProcessing: extra = createEncoder(modelExtraProcessing, polymorph.target, **keyargs)
@@ -182,7 +189,7 @@ class ModelEncode(HandlerBranching):
         for k, ord in enumerate(self.typeOrders):
             if prop.type == ord: break
         return k
-       
+
 # --------------------------------------------------------------------
 
 class EncoderModel(TransfromWithSpecifiers):

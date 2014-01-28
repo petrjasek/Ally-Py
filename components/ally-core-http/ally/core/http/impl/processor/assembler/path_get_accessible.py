@@ -99,6 +99,7 @@ class PathGetAccesibleHandler(HandlerProcessor):
                 for name, node in self.iterAvailable(current, invoker.isModel, target):
                     if not node.invokers or HTTP_GET not in node.invokers: continue
                     if current.invokersAccessible is None: current.invokersAccessible = []
+                    
                     current.invokersAccessible.append((name, node.invokers[HTTP_GET]))
                 
             elif register.polymorphs and current.properties:
@@ -124,10 +125,8 @@ class PathGetAccesibleHandler(HandlerProcessor):
         assert isinstance(node, Node), 'Invalid node %s' % node
         assert target is None or isinstance(target, TypeModel), 'Invalid model %s' % target
         
-        iterTarget = self.iterTargetNew
-        
         if target:
-            for cname, cnode in iterTarget('', node, target):
+            for cname, cnode in self.iterTarget('', node, target):
                 yield cname, cnode
         
         for cname, cnode in self.iterChildByName('', node):
@@ -135,7 +134,7 @@ class PathGetAccesibleHandler(HandlerProcessor):
                 if cnode.parent and findFirst(cnode.parent, Node.parent, Node.child): yield cname, cnode
             else: yield cname, cnode
             if target:
-                for cname, cnode in iterTarget(cname, cnode, target): yield cname, cnode
+                for cname, cnode in self.iterTarget(cname, cnode, target): yield cname, cnode
         
         if target and node.nodesByProperty:
             for parent in inheritedTypesFrom(target.clazz, TypeModel):
@@ -143,33 +142,9 @@ class PathGetAccesibleHandler(HandlerProcessor):
                 if not parent.propertyId: continue
                 pnode = node.nodesByProperty.get(parent.propertyId)
                 if pnode:
-                    for cname, cnode in iterTarget('', pnode, parent): yield cname, cnode
+                    for cname, cnode in self.iterTarget('', pnode, parent): yield cname, cnode
     
     def iterTarget(self, name, node, target):
-        '''
-        Iterates all the nodes that are made available by properties in the target.
-        '''
-        assert isinstance(target, TypeModel), 'Invalid target model %s' % target
-        assert isinstance(node, Node), 'Invalid node %s' % node
-        if not node.child: return
-        assert isinstance(node.child, Node), 'Invalid node %s' % node.child
-        
-        for cname, cnode in self.iterChildByName(name, node.child):
-            assert isinstance(cnode, Node), 'Invalid node %s' % cnode
-            if not cnode.invokers or not HTTP_GET in cnode.invokers: continue
-            
-            invoker = cnode.invokers[HTTP_GET]
-            assert isinstance(invoker, Invoker), 'Invalid invoker %s' % invoker
-            for el in reversed(invoker.path):
-                assert isinstance(el, Element), 'Invalid element %s' % el
-                if el.property:
-                    assert isinstance(el.property, TypeProperty), 'Invalid property %s' % el.property
-                    if el.property.parent == target and el.property.name in target.properties:
-                        yield cname, cnode
-                        for cname, cnode in self.iterChildByName(cname, cnode): yield cname, cnode
-                    break
-    
-    def iterTargetNew(self, name, node, target):
         '''
         Iterates all the nodes that are made available by properties in the target.
         '''
@@ -178,11 +153,6 @@ class PathGetAccesibleHandler(HandlerProcessor):
         tnode = node.child or node
         assert isinstance(tnode, Node), 'Invalid node %s' % tnode
         
-        # TODO: remove
-#         if nodeName(tnode) == 'Person.child' and nodePath(tnode) == 'HR/Person/*':
-#             print('*', name, ', target:', str(target))
-#             print('*', sorted(cname for cname, _cnode in self.iterAccessibleByName(name, tnode) if cname.find('Person') != -1))
-        
         for cname, cnode in self.iterAccessibleByName(name, tnode):
             assert isinstance(cnode, Node), 'Invalid node %s' % cnode
 
@@ -190,11 +160,6 @@ class PathGetAccesibleHandler(HandlerProcessor):
                 if cnode.child and cnode.child.invokers and HTTP_GET in cnode.child.invokers: cnode = cnode.child
                 else: continue
 
-            # TODO: remove
-#             if nodeName(tnode) == 'Person.child' and nodePath(tnode) == 'HR/Person/*':
-#                 if cname.find('Person') != -1:
-#                     print('**', nodeName(cnode), ',', cname)
-            
             invoker = cnode.invokers[HTTP_GET]
             assert isinstance(invoker, Invoker), 'Invalid invoker %s' % invoker
             for el in reversed(invoker.path):
@@ -210,7 +175,8 @@ class PathGetAccesibleHandler(HandlerProcessor):
                     ninvoker = tnode.invokers[HTTP_GET]
                     assert isinstance(ninvoker, Invoker), 'Invalid invoker %s' % ninvoker
                     if not ninvoker.path: continue
-                    el = ninvoker.path[len(ninvoker.path)-1]
+                    for el in reversed(ninvoker.path):
+                        if el.property: break
                     
                     if cnode.properties and el.property in cnode.properties and cnode.child:
                         yield cname, cnode.child
@@ -219,7 +185,7 @@ class PathGetAccesibleHandler(HandlerProcessor):
 
                 break
     
-    def iterChildByName(self, name, node, exclude=None):
+    def iterChildByName(self, name, node, exclude=None, nameComposer=lambda name, cname, node: ''.join((name, cname))):
         '''
         Iterates all the nodes that are directly available under the child by name attribute in the node.
         '''
@@ -232,7 +198,7 @@ class PathGetAccesibleHandler(HandlerProcessor):
             if exclude and exclude == node: continue
             if not node.childByName: continue
             for cname, cnode in node.childByName.items():
-                cname = ''.join((name, cname))
+                cname = nameComposer(name, cname, cnode)
                 yield cname, cnode
                 stack.append((cname, cnode))
     
@@ -241,8 +207,7 @@ class PathGetAccesibleHandler(HandlerProcessor):
         Iterates over nodes accessible from the given node.
         '''
         assert isinstance(node, Node), 'Invalid node %s' % node
-        for cname, cnode in self.iterChildByName(name, node):
-            yield cname, cnode
+        for cname, cnode in self.iterChildByName(name, node): yield cname, cnode
         
         current = node
         while current:
@@ -253,24 +218,18 @@ class PathGetAccesibleHandler(HandlerProcessor):
                 current = parent.parent
                 continue
             
-            for pname, pnode in self.iterChildByName('', parent, node):
+            for pname, pnode in self.iterChildByName('', parent, node, lambda name, cname, cnode: self.nodeName(cnode)):
                 yield pname, pnode
-                
+            
             current = parent
 
-
-# TODO: remove
-def nodePath(node):
-    if node.invokers and HTTP_GET in node.invokers:
-        return '/'.join(el.name or '*' for el in node.invokers[HTTP_GET].path)
-
-def nodeName(node):
-    if not node.parent:
-        return 'root'
-    elif node.parent.childByName:
-        for cname, cnode in node.parent.childByName.items():
-            if cnode == node:
-                return cname
-    elif node.parent.child:
-        return nodeName(node.parent) + '.child'
-    return None
+    def nodeName(self, node):
+        '''
+        Return the node name based on the nodes that contain the name:node correspondence dictionary
+        '''
+        if not node.parent: return ''
+        elif node.parent.childByName:
+            for cname, cnode in node.parent.childByName.items():
+                if cnode == node: return cname
+        elif node.parent.child: return self.nodeName(node.parent)
+        return None

@@ -56,7 +56,6 @@ class Node(Context):
     '''
     # ---------------------------------------------------------------- Required
     nodesByProperty = requires(dict)
-    invokersAccessiblePolymorph = requires(dict)
     
 class Polymorph(Context):
     '''
@@ -133,20 +132,17 @@ class ModelEncode(HandlerBranching):
                     assert isinstance(polymorph, Polymorph), 'Invalid polymorph %s' % polymorph
                     assert isinstance(polymorph.target, TypeModel)
                     
-                    if polymorph.target.propertyId:
-                        pnode = node.nodesByProperty.get(polymorph.target.propertyId)
-                        if pnode and pnode.invokersAccessiblePolymorph:
-                            assert isinstance(pnode, Node)
-                            accessible = pnode.invokersAccessiblePolymorph.get(polymorph.target.propertyId)
-                    
                     properties = self.encodeProperties(processing, polymorph.target, keyargs)
                     if properties is None: raise Abort(create)
                     if modelExtraProcessing: extra = createEncoder(modelExtraProcessing, polymorph.target, **keyargs)
                     else: extra = None
                     encoder = EncoderModel(encoderName(create, name), properties, extra, specifiers)
-                     
-                    routings.append((polymorph, encoder))
-                 
+                    self.insertRouting(routings, polymorph, encoder)
+                    
+                    # TODO: remove
+                    for poly, _e in routings:
+                        print('route', poly.target, poly.values)
+                
                 create.encoder = EncoderPolymorph(base, routings)
             else:
                 create.encoder = base
@@ -190,6 +186,15 @@ class ModelEncode(HandlerBranching):
             if prop.type == ord: break
         return k
 
+    def insertRouting(self, routings, polymorph, encoder):
+        for index, (prevpoly, _e) in enumerate(routings):
+            assert isinstance(prevpoly, Polymorph)
+            if len(prevpoly.values) <= len(polymorph.values):
+                routings.insert(index, (polymorph, encoder))
+                break
+        else:
+            routings.append((polymorph, encoder))
+
 # --------------------------------------------------------------------
 
 class EncoderModel(TransfromWithSpecifiers):
@@ -227,7 +232,7 @@ class EncoderModel(TransfromWithSpecifiers):
                 encoder.transform(val, target, support)
                 
             if self.extra: self.extra.transform(value, target, support)
-                
+
         target.end()
 
 class EncoderPolymorph(ITransfrom):
@@ -256,5 +261,5 @@ class EncoderPolymorph(ITransfrom):
             else:
                 encoder = pencoder
                 break
-                
+        
         encoder.transform(value, target, support)

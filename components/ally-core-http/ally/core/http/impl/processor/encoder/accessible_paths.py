@@ -21,6 +21,7 @@ from ally.support.util_sys import locationStack
 from collections import OrderedDict
 import logging
 from ally.support.util_spec import IDo
+from ally.api.type import Type
 
 # --------------------------------------------------------------------
 
@@ -34,6 +35,8 @@ class Node(Context):
     '''
     # ---------------------------------------------------------------- Required
     invokersAccessible = requires(list)
+    invokersAccessiblePolymorph = requires(dict)
+    nodesByProperty = requires(dict)
     
 class Invoker(Context):
     '''
@@ -47,6 +50,8 @@ class Create(Context):
     '''
     The create encoder context.
     '''
+    # ---------------------------------------------------------------- Required
+    objType = requires(Type)
     # ---------------------------------------------------------------- Defined
     encoder = defines(ITransfrom, doc='''
     @rtype: ITransfrom
@@ -78,13 +83,24 @@ class AccessiblePathEncode(HandlerProcessor):
         assert isinstance(invoker, Invoker), 'Invalid invoker %s' % invoker
         assert isinstance(create, Create), 'Invalid create %s' % create
         
-        if not node.invokersAccessible: return  # No accessible paths
         if not invoker.target: return  # No target available
         if create.encoder is not None: return  # There is already an encoder, nothing to do.
+        
+        if invoker.target != create.objType:
+            assert isinstance(invoker.target, TypeModel)
+            
+            invokersAccessible = None
+            if create.objType.propertyId and node.nodesByProperty:
+                pnode = node.nodesByProperty.get(create.objType.propertyId)
+                if pnode and pnode.invokersAccessiblePolymorph:
+                    invokersAccessible = pnode.invokersAccessiblePolymorph.get(create.objType)
+        else: invokersAccessible = node.invokersAccessible
+
+        if not invokersAccessible: return  # No accessible paths
         assert isinstance(invoker.target, TypeModel), 'Invalid target %s' % invoker.target
         
         accessible = []
-        for name, ainvoker in node.invokersAccessible:
+        for name, ainvoker in invokersAccessible:
             assert isinstance(ainvoker, Invoker), 'Invalid invoker %s' % ainvoker
             
             corrupted = False
@@ -99,8 +115,9 @@ class AccessiblePathEncode(HandlerProcessor):
 
             accessible.append(('%s%s' % (invoker.target.name, name), ainvoker))
         accessible.sort(key=firstOf)
-        create.encoder = EncoderAccessiblePath(self.nameRef, OrderedDict(accessible))
         
+        create.encoder = EncoderAccessiblePath(self.nameRef, OrderedDict(accessible))
+
 # --------------------------------------------------------------------
 
 class EncoderAccessiblePath(ITransfrom):

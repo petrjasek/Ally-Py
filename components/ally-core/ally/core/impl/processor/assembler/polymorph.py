@@ -132,6 +132,7 @@ class PolymorphHandler(HandlerProcessor):
                 
                 polymorph.target = target
                 polymorph.parents = []
+                hint = {}
             
                 for parent in target.clazz.__mro__:
                     if parent == target.clazz: continue
@@ -141,7 +142,12 @@ class PolymorphHandler(HandlerProcessor):
                     
                     polymorph.parents.append(parent)
                     
-                    if self.hintName not in parent.hints: break  # This is the root model for polymorph
+                    if self.hintName in parent.hints:
+                        hint.update(parent.hints[self.hintName])
+                    else:
+                        break  # This is the root model for polymorph
+
+                hint.update(target.hints[self.hintName])
                     
                 if not polymorph.parents:
                     log.error('Cannot use invoker because the model %s is set as polymorph \'%s\' but is not '
@@ -149,7 +155,7 @@ class PolymorphHandler(HandlerProcessor):
                     aborted.append(invoker)
                     continue
                 
-                hint, polymorph.values = target.hints[self.hintName], {}
+                polymorph.values = {}
                 valid = False
                 if isinstance(hint, dict) and hint:
                     valid = True

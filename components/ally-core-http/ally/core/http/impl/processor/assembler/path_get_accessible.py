@@ -102,14 +102,14 @@ class PathGetAccesibleHandler(HandlerProcessor):
                     
                     current.invokersAccessible.append((name, node.invokers[HTTP_GET]))
                 
-            elif register.polymorphs and current.properties:
-                for prop in current.properties:
+            if register.polymorphs and current.parent and current.parent.child:
+                for prop in current.parent.properties:
                     assert isinstance(prop, TypeProperty)
                     target = prop.parent
                     if target not in register.polymorphs: continue
 
                     for name, node in self.iterAvailable(current, True, target):
-                        if not node.invokers and HTTP_GET not in node.invokers: continue
+                        if not node.invokers or HTTP_GET not in node.invokers: continue
                         if current.invokersAccessiblePolymorph is None: current.invokersAccessiblePolymorph = dict()
                         accessible = current.invokersAccessiblePolymorph.get(target)
                         if accessible is None: accessible = current.invokersAccessiblePolymorph[target] = []

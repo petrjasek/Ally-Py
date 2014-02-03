@@ -26,6 +26,7 @@ from ..ally_core.resources import assemblyAssembler, injectorAssembly, register
 from ..ally_core_http import definition_header, definition_parameter
 from ..ally_core_http.definition_header import parameterHeaderVerifier
 from ally.documentation.core.impl.processor.mapping import MappingDumpHandler
+from ally.documentation.core.impl.processor.index_model import IndexModelHandler
 
 
 # --------------------------------------------------------------------
@@ -94,6 +95,9 @@ def assemblyMapping() -> Assembly:
 # --------------------------------------------------------------------
 
 @ioc.entity
+def indexModel() -> Handler: return IndexModelHandler()
+
+@ioc.entity
 def indexAPI() -> Handler: return IndexAPIHandler()
 
 @ioc.entity
@@ -151,7 +155,7 @@ def disableUnusedReport():
 
 @ioc.before(assemblyDocumentation)
 def updateAssemblyDocumentation():
-    assemblyDocumentation().add(injectorAssembly(), indexAPI(), indexHeader(), indexHeaderParameters(),
+    assemblyDocumentation().add(injectorAssembly(), indexModel(), indexAPI(), indexHeader(), indexHeaderParameters(),
                                 indexParameter(), template(), generator())
 
 @ioc.before(assemblyMapping)

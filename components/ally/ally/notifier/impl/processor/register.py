@@ -10,18 +10,18 @@ Created on Sep 12, 2013
 
 Registering the listeners for the file notifier.
 '''
+import logging
 import re
+from urllib.parse import urlsplit
 
 from ally.container.ioc import injected
 from ally.design.processor.attribute import defines
-from ally.design.processor.handler import HandlerProcessor
 from ally.design.processor.context import Context
+from ally.design.processor.handler import HandlerProcessor
 from ally.support.util_spec import IDo
-import logging
-from urllib.parse import urlsplit, urljoin
+
 
 # --------------------------------------------------------------------
-
 log = logging.getLogger(__name__)
 
 # --------------------------------------------------------------------

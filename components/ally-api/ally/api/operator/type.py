@@ -343,7 +343,7 @@ class TypeCall(Type):
     input and output from the call.
     '''
 
-    def __init__(self, parent, definer, name, method, inputs, output, hints=None):
+    def __init__(self, parent, definer, name, method, inputs, output, hints=None, doc=None):
         '''
         Constructs the service call type.
         @see: Type.__init__
@@ -362,6 +362,8 @@ class TypeCall(Type):
             The output type for the service call.
         @param hints: dictionary{string: object}|None
             The hints associated with the call.
+        @param doc: string|None
+            The documentation to be associated with the call.
         '''
         assert isinstance(parent, TypeService), 'Invalid parent %s' % parent
         assert isclass(definer), 'Invalid definer class %s' % definer
@@ -369,6 +371,7 @@ class TypeCall(Type):
         assert isinstance(method, int), 'Invalid method %s' % method
         assert isinstance(inputs, (list, tuple)), 'Invalid inputs %s, needs to be a list' % inputs
         assert isinstance(output, Type), 'Invalid output type %s' % output
+        assert doc is None or isinstance(doc, str), 'Invalid documentation %s' % doc
         super().__init__(False, False)
 
         self.parent = parent
@@ -376,6 +379,7 @@ class TypeCall(Type):
         self.name = name
         self.method = method
         self.output = output
+        self.doc = doc
         
         self.inputs = OrderedDict()
         for inp in inputs:

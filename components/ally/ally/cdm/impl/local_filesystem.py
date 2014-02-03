@@ -10,21 +10,23 @@ Created on Jan 5, 2012
 Contains the Content Delivery Manager implementation for local file system
 '''
 
-from ally.cdm.spec import ICDM, UnsupportedProtocol, PathNotFound
-from ally.container.ioc import injected
-from ally.zip.util_zip import normOSPath, normZipPath
+import abc
+from io import BytesIO
+from json.decoder import JSONDecoder
+from json.encoder import JSONEncoder
+import logging
+import os
 from os.path import isdir, isfile, join, dirname, abspath
 from shutil import copyfile, copyfileobj, move, rmtree
 from urllib.parse import urljoin
-import abc
-import logging
-import os
-from json.encoder import JSONEncoder
-from json.decoder import JSONDecoder
-from babel._compat import BytesIO
-from ally.container import wire
-# --------------------------------------------------------------------
 
+from ally.cdm.spec import ICDM, UnsupportedProtocol, PathNotFound
+from ally.container import wire
+from ally.container.ioc import injected
+from ally.zip.util_zip import normOSPath, normZipPath
+
+
+# --------------------------------------------------------------------
 log = logging.getLogger(__name__)
 
 # --------------------------------------------------------------------

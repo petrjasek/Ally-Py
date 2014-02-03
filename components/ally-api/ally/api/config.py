@@ -19,7 +19,7 @@ from .type import typeFor
 from ally.api.operator.type import TypePropertyContainer
 from ally.api.type import List, Input
 from ally.support.util_sys import locationStack
-from inspect import isclass, isfunction
+from inspect import isclass, isfunction, getdoc
 from re import match
 import logging
 
@@ -127,7 +127,7 @@ def model(*args, id=None, name=None, **hints):
                 
                 if not typ.propertyId:
                     raise Exception('Cannot use %s for property \'%s\', because the model has no id defined' % (typ, name))
-                model.properties[name] = TypePropertyContainer(model, name, typ.propertyId, typ)
+                model.properties[name] = TypePropertyContainer(model, name, typ.propertyId.type, typ)
             elif not typ.isPrimitive:
                 raise Exception('Invalid type %s for property \'%s\', only primitives or models allowed' % (typ, name))
             else: model.properties[name] = TypeProperty(model, name, typ)
@@ -145,7 +145,7 @@ def model(*args, id=None, name=None, **hints):
         for name in toSelf:
             if not model.propertyId:
                 raise Exception('Cannot use self %s for property \'%s\', because there is no id defined' % (model, name))
-            model.properties[name] = TypePropertyContainer(model, name, model.propertyId, model)
+            model.properties[name] = TypePropertyContainer(model, name, model.propertyId.type, model)
                 
         return processWithProperties(clazz, model)
     if args: return decorator(*args)
@@ -377,7 +377,7 @@ def service(*generic):
         service = clazz._ally_type = TypeService(clazz)
         for name, function in clazz.__dict__.items():
             if not isfunction(function): continue
-            try: service.calls[name] = TypeCall(service, clazz, *function._ally_call)
+            try: service.calls[name] = TypeCall(service, clazz, *function._ally_call, doc=getdoc(function))
             except AttributeError: raise Exception('No call for method at:%s' % locationStack(function))
             del function._ally_call
 
@@ -393,9 +393,9 @@ def service(*generic):
                     except AttributeError: pass
                     else:
                         if prototype is None: prototype = Prototype(replaces, clazz)
-                        service.calls[name] = TypeCall(service, base, *callPrototype(prototype))
+                        service.calls[name] = TypeCall(service, base, *callPrototype(prototype), doc=getdoc(function))
                         continue
-                    try: service.calls[name] = TypeCall(service, base, *function._ally_call)
+                    try: service.calls[name] = TypeCall(service, base, *function._ally_call, doc=getdoc(function))
                     except AttributeError: raise Exception('No call for inherited method at:%s' % locationStack(function))
                 classes.extend(base.__bases__)
                 
@@ -406,7 +406,7 @@ def service(*generic):
                 for name, cal in inherited.calls.items():
                     assert isinstance(cal, TypeCall)
                     if name not in service.calls:
-                        service.calls[name] = TypeCall(service, cal.definer, *processGenericCall(cal, generics))
+                        service.calls[name] = TypeCall(service, cal.definer, *processGenericCall(cal, generics), doc=cal.doc)
     
         return processAsService(clazz, service)
     if clazz: return decorator(clazz)

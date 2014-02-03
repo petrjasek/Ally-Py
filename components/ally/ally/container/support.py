@@ -13,7 +13,7 @@ from collections import Iterable
 from functools import partial
 from inspect import isclass, ismodule, getsource, isfunction, ismethod
 
-from ally.design.priority import Priority, PRIORITY_NORMAL, sortByPriorities
+from ally.design.priority import Priority, sortByPriorities
 
 from ..support.util_sys import callerLocals
 from ._impl._assembly import Assembly

@@ -16,19 +16,17 @@ if True:
 
 # --------------------------------------------------------------------
 
-from ally.cdm.impl.local_filesystem import HTTPDelivery, LocalFileSystemCDM, \
-    LocalFileSystemLinkCDM
-from ally.cdm.spec import PathNotFound
-from ally.zip.util_zip import normOSPath
-from datetime import datetime
 from io import BytesIO
-from os import makedirs, remove, sep, stat
+from os import makedirs, remove, stat
 from os.path import join, dirname, isfile, isdir
+import re
 from shutil import rmtree
 from tempfile import NamedTemporaryFile, TemporaryDirectory
-import json
-import re
 import unittest
+
+from ally.cdm.impl.local_filesystem import HTTPDelivery, LocalFileSystemCDM
+from ally.zip.util_zip import normOSPath
+
 
 normpath = lambda txt: re.sub('[\\W]+', '', txt)
 

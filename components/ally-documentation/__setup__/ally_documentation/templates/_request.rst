@@ -4,12 +4,15 @@
 **{{ request['path'] }}**
 ==========================================================
 
+{{ request['doc'] }}
+
+
  * The request is defined by API call ``{{ request['call'] }}``
 {% block description %}{% endblock %}
 
 URL parameters
 -------------------------------------
-TODO:
+{{ request['url'] }}
 
 
 Query parameters

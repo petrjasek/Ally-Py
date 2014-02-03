@@ -20,7 +20,7 @@ try: from __unit_test__.ally.api.config.config_models import Entity, APIModel
 except ImportError: from .config_models import Entity, APIModel
 from ally.api.config import service, call, GET
 from ally.api.operator.type import TypeCall
-from ally.api.type import Integer, Number, String, typeFor, Non
+from ally.api.type import Integer, Number, String, typeFor
 import unittest
 
 # --------------------------------------------------------------------

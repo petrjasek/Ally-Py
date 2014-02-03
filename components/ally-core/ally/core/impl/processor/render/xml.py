@@ -359,7 +359,7 @@ class RenderXML(XMLGenerator, IRender):
                 index = self._index(PATTERN_XML_BLOCK % indexBlock)
                 self._block = True
             else: index = None
-        
+
         if self._pending_start_element:
             self._write('>')
             if self._pendingStart: self._pendingStart(EIND_TAG)

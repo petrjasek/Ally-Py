@@ -15,7 +15,7 @@ from ally.api.type import Type, Iter
 from ally.design.processor.attribute import requires, defines
 from ally.design.processor.context import Context
 from ally.design.processor.handler import HandlerProcessor
-from ally.http.spec.server import HTTP_PUT, HTTP_LINK, HTTP_GET
+from ally.http.spec.server import HTTP_PUT, HTTP_GET, HTTP_DELETE
 
 
 # --------------------------------------------------------------------
@@ -37,6 +37,8 @@ class Invoker(Context):
     target = requires(TypeModel)
     isCollection = requires(bool)
     call = requires(TypeCall)
+    filterName = requires(str)
+    links = requires(set)
     
 class Element(Context):
     '''
@@ -44,6 +46,7 @@ class Element(Context):
     '''
     # ---------------------------------------------------------------- Required
     name = requires(str)
+    property = requires(TypeProperty)
     
 class Document(Context):
     '''
@@ -58,6 +61,8 @@ class Document(Context):
     @rtype: list[tuple(Context, dictionary{string: object})]
     The list containing tuples with the invoker context and the data dictionary associated with it.
     ''')
+    # ---------------------------------------------------------------- Required
+    modelData = requires(dict)
       
 # --------------------------------------------------------------------
 
@@ -91,27 +96,47 @@ class IndexAPIHandler(HandlerProcessor):
         for invoker in register.invokers:
             assert isinstance(invoker, Invoker), 'Invalid invoker %s' % invoker
             if not invoker.path: continue
+            if invoker.filterName is not None: continue  # We remove the filters which are not direct part of the API.
             
             request = {}
             requests.append(request)
             
             method = invoker.methodHTTP
-            if method == HTTP_PUT and invoker.target is None: method = HTTP_LINK
-            
+            if method == HTTP_PUT and invoker.target is None: method = 'LINK'
+            if method == HTTP_DELETE and invoker.links and len(invoker.links) > 1: method = 'UNLINK'
+
             mrequests = methods.get(method)
             if mrequests is None: mrequests = methods[method] = []
             mrequests.append(request)
             
             request['path'] = '/'.join(el.name if el.name else '*' for el in invoker.path)
+            
+            pathParams = request['path_params'] = []
+            for el in invoker.path:
+                if el.name: continue
+                paramData = {'name': str(el.property)}
+                pathParams.append(paramData)
+                paramData['entity'] = document.modelData[el.property.parent]
+            
             request['method'] = method
+            request['doc'] = invoker.call.doc
             assert isinstance(invoker.call, TypeCall), 'Invalid invoker call %s' % invoker.call
             assert isinstance(invoker.call.parent, TypeService), 'Invalid call parent %s' % invoker.call.parent
             request['call'] = '%s.%s.%s' % (invoker.call.parent.clazz.__module__,
                                             invoker.call.parent.clazz.__name__, invoker.call.name)
             
-            if invoker.target:
-                assert isinstance(invoker.target, TypeModel), 'Invalid target %s' % invoker.target
-                request['target'] = '%s.%s' % (invoker.target.clazz.__module__, invoker.target.clazz.__name__)
+            models = set()
+            if invoker.links: models.update(invoker.links)
+            if invoker.target: models.add(invoker.target)
+            
+            for target in models:
+                assert isinstance(target, TypeModel), 'Invalid target %s' % target
+                entity = request['entity'] = document.modelData[target]
+                modelMethods = entity['model'].get('methods')
+                if modelMethods is None: modelMethods = entity['model']['methods'] = {}
+                modelRequests = modelMethods.get(method)
+                if modelRequests is None: modelRequests = modelMethods[method] = []
+                modelRequests.append(request)
             
             flags = request['flags'] = set()
             
@@ -136,3 +161,10 @@ class IndexAPIHandler(HandlerProcessor):
         
         for mrequests in methods.values():
             mrequests.sort(key=lambda request: request['path'])
+        
+        for entity in document.modelData.values():
+            for requests in entity['model']['methods'].values():
+                requests.sort(key=lambda request: request['path'])
+                requests.sort(key=lambda request: 'isModel' not in request['flags'])  # We put the get model first
+                 
+        

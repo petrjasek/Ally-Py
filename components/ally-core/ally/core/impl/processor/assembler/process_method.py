@@ -12,11 +12,12 @@ Provides the processing on callers based on methods.
 from ally.api.config import GET, INSERT, UPDATE, DELETE
 from ally.api.operator.type import TypeProperty, TypeModel
 from ally.api.type import Iter, Type, Input
-from ally.design.processor.attribute import requires, defines
+from ally.design.processor.attribute import requires, defines, definesIf
 from ally.design.processor.context import Context
 from ally.design.processor.execution import Abort
 from ally.design.processor.handler import HandlerProcessor
 import logging
+from ally.support.util_spec import IDo
 
 # --------------------------------------------------------------------
 
@@ -30,6 +31,7 @@ class Register(Context):
     '''
     # ---------------------------------------------------------------- Required
     invokers = requires(list)
+    doCopyInvoker = requires(IDo)
     
 class Invoker(Context):
     '''
@@ -51,6 +53,10 @@ class Invoker(Context):
     modelInput = defines(Input, doc='''
     @rtype: Input
     The input that is expected to receive a model object, this is only available for INSERT or UPDATE methods.
+    ''')
+    links = definesIf(set, doc='''
+    @rtype: set(TypeModel)
+    The models that are linked by the caller.
     ''')
     # ---------------------------------------------------------------- Required
     method = requires(int)
@@ -92,6 +98,8 @@ class ProcessMethodHandler(HandlerProcessor):
             if not keep: aborted.append(invoker)
         
         if aborted: raise Abort(*aborted)
+        
+        register.doCopyInvoker = self.createCopyInvoker(register.doCopyInvoker)
 
     # ----------------------------------------------------------------
     
@@ -142,6 +150,9 @@ class ProcessMethodHandler(HandlerProcessor):
         if inputs: invoker.modelInput = inputs[0]
             
         invoker.target = output
+        if Invoker.links in invoker:
+            if invoker.links is None: invoker.links = set()
+            invoker.links.update(inp.type.parent for inp in invoker.inputs if isinstance(inp.type, TypeProperty))
         return True
  
     def processUPDATE(self, invoker):
@@ -158,6 +169,9 @@ class ProcessMethodHandler(HandlerProcessor):
         if inputs:
             invoker.modelInput = inputs[0]
             invoker.target = invoker.modelInput.type
+        if Invoker.links in invoker:
+            if invoker.links is None: invoker.links = set()
+            invoker.links.update(inp.type.parent for inp in invoker.inputs if isinstance(inp.type, TypeProperty))
         return True
     
     def processDELETE(self, invoker):
@@ -169,4 +183,25 @@ class ProcessMethodHandler(HandlerProcessor):
         if not invoker.output.isOf(bool):
             log.error('Cannot use because a boolean return is expected, at:%s', invoker.location)
             return False
+        if Invoker.links in invoker:
+            if invoker.links is None: invoker.links = set()
+            invoker.links.update(inp.type.parent for inp in invoker.inputs if isinstance(inp.type, TypeProperty))
         return True
+    
+    # ----------------------------------------------------------------
+    
+    def createCopyInvoker(self, copyInvoker):
+        assert isinstance(copyInvoker, IDo), 'Invalid copy invoker %s' % copyInvoker
+        def doCopy(destination, source, exclude=None):
+            '''
+            Do copy the invoker.
+            '''
+            assert isinstance(destination, Invoker), 'Invalid destination %s' % destination
+            assert isinstance(source, Invoker), 'Invalid source %s' % source
+            assert exclude is None or isinstance(exclude, set), 'Invalid exclude %s' % exclude
+            
+            if Invoker.links in source and Invoker.links in destination:
+                if not(exclude and 'links' not in exclude) and source.links: destination.links = set(source.links)
+            
+            return copyInvoker(destination, source, exclude=exclude)
+        return doCopy

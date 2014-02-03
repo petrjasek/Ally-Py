@@ -9,7 +9,7 @@ Created on Mar 9, 2012
 API specifications for PO file management.
 '''
 
-from ally.api.config import service, call, model
+from ally.api.config import service, call
 from ally.api.model import Content
 from ally.api.type import Scheme, Reference
 from internationalization.api.domain import modelLocalization

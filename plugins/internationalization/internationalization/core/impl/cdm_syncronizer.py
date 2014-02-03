@@ -15,9 +15,9 @@ from ally.container.support import setup
 from ally.cdm.spec import ICDM
 from ally.container import wire
 from os.path import join
-from babel._compat import BytesIO
 from babel.messages.catalog import Catalog
 from babel.messages.pofile import write_po
+from io import BytesIO
   
 # --------------------------------------------------------------------
 
@@ -43,7 +43,7 @@ class POCDMSyncronyzer(ICDMSyncronizer):
     filename_pot = 'messages.pot'; wire.config('filename_pot', doc='''Filename of POT file in CDM''')
     # The format of the pot files. 
     
-    #TODO: get rid of this from here
+    # TODO: get rid of this from here
     write_po_config = {
                        'no_location': False,
                        'omit_header': False,

@@ -138,10 +138,6 @@ class ModelEncode(HandlerBranching):
                     else: extra = None
                     encoder = EncoderModel(encoderName(create, name), properties, extra, specifiers)
                     self.insertRouting(routings, polymorph, encoder)
-                    
-                    # TODO: remove
-                    for poly, _e in routings:
-                        print('route', poly.target, poly.values)
                 
                 create.encoder = EncoderPolymorph(base, routings)
             else:

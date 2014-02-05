@@ -22,7 +22,7 @@ log = logging.getLogger(__name__)
 
 # --------------------------------------------------------------------
 
-def inheritedTypesFrom(clazz, forType=Type):
+def inheritedTypesFrom(clazz, forType=Type, inDepth=False):
     '''
     Extracts the inherited types for class.
     
@@ -30,6 +30,9 @@ def inheritedTypesFrom(clazz, forType=Type):
         The class to extract the inherited types from.
     @param forType: class
         The type to be extracted, the type needs to be a subclass of Type.
+    @param inDepth: bool
+        Search in depth if true, otherwise return only the first level
+        of inherited types.
     @return: list[Type]
         A list of the extracted types.
     '''
@@ -37,7 +40,8 @@ def inheritedTypesFrom(clazz, forType=Type):
     assert issubclass(forType, Type), 'Invalid for type class %s' % forType
 
     types = []
-    for base in clazz.__bases__:
+    bases = clazz.__bases__ if not inDepth else clazz.__mro__
+    for base in bases:
         type = typeFor(base)
         if type and isinstance(type, forType): types.append(type)
 

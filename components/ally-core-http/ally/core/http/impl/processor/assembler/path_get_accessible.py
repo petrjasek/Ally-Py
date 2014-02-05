@@ -28,6 +28,7 @@ class Register(Context):
     # ---------------------------------------------------------------- Required
     nodes = requires(list)
     polymorphs = requires(dict)
+    polymorphed = requires(dict)
     
 class Invoker(Context):
     '''
@@ -58,15 +59,21 @@ class Node(Context):
     childByName = requires(dict)
     properties = requires(set)
     # ---------------------------------------------------------------- Defined
-    invokersAccessible = defines(list, doc='''
-    @rtype: list[tuple(string, Context)]
-    The list of invokers tuples that are accessible for this node, the first entry in tuple is a generated invoker name.
-    ''')
-    invokersAccessiblePolymorph = defines(dict, doc='''
+    invokersAccessible = defines(dict, doc='''
     @rtype: dict{TypeModel:[tuple(string, Context)]}
-    The list of invokers tuples that are accessible for this node, the first entry in tuple is a generated invoker name.
+    The dictionary of list of invokers tuples that are accessible for this node for the key model.
+    The first entry in tuple is a generated invoker name.
     ''')
     
+class Polymorph(Context):
+    '''
+    The polymorph context.
+    '''
+    # ---------------------------------------------------------------- Required
+    target = requires(TypeModel)
+    parents = requires(list)
+    values = requires(dict)
+
 # --------------------------------------------------------------------
 
 class PathGetAccesibleHandler(HandlerProcessor):
@@ -86,6 +93,7 @@ class PathGetAccesibleHandler(HandlerProcessor):
         assert isinstance(register, Register), 'Invalid register %s' % register
         if not register.nodes: return  # No nodes to process
         
+        invokersAccessiblePolymorph = dict()
         for current in register.nodes:
             assert isinstance(current, Node), 'Invalid node %s' % current
             
@@ -98,25 +106,59 @@ class PathGetAccesibleHandler(HandlerProcessor):
                 
                 for name, node in self.iterAvailable(current, invoker.isModel, target):
                     if not node.invokers or HTTP_GET not in node.invokers: continue
-                    if current.invokersAccessible is None: current.invokersAccessible = []
-                    
-                    current.invokersAccessible.append((name, node.invokers[HTTP_GET]))
-                
+                    self.appendAccessible(current, target, name, node.invokers[HTTP_GET])
+            
             if register.polymorphs and current.parent and current.parent.child:
                 for prop in current.parent.properties:
                     assert isinstance(prop, TypeProperty)
                     target = prop.parent
+                    assert isinstance(target, TypeModel)
                     if target not in register.polymorphs: continue
-
+                    
                     for name, node in self.iterAvailable(current, True, target):
                         if not node.invokers or HTTP_GET not in node.invokers: continue
-                        if current.invokersAccessiblePolymorph is None: current.invokersAccessiblePolymorph = dict()
-                        accessible = current.invokersAccessiblePolymorph.get(target)
-                        if accessible is None: accessible = current.invokersAccessiblePolymorph[target] = []
+                        invokersAccessible = invokersAccessiblePolymorph.get(current)
+                        if invokersAccessible is None: invokersAccessible = invokersAccessiblePolymorph[current] = {}
+                        accessible = invokersAccessible.get(target)
+                        if accessible is None: accessible = invokersAccessible[target] = []
                         
                         accessible.append((name, node.invokers[HTTP_GET]))
+        
+        if not register.polymorphs or not invokersAccessiblePolymorph: return
+        
+        for current in register.nodes:
+            assert isinstance(current, Node), 'Invalid node %s' % current
+            if not current.nodesByProperty: continue
+            
+            if not current.invokers or HTTP_GET not in current.invokers: continue
+            invoker = current.invokers[HTTP_GET]
+            assert isinstance(invoker, Invoker)
+
+            if not invoker.isModel or not invoker.target or invoker.target not in register.polymorphed: continue
+            
+            for polymorph in register.polymorphed[invoker.target]:
+                assert isinstance(polymorph, Polymorph), 'Invalid polymorph %s' % polymorph
+                assert isinstance(polymorph.target, TypeModel)
+                
+                propertyId = polymorph.target.propertyId
+                if not propertyId or propertyId not in current.nodesByProperty: continue
+                
+                node = current.nodesByProperty[propertyId]
+                if node in invokersAccessiblePolymorph:
+                    if current.invokersAccessible is None: current.invokersAccessible = dict()
+                    current.invokersAccessible.update(invokersAccessiblePolymorph[node])
     
     # ----------------------------------------------------------------
+    
+    def appendAccessible(self, node, target, name, invoker):
+        '''
+        Appends the accessible invoker for the given target to the given node.
+        '''
+        assert isinstance(node, Node)
+        if node.invokersAccessible is None: node.invokersAccessible = dict()
+        accessible = node.invokersAccessible
+        if accessible.get(target) is None: accessible[target] = []
+        accessible[target].append((name, invoker))
     
     def iterAvailable(self, node, isModel, target):
         '''

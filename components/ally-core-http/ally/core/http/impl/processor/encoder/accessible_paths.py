@@ -34,8 +34,7 @@ class Node(Context):
     The node context.
     '''
     # ---------------------------------------------------------------- Required
-    invokersAccessible = requires(list)
-    invokersAccessiblePolymorph = requires(dict)
+    invokersAccessible = requires(dict)
     nodesByProperty = requires(dict)
     
 class Invoker(Context):
@@ -86,21 +85,11 @@ class AccessiblePathEncode(HandlerProcessor):
         if not invoker.target: return  # No target available
         if create.encoder is not None: return  # There is already an encoder, nothing to do.
         
-        if invoker.target != create.objType:
-            assert isinstance(invoker.target, TypeModel)
-            
-            invokersAccessible = None
-            if create.objType.propertyId and node.nodesByProperty:
-                pnode = node.nodesByProperty.get(create.objType.propertyId)
-                if pnode and pnode.invokersAccessiblePolymorph:
-                    invokersAccessible = pnode.invokersAccessiblePolymorph.get(create.objType)
-        else: invokersAccessible = node.invokersAccessible
-
-        if not invokersAccessible: return  # No accessible paths
+        if not node.invokersAccessible or create.objType not in node.invokersAccessible: return  # No accessible paths
         assert isinstance(invoker.target, TypeModel), 'Invalid target %s' % invoker.target
         
         accessible = []
-        for name, ainvoker in invokersAccessible:
+        for name, ainvoker in node.invokersAccessible[create.objType]:
             assert isinstance(ainvoker, Invoker), 'Invalid invoker %s' % ainvoker
             
             corrupted = False

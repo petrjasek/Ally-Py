@@ -20,6 +20,7 @@ from ally.design.processor.execution import Abort
 from ally.design.processor.handler import HandlerProcessor
 from ally.support.api.util_service import isAvailableIn
 from ally.api.config import GET
+from ally.api.operator.extract import inheritedTypesFrom
 
 
 # --------------------------------------------------------------------
@@ -133,11 +134,9 @@ class PolymorphHandler(HandlerProcessor):
                 polymorph.target = target
                 polymorph.parents = []
                 hint = {}
-            
-                for parent in target.clazz.__mro__:
+                
+                for parent in inheritedTypesFrom(target.clazz, TypeModel, inDepth=True):
                     if parent == target.clazz: continue
-                    parent = typeFor(parent)
-                    if not isinstance(parent, TypeModel): continue
                     assert isinstance(parent, TypeModel)
                     
                     polymorph.parents.append(parent)

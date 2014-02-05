@@ -55,7 +55,7 @@ class Node(Context):
     The node context.
     '''
     # ---------------------------------------------------------------- Required
-    invokersGet = requires(dict)
+    nodesByProperty = requires(dict)
     
 class Polymorph(Context):
     '''
@@ -137,9 +137,8 @@ class ModelEncode(HandlerBranching):
                     if modelExtraProcessing: extra = createEncoder(modelExtraProcessing, polymorph.target, **keyargs)
                     else: extra = None
                     encoder = EncoderModel(encoderName(create, name), properties, extra, specifiers)
-                     
-                    routings.append((polymorph, encoder))
-                 
+                    self.insertRouting(routings, polymorph, encoder)
+                
                 create.encoder = EncoderPolymorph(base, routings)
             else:
                 create.encoder = base
@@ -182,7 +181,16 @@ class ModelEncode(HandlerBranching):
         for k, ord in enumerate(self.typeOrders):
             if prop.type == ord: break
         return k
-       
+
+    def insertRouting(self, routings, polymorph, encoder):
+        for index, (prevpoly, _e) in enumerate(routings):
+            assert isinstance(prevpoly, Polymorph)
+            if len(prevpoly.values) <= len(polymorph.values):
+                routings.insert(index, (polymorph, encoder))
+                break
+        else:
+            routings.append((polymorph, encoder))
+
 # --------------------------------------------------------------------
 
 class EncoderModel(TransfromWithSpecifiers):
@@ -220,7 +228,7 @@ class EncoderModel(TransfromWithSpecifiers):
                 encoder.transform(val, target, support)
                 
             if self.extra: self.extra.transform(value, target, support)
-                
+
         target.end()
 
 class EncoderPolymorph(ITransfrom):
@@ -249,5 +257,5 @@ class EncoderPolymorph(ITransfrom):
             else:
                 encoder = pencoder
                 break
-                
+        
         encoder.transform(value, target, support)

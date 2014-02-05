@@ -241,7 +241,7 @@ class NodeRequired(Context):
     '''
     # ---------------------------------------------------------------- Required
     invokers = requires(dict)
-    invokersAccessible = requires(list)
+    invokersAccessible = requires(dict)
     
 # --------------------------------------------------------------------
 
@@ -274,10 +274,13 @@ class RequiredShadowHandler(HandlerProcessor):
             
             if not node.invokersAccessible: aborted.append(invoker)
             else:
-                assert isinstance(node.invokersAccessible, list), 'Invalid accessible invokers %s' % node.invokersAccessible
+                assert isinstance(node.invokersAccessible, dict), 'Invalid accessible invokers %s' % node.invokersAccessible
                 if invoker.shadowing.node.invokersAccessible:
-                    node.invokersAccessible.reverse()
-                    node.invokersAccessible.extend(invoker.shadowing.node.invokersAccessible)
-                    node.invokersAccessible.reverse()
+                    for model, accessible in invoker.shadowing.node.invokersAccessible.items():
+                        saccessible = node.invokersAccessible.get(model)
+                        if saccessible is None: saccessible = node.invokersAccessible[model] = []
+                        saccessible.reverse()
+                        saccessible.extend(accessible)
+                        saccessible.reverse()
         
         if aborted: raise Abort(*aborted)

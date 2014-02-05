@@ -86,6 +86,7 @@ class PathGetModelHandler(HandlerProcessor):
         # We get all the nodes
         stack, nstack = deque(), deque()
         stack.append((register.root, {}))
+        stackNodes = set()
         while stack:
             current, invokersGet = stack.popleft()
             nstack.append(current)
@@ -113,7 +114,8 @@ class PathGetModelHandler(HandlerProcessor):
                         assert isinstance(el.property, TypeProperty), 'Invalid element property %s' % el.property
                         if el.property.parent == invoker.target: current.invokersGet[el.property] = invoker
                         break
-                    stack.append((node.child, current.invokersGet))
+                    if not node.child in stackNodes:
+                        stack.append((node.child, current.invokersGet))
             
         for invoker in register.invokers:
             assert isinstance(invoker, Invoker), 'Invalid invoker %s' % invoker

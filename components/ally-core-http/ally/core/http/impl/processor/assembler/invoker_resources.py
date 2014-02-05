@@ -36,7 +36,7 @@ class Node(Context):
     The node context.
     '''
     # ---------------------------------------------------------------- Required
-    invokersAccessible = requires(list)
+    invokersAccessible = requires(dict)
 
 class InvokerResources(Context):
     '''
@@ -121,12 +121,13 @@ class EncoderResources(ITransfrom):
         
         target.beginCollection(self.nameResources)
         node = self.invoker.node
-        if node:
+        if node and node.invokersAccessible:
             assert isinstance(node, Node), 'Invalid node %s' % node
-            if node.invokersAccessible:
-                indexes = dict(indexBlock=NAME_BLOCK_REST, indexAttributesCapture={self.nameRef: ACTION_REFERENCE})
-                for name, invoker in sorted(node.invokersAccessible, key=firstOf):
-                    assert isinstance(invoker, InvokerResources), 'Invalid invoker %s' % invoker
-                    assert isinstance(invoker.doEncodePath, IDo), 'Invalid path encode %s' % invoker.doEncodePath
-                    target.beginObject(name, attributes={self.nameRef: invoker.doEncodePath(support)}, **indexes).end()
+            accessible = []
+            for val in node.invokersAccessible.values(): accessible.extend(val)
+            indexes = dict(indexBlock=NAME_BLOCK_REST, indexAttributesCapture={self.nameRef: ACTION_REFERENCE})
+            for name, invoker in sorted(accessible, key=firstOf):
+                assert isinstance(invoker, InvokerResources), 'Invalid invoker %s' % invoker
+                assert isinstance(invoker.doEncodePath, IDo), 'Invalid path encode %s' % invoker.doEncodePath
+                target.beginObject(name, attributes={self.nameRef: invoker.doEncodePath(support)}, **indexes).end()
         target.end()

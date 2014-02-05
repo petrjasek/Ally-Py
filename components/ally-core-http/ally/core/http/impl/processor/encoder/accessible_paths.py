@@ -21,6 +21,7 @@ from ally.support.util_sys import locationStack
 from collections import OrderedDict
 import logging
 from ally.support.util_spec import IDo
+from ally.api.type import Type
 
 # --------------------------------------------------------------------
 
@@ -33,7 +34,8 @@ class Node(Context):
     The node context.
     '''
     # ---------------------------------------------------------------- Required
-    invokersAccessible = requires(list)
+    invokersAccessible = requires(dict)
+    nodesByProperty = requires(dict)
     
 class Invoker(Context):
     '''
@@ -47,6 +49,8 @@ class Create(Context):
     '''
     The create encoder context.
     '''
+    # ---------------------------------------------------------------- Required
+    objType = requires(Type)
     # ---------------------------------------------------------------- Defined
     encoder = defines(ITransfrom, doc='''
     @rtype: ITransfrom
@@ -78,13 +82,14 @@ class AccessiblePathEncode(HandlerProcessor):
         assert isinstance(invoker, Invoker), 'Invalid invoker %s' % invoker
         assert isinstance(create, Create), 'Invalid create %s' % create
         
-        if not node.invokersAccessible: return  # No accessible paths
         if not invoker.target: return  # No target available
         if create.encoder is not None: return  # There is already an encoder, nothing to do.
+        
+        if not node.invokersAccessible or create.objType not in node.invokersAccessible: return  # No accessible paths
         assert isinstance(invoker.target, TypeModel), 'Invalid target %s' % invoker.target
         
         accessible = []
-        for name, ainvoker in node.invokersAccessible:
+        for name, ainvoker in node.invokersAccessible[create.objType]:
             assert isinstance(ainvoker, Invoker), 'Invalid invoker %s' % ainvoker
             
             corrupted = False
@@ -99,8 +104,9 @@ class AccessiblePathEncode(HandlerProcessor):
 
             accessible.append(('%s%s' % (invoker.target.name, name), ainvoker))
         accessible.sort(key=firstOf)
-        create.encoder = EncoderAccessiblePath(self.nameRef, OrderedDict(accessible))
         
+        create.encoder = EncoderAccessiblePath(self.nameRef, OrderedDict(accessible))
+
 # --------------------------------------------------------------------
 
 class EncoderAccessiblePath(ITransfrom):

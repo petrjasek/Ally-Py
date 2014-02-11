@@ -18,6 +18,7 @@ from ally.http.spec.server import HTTP_GET
 from ally.support.api.util_service import isCompatible
 from ally.support.util_spec import IDo
 import logging
+from ally.type_legacy import OrderedDict
 
 # --------------------------------------------------------------------
 
@@ -273,14 +274,11 @@ class RequiredShadowHandler(HandlerProcessor):
             assert isinstance(invoker.shadowing.node, NodeRequired), 'Invalid node %s' % invoker.shadowing.node
             
             if not node.invokersAccessible: aborted.append(invoker)
-            else:
-                assert isinstance(node.invokersAccessible, dict), 'Invalid accessible invokers %s' % node.invokersAccessible
-                if invoker.shadowing.node.invokersAccessible:
-                    for model, accessible in invoker.shadowing.node.invokersAccessible.items():
-                        saccessible = node.invokersAccessible.get(model)
-                        if saccessible is None: saccessible = node.invokersAccessible[model] = []
-                        saccessible.reverse()
-                        saccessible.extend(accessible)
-                        saccessible.reverse()
+            elif node.invokersAccessible == invoker.shadowing.node.invokersAccessible: aborted.append(invoker)
+            elif invoker.shadowing.node.invokersAccessible:
+                for model, accessible in invoker.shadowing.node.invokersAccessible.items():
+                    saccessible = node.invokersAccessible.get(model)
+                    if saccessible is None: saccessible = node.invokersAccessible[model] = OrderedDict()
+                    saccessible.update(accessible)
         
         if aborted: raise Abort(*aborted)

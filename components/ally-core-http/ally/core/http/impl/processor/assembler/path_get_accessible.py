@@ -1,23 +1,22 @@
 '''
-Created on May 31, 2013
+Created on Feb 7, 2014
 
 @package: ally core http
-@copyright: 2011 Sourcefabric o.p.s.
+@copyright: 2014 Sourcefabric o.p.s.
 @license: http://www.gnu.org/licenses/gpl-3.0.txt
-@author: Gabriel Nistor
+@author: Mugur Rus
 
 Finds all get invokers that can be directly accessed without the need of extra information, basically all paths that can be
 directly related to a node.
 '''
 
-from ally.api.operator.extract import inheritedTypesFrom
 from ally.api.operator.type import TypeModel, TypeProperty
-from ally.design.processor.attribute import requires, defines
+from ally.design.processor.attribute import requires, defines, optional
 from ally.design.processor.context import Context
 from ally.design.processor.handler import HandlerProcessor
 from ally.http.spec.server import HTTP_GET
-from collections import deque
-from ally.support.util_context import findFirst
+from ally.api.operator.extract import inheritedTypesFrom
+from collections import OrderedDict
 
 # --------------------------------------------------------------------
 
@@ -26,18 +25,22 @@ class Register(Context):
     The register context.
     '''
     # ---------------------------------------------------------------- Required
+    invokers = requires(list)
     nodes = requires(list)
-    polymorphs = requires(dict)
     polymorphed = requires(dict)
     
 class Invoker(Context):
     '''
     The invoker context.
     '''
+    # ---------------------------------------------------------------- Optional
+    shadowing = optional(Context)
     # ---------------------------------------------------------------- Required
     node = requires(Context)
     target = requires(TypeModel)
     isModel = requires(bool)
+    isCollection = requires(bool)
+    methodHTTP = requires(str)
     path = requires(list)
     
 class Element(Context):
@@ -45,6 +48,7 @@ class Element(Context):
     The element context.
     '''
     # ---------------------------------------------------------------- Required
+    name = requires(str)
     property = requires(TypeProperty)
 
 class Node(Context):
@@ -64,7 +68,7 @@ class Node(Context):
     The dictionary of list of invokers tuples that are accessible for this node for the key model.
     The first entry in tuple is a generated invoker name.
     ''')
-    
+
 class Polymorph(Context):
     '''
     The polymorph context.
@@ -93,185 +97,111 @@ class PathGetAccesibleHandler(HandlerProcessor):
         assert isinstance(register, Register), 'Invalid register %s' % register
         if not register.nodes: return  # No nodes to process
         
-        invokersAccessiblePolymorph = dict()
-        for current in register.nodes:
-            assert isinstance(current, Node), 'Invalid node %s' % current
+        mandatories = {}
+        for invoker in register.invokers:
+            assert isinstance(invoker, Invoker), 'Invalid invoker %s' % invoker
+            if invoker.methodHTTP != HTTP_GET: continue
             
-            if current.invokers and HTTP_GET in current.invokers:
-                # The available paths are compiled only for nodes that have a get invoker that can use them.
-                target = None
-                invoker = current.invokers[HTTP_GET]
-                assert isinstance(invoker, Invoker)
-                if invoker.isModel and invoker.target: target = invoker.target
+            if not invoker.isModel or not invoker.target: continue
+            
+            assert isinstance(invoker.target, TypeModel)
+            package = mandatories.get(invoker.target)
+            if package is None:
+                mandatory, types = set(), set(inheritedTypesFrom(invoker.target.clazz, TypeModel, inDepth=True))
+                for model in types:
+                    assert isinstance(model, TypeModel)
+                    mandatory.update(model.properties.values())
+                mandatories[invoker.target] = (mandatory, types)
+            else:
+                mandatory, types = package
                 
-                for name, node in self.iterAvailable(current, invoker.isModel, target):
-                    if not node.invokers or HTTP_GET not in node.invokers: continue
-                    self.appendAccessible(current, target, name, node.invokers[HTTP_GET])
+            available = self.invokerAvailable(invoker)
             
-            if register.polymorphs and current.parent and current.parent.child:
-                for prop in current.parent.properties:
-                    assert isinstance(prop, TypeProperty)
-                    target = prop.parent
-                    assert isinstance(target, TypeModel)
-                    if target not in register.polymorphs: continue
-                    
-                    for name, node in self.iterAvailable(current, True, target):
-                        if not node.invokers or HTTP_GET not in node.invokers: continue
-                        invokersAccessible = invokersAccessiblePolymorph.get(current)
-                        if invokersAccessible is None: invokersAccessible = invokersAccessiblePolymorph[current] = {}
-                        accessible = invokersAccessible.get(target)
-                        if accessible is None: accessible = invokersAccessible[target] = []
-                        
-                        accessible.append((name, node.invokers[HTTP_GET]))
+            invoker.node.invokersAccessible = self.processAccessible(register.invokers, invoker.target, mandatory, types,
+                            available, invoker.node.invokersAccessible, invoker.shadowing if Invoker.shadowing in invoker else None)
         
-        if not register.polymorphs or not invokersAccessiblePolymorph: return
+        # Handling the polymorph accessible paths.
+        if not register.polymorphed: return
         
-        for current in register.nodes:
-            assert isinstance(current, Node), 'Invalid node %s' % current
-            if not current.nodesByProperty: continue
-            
-            if not current.invokers or HTTP_GET not in current.invokers: continue
-            invoker = current.invokers[HTTP_GET]
-            assert isinstance(invoker, Invoker)
-
-            if not invoker.isModel or not invoker.target or invoker.target not in register.polymorphed: continue
+        for invoker in register.invokers:
+            assert isinstance(invoker, Invoker), 'Invalid invoker %s' % invoker
+            if invoker.methodHTTP != HTTP_GET: continue
+            if not invoker.isModel or not invoker.target or not invoker.node.nodesByProperty: continue
+            if invoker.target not in register.polymorphed: continue
             
             for polymorph in register.polymorphed[invoker.target]:
                 assert isinstance(polymorph, Polymorph), 'Invalid polymorph %s' % polymorph
                 assert isinstance(polymorph.target, TypeModel)
-                
-                propertyId = polymorph.target.propertyId
-                if not propertyId or propertyId not in current.nodesByProperty: continue
-                
-                node = current.nodesByProperty[propertyId]
-                if node in invokersAccessiblePolymorph:
-                    if current.invokersAccessible is None: current.invokersAccessible = dict()
-                    current.invokersAccessible.update(invokersAccessiblePolymorph[node])
+              
+                if polymorph.target.propertyId:
+                    pnode = invoker.node.nodesByProperty.get(polymorph.target.propertyId)
+                    if pnode and pnode.invokersAccessible:
+                        for accessible in pnode.invokersAccessible.values():
+                            for ainvoker in accessible.values():
+                                invoker.node.invokersAccessible = self.merge(invoker.node.invokersAccessible, polymorph.target, ainvoker)
     
     # ----------------------------------------------------------------
     
-    def appendAccessible(self, node, target, name, invoker):
-        '''
-        Appends the accessible invoker for the given target to the given node.
-        '''
-        assert isinstance(node, Node)
-        if node.invokersAccessible is None: node.invokersAccessible = dict()
-        accessible = node.invokersAccessible
-        if accessible.get(target) is None: accessible[target] = []
-        accessible[target].append((name, invoker))
+    def invokerAvailable(self, invoker):
+        assert isinstance(invoker, Invoker)
+        
+        available = set()
+        for el in invoker.path:
+            assert isinstance(el, Element), 'Invalid element %s' % el
+            if el.property:
+                assert isinstance(el.property, TypeProperty), 'Invalid element property %s' % el.property
+                assert isinstance(el.property.parent, TypeModel), 'Invalid element property %s' % el.property.parent
+                available.add(el.property)
+                for model in inheritedTypesFrom(el.property.parent.clazz, TypeModel, inDepth=True):
+                    assert isinstance(model, TypeModel)
+                    if el.property.name in model.properties: available.add(model.properties[el.property.name])
+        
+        return available
     
-    def iterAvailable(self, node, isModel, target):
+    def processAccessible(self, invokers, target, mandatory, types, available, invokersAccessible, shadowing):
         '''
-        Iterates all the available nodes for node.
+        Process the accessible paths.
         '''
-        assert isinstance(node, Node), 'Invalid node %s' % node
-        assert target is None or isinstance(target, TypeModel), 'Invalid model %s' % target
-        
-        if target:
-            for cname, cnode in self.iterTarget('', node, target):
-                yield cname, cnode
-        
-        for cname, cnode in self.iterChildByName('', node):
-            if isModel:
-                if cnode.parent and findFirst(cnode.parent, Node.parent, Node.child): yield cname, cnode
-            else: yield cname, cnode
-            if target:
-                for cname, cnode in self.iterTarget(cname, cnode, target): yield cname, cnode
-        
-        if target and node.nodesByProperty:
-            for parent in inheritedTypesFrom(target.clazz, TypeModel):
-                assert isinstance(parent, TypeModel), 'Invalid parent %s' % parent
-                if not parent.propertyId: continue
-                pnode = node.nodesByProperty.get(parent.propertyId)
-                if pnode:
-                    for cname, cnode in self.iterTarget('', pnode, parent): yield cname, cnode
-    
-    def iterTarget(self, name, node, target):
-        '''
-        Iterates all the nodes that are made available by properties in the target.
-        '''
-        assert isinstance(target, TypeModel), 'Invalid target model %s' % target
-        assert isinstance(node, Node), 'Invalid node %s' % node
-        tnode = node.child or node
-        assert isinstance(tnode, Node), 'Invalid node %s' % tnode
-        
-        for cname, cnode in self.iterAccessibleByName(name, tnode):
-            assert isinstance(cnode, Node), 'Invalid node %s' % cnode
-
-            if not cnode.invokers or not HTTP_GET in cnode.invokers:
-                if cnode.child and cnode.child.invokers and HTTP_GET in cnode.child.invokers: cnode = cnode.child
-                else: continue
-
-            invoker = cnode.invokers[HTTP_GET]
-            assert isinstance(invoker, Invoker), 'Invalid invoker %s' % invoker
-            for el in reversed(invoker.path):
+        for invoker in invokers:
+            assert isinstance(invoker, Invoker)
+            if invoker.methodHTTP != HTTP_GET: continue
+            if not invoker.isCollection and invoker.target in types: continue
+            if Invoker.shadowing in invoker and invoker.shadowing: continue
+            if shadowing == invoker: continue
+            
+            hasMandatory = False
+            for el in invoker.path:
                 assert isinstance(el, Element), 'Invalid element %s' % el
                 if not el.property: continue
-                assert isinstance(el.property, TypeProperty), 'Invalid property %s' % el.property
-                
-                if el.property.parent == target and el.property.name in target.properties:
-                    yield cname, cnode
-                    for ccname, ccnode in self.iterChildByName(cname, cnode): yield ccname, ccnode
-                else:
-                    if not tnode.invokers or HTTP_GET not in tnode.invokers: continue
-                    ninvoker = tnode.invokers[HTTP_GET]
-                    assert isinstance(ninvoker, Invoker), 'Invalid invoker %s' % ninvoker
-                    if not ninvoker.path: continue
-                    for el in reversed(ninvoker.path):
-                        if el.property: break
-                    
-                    if cnode.properties and el.property in cnode.properties and cnode.child:
-                        yield cname, cnode.child
-                        for ccname, ccnode in self.iterChildByName(cname, cnode.child):
-                            yield ccname, ccnode
-
-                break
+                if el.property in mandatory: hasMandatory = True
+                elif el.property not in available: break
+            else:
+                if hasMandatory:
+                    invokersAccessible = self.merge(invokersAccessible, target, invoker)
+                        
+        return invokersAccessible
     
-    def iterChildByName(self, name, node, exclude=None, nameComposer=lambda name, cname, node: ''.join((name, cname))):
+    def merge(self, invokersAccessible, target, invoker):
         '''
-        Iterates all the nodes that are directly available under the child by name attribute in the node.
+        Merge the invoker in the accessible dictionary.
         '''
-        assert isinstance(name, str), 'Invalid name %s' % name
-        stack = deque()
-        stack.append((name, node))
-        while stack:
-            name, node = stack.popleft()
-            assert isinstance(node, Node), 'Invalid node %s' % node
-            if exclude and exclude == node: continue
-            if not node.childByName: continue
-            for cname, cnode in node.childByName.items():
-                cname = nameComposer(name, cname, cnode)
-                yield cname, cnode
-                stack.append((cname, cnode))
-    
-    def iterAccessibleByName(self, name, node):
-        '''
-        Iterates over nodes accessible from the given node.
-        '''
-        assert isinstance(node, Node), 'Invalid node %s' % node
-        for cname, cnode in self.iterChildByName(name, node): yield cname, cnode
+        if invokersAccessible is None: invokersAccessible = {}
+        accessible = invokersAccessible.get(target)
+        if accessible is None: accessible = invokersAccessible[target] = OrderedDict()
         
-        current = node
-        while current:
-            assert isinstance(current, Node)
-            if not current.parent: return
-            parent = current.parent
-            if not parent.childByName:
-                current = parent.parent
-                continue
-            
-            for pname, pnode in self.iterChildByName('', parent, node, lambda name, cname, cnode: self.nodeName(cnode)):
-                yield pname, pnode
-            
-            current = parent
-
-    def nodeName(self, node):
-        '''
-        Return the node name based on the nodes that contain the name:node correspondence dictionary
-        '''
-        if not node.parent: return ''
-        elif node.parent.childByName:
-            for cname, cnode in node.parent.childByName.items():
-                if cnode == node: return cname
-        elif node.parent.child: return self.nodeName(node.parent)
-        return None
+        for el in reversed(invoker.path):
+            if el.name:
+                ainvoker = accessible.get(el.name)
+                if ainvoker and self.priorityInvoker(ainvoker) > self.priorityInvoker(invoker): break
+                accessible[el.name] = invoker
+                break
+        return invokersAccessible
+    
+    def priorityInvoker(self, invoker):
+        ''' Provides the priority of an invoker.'''
+        assert isinstance(invoker, Invoker)
+        
+        priority = 0
+        for el in invoker.path:
+            if el.property: priority += 1
+        return priority

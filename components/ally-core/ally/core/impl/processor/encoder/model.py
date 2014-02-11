@@ -88,7 +88,7 @@ class ModelEncode(HandlerBranching):
         'Invalid model extra encode assembly %s' % self.modelExtraEncodeAssembly
         assert isinstance(self.typeOrders, list), 'Invalid type orders %s' % self.typeOrders
         super().__init__(Branch(self.propertyEncodeAssembly).included().using(create=RequestEncoderNamed),
-                         Branch(self.modelExtraEncodeAssembly).included().using(create=RequestEncoder), Polymorph=Polymorph)
+                         Branch(self.modelExtraEncodeAssembly).included().using(create=RequestEncoderNamed), Polymorph=Polymorph)
         
         self.typeOrders = [typeFor(typ) for typ in self.typeOrders]
         
@@ -122,7 +122,7 @@ class ModelEncode(HandlerBranching):
         if not invoker.hideProperties:
             properties = self.encodeProperties(processing, create.objType, keyargs)
             if properties is None: raise Abort(create)
-            if modelExtraProcessing: extra = createEncoder(modelExtraProcessing, create.objType, **keyargs)
+            if modelExtraProcessing: extra = createEncoderNamed(modelExtraProcessing, name, create.objType, **keyargs)
             else: extra = None
             base = EncoderModel(encoderName(create, name), properties, extra, specifiers)
             
@@ -131,14 +131,14 @@ class ModelEncode(HandlerBranching):
                 for polymorph in register.polymorphed[create.objType]:
                     assert isinstance(polymorph, Polymorph), 'Invalid polymorph %s' % polymorph
                     assert isinstance(polymorph.target, TypeModel)
-                    
+                     
                     properties = self.encodeProperties(processing, polymorph.target, keyargs)
                     if properties is None: raise Abort(create)
                     if modelExtraProcessing: extra = createEncoder(modelExtraProcessing, polymorph.target, **keyargs)
                     else: extra = None
                     encoder = EncoderModel(encoderName(create, name), properties, extra, specifiers)
                     self.insertRouting(routings, polymorph, encoder)
-                
+                 
                 create.encoder = EncoderPolymorph(base, routings)
             else:
                 create.encoder = base

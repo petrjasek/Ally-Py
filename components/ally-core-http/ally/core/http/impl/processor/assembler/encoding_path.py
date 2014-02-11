@@ -134,7 +134,9 @@ class EncodingPathHandler(HandlerProcessor):
                     assert Support.nodesValues in support, 'Node values required in %s' % support
                     assert isinstance(support.nodesValues, dict), 'Invalid node values %s' % support.nodesValues
                     
-                    assert el in support.nodesValues, 'No value could be found for %s' % el
+                    assert el in support.nodesValues, \
+                    'No value could be found for path %s for %s' % \
+                    ('/'.join(el if isinstance(el, str) else '*' for el in elements), id(el))
                     value = support.nodesValues[el]
                     if not isinstance(value, str): value = support.converterPath.asString(value, el.type)
                     path.append(quote(value, safe=''))

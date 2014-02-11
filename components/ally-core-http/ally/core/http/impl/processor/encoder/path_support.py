@@ -15,8 +15,19 @@ from ally.design.processor.attribute import requires, defines
 from ally.design.processor.context import Context
 from ally.design.processor.handler import HandlerProcessor
 from ally.core.impl.processor.encoder.base import ExportingSupport
+from ally.api.operator.extract import inheritedTypesFrom
+from collections import OrderedDict
 
 # --------------------------------------------------------------------
+
+class Register(Context):
+    '''
+    The register context.
+    '''
+    # ---------------------------------------------------------------- Required
+    nodes = requires(list)
+    polymorphs = requires(dict)
+    polymorphed = requires(dict)
 
 class Node(Context):
     '''
@@ -57,7 +68,16 @@ class Support(Context):
     @rtype: dictionary{Context: object}
     The values used in constructing the paths indexed by corresponding node.
     ''')
-    
+
+class Polymorph(Context):
+    '''
+    The polymorph context.
+    '''
+    # ---------------------------------------------------------------- Required
+    target = requires(TypeModel)
+    parents = requires(list)
+    values = requires(dict)
+
 # --------------------------------------------------------------------
 
 pathUpdaterSupportEncodeExport = ExportingSupport(Support)
@@ -71,7 +91,7 @@ class PathUpdaterSupportEncode(HandlerProcessor):
     def __init__(self):
         super().__init__(Invoker=Invoker, Element=Element)
         
-    def process(self, chain, create:Create, node:Node, invoker:Invoker, **keyargs):
+    def process(self, chain, create:Create, node:Node, register:Register, **keyargs):
         '''
         @see: HandlerProcessor.process
         
@@ -94,7 +114,6 @@ class PathUpdaterSupportEncode(HandlerProcessor):
         else: return  # The type is not for a path updater, nothing to do, just move along
         
         elements = []
-        
         if node.invokersGet:
             assert isinstance(node.invokersGet, dict), 'Invalid get invokers %s' % node.invokersGet
             for prop in properties:
@@ -107,20 +126,38 @@ class PathUpdaterSupportEncode(HandlerProcessor):
                     if el.property == prop:
                         elements.append(el)
                         break
+
+        if isinstance(create.objType, TypeModel) and node.invokersAccessible:
+
+            typeElements = {create.objType: elements}
+            types = [create.objType]
+            if register.polymorphed and create.objType in register.polymorphed:
+                for polymorph in register.polymorphed[create.objType]:
+                    assert isinstance(polymorph, Polymorph), 'Invalid polymorph %s' % polymorph
+                    assert isinstance(polymorph.target, TypeModel)
+                    types.append(polymorph.target)
+                
+            for objType in types:
+                if objType not in node.invokersAccessible: continue
+                invokersAccessible = node.invokersAccessible[objType]
+                
+                assert isinstance(invokersAccessible, OrderedDict), 'Invalid accessible invokers %s' % invokersAccessible
+                for _name, invoker in invokersAccessible.items():
+                    assert isinstance(invoker, Invoker), 'Invalid invoker %s' % invoker
+                    
+                    for el in reversed(invoker.path):
+                        assert isinstance(el, Element), 'Invalid element %s' % el
+                        if el.property:
+                            elements = typeElements.get(objType)
+                            if not elements: elements = typeElements[objType] = []
+                            elements.append(el)
+                            break
+    
+            if typeElements:
+                create.encoder = EncoderPathUpdaterModel(create.encoder, typeElements)
         
-        if isinstance(create.objType, TypeModel) and node.invokersAccessible and create.objType in node.invokersAccessible:
-            invokersAccessible = node.invokersAccessible[create.objType]
-            assert isinstance(invokersAccessible, list), 'Invalid accessible invokers %s' % invokersAccessible
-            for _name, invoker in invokersAccessible:
-                assert isinstance(invoker, Invoker), 'Invalid invoker %s' % invoker
-                for el in reversed(invoker.path):
-                    assert isinstance(el, Element), 'Invalid element %s' % el
-                    if el.property in properties:
-                        elements.append(el)
-                        break
-        
-        if elements:
-            create.encoder = EncoderPathUpdater(create.encoder, elements, isinstance(create.objType, TypeModel))
+        elif elements:
+            create.encoder = EncoderPathUpdaterProperty(create.encoder, elements)
 
     def nodeName(self, node):
         '''
@@ -135,22 +172,20 @@ class PathUpdaterSupportEncode(HandlerProcessor):
     
 # --------------------------------------------------------------------
 
-class EncoderPathUpdater(ITransfrom):
+class EncoderPathUpdaterModel(ITransfrom):
     '''
     Implementation for a @see: ITransfrom that updates the path before encoding .
     '''
     
-    def __init__(self, encoder, elements, isModel):
+    def __init__(self, encoder, typeElements):
         '''
-        Construct the path updater.
+        Construct the path updater for model value.
         '''
         assert isinstance(encoder, ITransfrom), 'Invalid property encoder %s' % encoder
-        assert isinstance(elements, list), 'Invalid elements %s' % elements
-        assert isinstance(isModel, bool), 'Invalid is model flag %s' % isModel
+        assert isinstance(typeElements, dict), 'Invalid elements %s' % typeElements
         
         self.encoder = encoder
-        self.elements = elements
-        self.isModel = isModel
+        self.typeElements = typeElements
         
     def transform(self, value, target, support):
         '''
@@ -159,10 +194,43 @@ class EncoderPathUpdater(ITransfrom):
         assert isinstance(support, Support), 'Invalid support %s' % support
         if support.nodesValues is None: support.nodesValues = {}
 
+        types = inheritedTypesFrom(type(value), TypeModel, inDepth=True)
+        for typeElement in types:
+            elements = self.typeElements.get(typeElement)
+            if elements: 
+                for el in elements:
+                    assert isinstance(el, Element), 'Invalid element %s' % el
+                    assert isinstance(el.property, TypeProperty), 'Invalid property %s' % el.property
+                    support.nodesValues[el.node] = getattr(value, el.property.name)
+                break
+        
+        self.encoder.transform(value, target, support)
+
+class EncoderPathUpdaterProperty(ITransfrom):
+    '''
+    Implementation for a @see: ITransfrom that updates the path before encoding .
+    '''
+    
+    def __init__(self, encoder, elements):
+        '''
+        Construct the path updater for property value.
+        '''
+        assert isinstance(encoder, ITransfrom), 'Invalid property encoder %s' % encoder
+        assert isinstance(elements, list), 'Invalid elements %s' % elements
+        
+        self.encoder = encoder
+        self.elements = elements
+        
+    def transform(self, value, target, support):
+        '''
+        @see: ITransfrom.transform
+        '''
+        assert isinstance(support, Support), 'Invalid support %s' % support
+        if support.nodesValues is None: support.nodesValues = {}
+        
         for el in self.elements:
             assert isinstance(el, Element), 'Invalid element %s' % el
             assert isinstance(el.property, TypeProperty), 'Invalid property %s' % el.property
-            if self.isModel: support.nodesValues[el.node] = getattr(value, el.property.name)
-            else: support.nodesValues[el.node] = value
+            support.nodesValues[el.node] = value
         
         self.encoder.transform(value, target, support)

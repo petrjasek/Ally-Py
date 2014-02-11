@@ -13,7 +13,7 @@ from ally.api.operator.type import TypeModel
 from ally.container.ioc import injected
 from ally.core.http.impl.index import NAME_BLOCK_REST, ACTION_REFERENCE
 from ally.core.spec.transform import ITransfrom, IRender
-from ally.design.processor.attribute import requires, defines
+from ally.design.processor.attribute import requires, defines, optional
 from ally.design.processor.context import Context
 from ally.design.processor.handler import HandlerProcessor
 from ally.support.util import firstOf
@@ -22,6 +22,7 @@ from collections import OrderedDict
 import logging
 from ally.support.util_spec import IDo
 from ally.api.type import Type
+from ally.design.processor.execution import Abort
 
 # --------------------------------------------------------------------
 
@@ -35,7 +36,6 @@ class Node(Context):
     '''
     # ---------------------------------------------------------------- Required
     invokersAccessible = requires(dict)
-    nodesByProperty = requires(dict)
     
 class Invoker(Context):
     '''
@@ -49,13 +49,15 @@ class Create(Context):
     '''
     The create encoder context.
     '''
-    # ---------------------------------------------------------------- Required
-    objType = requires(Type)
     # ---------------------------------------------------------------- Defined
     encoder = defines(ITransfrom, doc='''
     @rtype: ITransfrom
     The encoder for the accessible paths.
     ''')
+    # ---------------------------------------------------------------- Optional
+    name = optional(str)
+    # ---------------------------------------------------------------- Required
+    objType = requires(Type)
     
 # --------------------------------------------------------------------
 
@@ -88,24 +90,26 @@ class AccessiblePathEncode(HandlerProcessor):
         if not node.invokersAccessible or create.objType not in node.invokersAccessible: return  # No accessible paths
         assert isinstance(invoker.target, TypeModel), 'Invalid target %s' % invoker.target
         
-        accessible = []
-        for name, ainvoker in node.invokersAccessible[create.objType]:
-            assert isinstance(ainvoker, Invoker), 'Invalid invoker %s' % ainvoker
-            
-            corrupted = False
-            for pname in ainvoker.target.properties:
-                if pname.startswith(ainvoker.target.name):
-                    log.error('Illegal property name \'%s\', is not allowed to start with the model name, at:%s',
-                              pname, locationStack(ainvoker.target.clazz))
-                    corrupted = True
-                    break
-                
-            if corrupted: continue
+        if Create.name in create and create.name: prefix = create.name
+        else: prefix = invoker.target.name
 
-            accessible.append(('%s%s' % (invoker.target.name, name), ainvoker))
+        corrupted = False
+        for pname in invoker.target.properties:
+            if pname.startswith(prefix):
+                log.error('Illegal property name \'%s\', is not allowed to start with the model name, at:%s',
+                          pname, locationStack(invoker.target.clazz))
+                corrupted = True
+                break
+            
+        if corrupted: raise Abort(invoker)
+
+        accessible = []
+        for name, ainvoker in node.invokersAccessible[create.objType].items():
+            assert isinstance(ainvoker, Invoker), 'Invalid invoker %s' % ainvoker
+            accessible.append(('%s%s' % (prefix, name), ainvoker))
         accessible.sort(key=firstOf)
         
-        create.encoder = EncoderAccessiblePath(self.nameRef, OrderedDict(accessible))
+        if accessible: create.encoder = EncoderAccessiblePath(self.nameRef, OrderedDict(accessible))
 
 # --------------------------------------------------------------------
 

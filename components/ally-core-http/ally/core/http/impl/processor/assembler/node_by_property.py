@@ -14,9 +14,10 @@ from ally.design.processor.attribute import requires, defines
 from ally.design.processor.context import Context
 from ally.design.processor.handler import HandlerProcessor
 from collections import deque
-
-
 import logging
+
+# --------------------------------------------------------------------
+
 log = logging.getLogger(__name__)
 
 # --------------------------------------------------------------------
@@ -63,27 +64,33 @@ class NodeByPropertyHandler(HandlerProcessor):
         if register.root is None: return  # No root context to process
         assert isinstance(register.root, Node), 'Invalid node %s' % register.node
         
-        # We get all the nodes
-        stack, nstack = deque(), deque()
+        stack = deque()
         stack.append((register.root, {}))
-        stackNodes = set()
         while stack:
-            current, nodesByProp = stack.popleft()
-            nstack.append(current)
-            current.nodesByProperty = dict(nodesByProp)
-            while nstack:
-                node = nstack.popleft()
-                assert isinstance(node, Node), 'Invalid node %s' % node
+            current, previous = stack.popleft()
+            # First we search the first level node properties.
+            nodesByProperty = {prop:set(nodes) for prop, nodes in previous.items()}
+            nstack, k = [current], 0
+            while len(nstack) > k:
+                node = nstack[k]
+                k += 1
                 
-                if node.childByName:
-                    nstack.extend(node.childByName.values())
-                    stack.extend((nod, current.nodesByProperty) for nod in node.childByName.values())
+                assert isinstance(node, Node), 'Invalid node %s' % node
+                if node.childByName: nstack.extend(node.childByName.values())
                 elif node.child:
                     assert isinstance(node.child, Node), 'Invalid node %s' % node.child
-                    
                     for prop in node.properties:
                         assert isinstance(prop, TypeProperty), 'Invalid property %s' % prop
-                        current.nodesByProperty[prop] = node.child
+                        nodes = nodesByProperty.get(prop)
+                        if nodes is None: nodes = nodesByProperty[prop] = set()
+                        nodes.add(node.child)
                     
-                    if not node.child in stackNodes:
-                        stack.append((node.child, current.nodesByProperty))
+                    if node.child.childByName:
+                        stack.extend((nod, nodesByProperty) for nod in node.child.childByName.values())
+                    elif node.child.child:
+                        stack.append((node.child.child, nodesByProperty))
+                    
+            for node in nstack:
+                node.nodesByProperty = nodesByProperty
+            for nodes in nodesByProperty.values():
+                for node in nodes: node.nodesByProperty = nodesByProperty

@@ -132,13 +132,19 @@ class PathGetAccesibleHandler(HandlerProcessor):
             for polymorph in register.polymorphed[invoker.target]:
                 assert isinstance(polymorph, Polymorph), 'Invalid polymorph %s' % polymorph
                 assert isinstance(polymorph.target, TypeModel)
-              
-                if polymorph.target.propertyId:
-                    pnode = invoker.node.nodesByProperty.get(polymorph.target.propertyId)
-                    if pnode and pnode.invokersAccessible:
-                        for accessible in pnode.invokersAccessible.values():
-                            for ainvoker in accessible.values():
-                                invoker.node.invokersAccessible = self.merge(invoker.node.invokersAccessible, polymorph.target, ainvoker)
+                
+                if polymorph.target.propertyId is None: continue
+                pnodes = invoker.node.nodesByProperty.get(polymorph.target.propertyId)
+                if not pnodes: continue
+                for pnode in pnodes:
+                    assert isinstance(pnode, Node)
+                    if HTTP_GET in pnode.invokers and pnode.invokersAccessible:
+                        pinvoker = pnode.invokers[HTTP_GET]
+                        if pinvoker.target == polymorph.target:
+                            for accessible in pnode.invokersAccessible.values():
+                                for ainvoker in accessible.values():
+                                    invoker.node.invokersAccessible = self.merge(invoker.node.invokersAccessible,
+                                                                                 polymorph.target, ainvoker)
     
     # ----------------------------------------------------------------
     

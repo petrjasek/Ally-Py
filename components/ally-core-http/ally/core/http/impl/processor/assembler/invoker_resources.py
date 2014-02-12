@@ -19,6 +19,8 @@ from ally.http.spec.server import HTTP_GET
 from ally.support.util import firstOf
 from ally.support.util_spec import IDo
 from ally.support.util_sys import locationStack
+from collections import deque
+from ally.api.operator.type import TypeModel
 
 # --------------------------------------------------------------------
 
@@ -36,7 +38,9 @@ class Node(Context):
     The node context.
     '''
     # ---------------------------------------------------------------- Required
+    invokers = requires(dict)
     invokersAccessible = requires(dict)
+    childByName = requires(dict)
 
 class InvokerResources(Context):
     '''
@@ -53,6 +57,7 @@ class InvokerResources(Context):
     ''')
     # ---------------------------------------------------------------- Required
     node = requires(Context)
+    target = requires(TypeModel)
     doEncodePath = requires(IDo)
     
 # --------------------------------------------------------------------
@@ -120,11 +125,17 @@ class EncoderResources(ITransfrom):
         assert isinstance(target, IRender), 'Invalid target %s' % target
         
         target.beginCollection(self.nameResources)
-        node = self.invoker.node
-        if node and node.invokersAccessible:
-            assert isinstance(node, Node), 'Invalid node %s' % node
-            accessible = []
-            for val in node.invokersAccessible.values(): accessible.extend(val)
+        if self.invoker.node:
+            accessible, stack = [], deque()
+            stack.append(('', self.invoker.node))
+            while stack:
+                name, node = stack.popleft()
+                assert isinstance(node, Node)
+                if node.invokers and HTTP_GET in node.invokers and name:
+                    accessible.append((name, node.invokers[HTTP_GET]))
+                if node.childByName:
+                    stack.extend(('%s%s' % (name, cname), cnode) for cname, cnode in node.childByName.items())
+            
             indexes = dict(indexBlock=NAME_BLOCK_REST, indexAttributesCapture={self.nameRef: ACTION_REFERENCE})
             for name, invoker in sorted(accessible, key=firstOf):
                 assert isinstance(invoker, InvokerResources), 'Invalid invoker %s' % invoker

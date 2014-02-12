@@ -9,7 +9,7 @@ Created on Mar 7, 2013
 Provides the model encoder.
 '''
 
-from .base import RequestEncoderNamed, RequestEncoder, DefineEncoder, \
+from .base import RequestEncoderNamed, DefineEncoder, \
     encoderSpecifiers, encoderName
 from ally.api.operator.type import TypeModel, TypeProperty
 from ally.api.type import Iter, Boolean, Integer, Number, String, Time, Date, \
@@ -49,13 +49,6 @@ class Invoker(Context):
     # ---------------------------------------------------------------- Required
     hideProperties = requires(bool)
     isCollection = requires(bool)
-
-class Node(Context):
-    '''
-    The node context.
-    '''
-    # ---------------------------------------------------------------- Required
-    nodesByProperty = requires(dict)
     
 class Polymorph(Context):
     '''
@@ -92,7 +85,7 @@ class ModelEncode(HandlerBranching):
         
         self.typeOrders = [typeFor(typ) for typ in self.typeOrders]
         
-    def process(self, chain, processing, modelExtraProcessing, register:Register, node:Node,
+    def process(self, chain, processing, modelExtraProcessing, register:Register,
                 invoker:Invoker, create:DefineEncoder, **keyargs):
         '''
         @see: HandlerBranching.process
@@ -100,7 +93,6 @@ class ModelEncode(HandlerBranching):
         Create the model encoder.
         '''
         assert isinstance(register, Register), 'Invalid register %s' % register
-        assert isinstance(node, Node), 'Invalid node %s' % node
         assert isinstance(invoker, Invoker), 'Invalid invoker %s' % invoker
         assert isinstance(create, DefineEncoder), 'Invalid create %s' % create
         
@@ -117,7 +109,7 @@ class ModelEncode(HandlerBranching):
                 assert isinstance(polymorph, Polymorph)
                 name = polymorph.parents[-1].name
         
-        keyargs.update(register=register, node=node, invoker=invoker)
+        keyargs.update(register=register, invoker=invoker)
         specifiers = encoderSpecifiers(create)
         if not invoker.hideProperties:
             properties = self.encodeProperties(processing, create.objType, keyargs)

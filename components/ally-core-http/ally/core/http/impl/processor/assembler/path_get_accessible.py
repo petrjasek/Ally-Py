@@ -104,20 +104,9 @@ class PathGetAccesibleHandler(HandlerProcessor):
             
             if not invoker.isModel or not invoker.target: continue
             
-            assert isinstance(invoker.target, TypeModel)
-            package = mandatories.get(invoker.target)
-            if package is None:
-                mandatory, types = set(), set(inheritedTypesFrom(invoker.target.clazz, TypeModel, inDepth=True))
-                for model in types:
-                    assert isinstance(model, TypeModel)
-                    mandatory.update(model.properties.values())
-                mandatories[invoker.target] = (mandatory, types)
-            else:
-                mandatory, types = package
-                
             available = self.invokerAvailable(invoker)
             
-            invoker.node.invokersAccessible = self.processAccessible(register.invokers, invoker.target, mandatory, types,
+            invoker.node.invokersAccessible = self.processAccessible(register.invokers, invoker.target, mandatories,
                             available, invoker.node.invokersAccessible, invoker.shadowing if Invoker.shadowing in invoker else None)
         
         # Handling the polymorph accessible paths.
@@ -145,6 +134,9 @@ class PathGetAccesibleHandler(HandlerProcessor):
                                 for ainvoker in accessible.values():
                                     invoker.node.invokersAccessible = self.merge(invoker.node.invokersAccessible,
                                                                                  polymorph.target, ainvoker)
+                    else:
+                        invoker.node.invokersAccessible = self.processAccessible(register.invokers, polymorph.target, mandatories,
+                            available, invoker.node.invokersAccessible, None)
     
     # ----------------------------------------------------------------
     
@@ -164,10 +156,21 @@ class PathGetAccesibleHandler(HandlerProcessor):
         
         return available
     
-    def processAccessible(self, invokers, target, mandatory, types, available, invokersAccessible, shadowing):
+    def processAccessible(self, invokers, target, mandatories, available, invokersAccessible, shadowing):
         '''
         Process the accessible paths.
         '''
+        assert isinstance(target, TypeModel)
+        package = mandatories.get(target)
+        if package is None:
+            mandatory, types = set(), set(inheritedTypesFrom(target.clazz, TypeModel, inDepth=True))
+            for model in types:
+                assert isinstance(model, TypeModel)
+                mandatory.update(model.properties.values())
+            mandatories[target] = (mandatory, types)
+        else:
+            mandatory, types = package
+                
         for invoker in invokers:
             assert isinstance(invoker, Invoker)
             if invoker.methodHTTP != HTTP_GET: continue

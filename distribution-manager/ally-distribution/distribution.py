@@ -12,6 +12,7 @@ The entry point module that starts the distribution.
 import argparse
 import sys
 import timeit
+import logging
 
 # --------------------------------------------------------------------
 
@@ -31,6 +32,10 @@ options = Options()
 
 def __distribution__():
     # In the first stage we prepare the application deployment.
+    
+    logging.basicConfig(format='%(asctime)s %(levelname)-7s %(message)s')
+    logging.getLogger('ally.distribution').setLevel(logging.INFO)
+
     with context.activate(context.open(aop.modulesIn('__distribution__.**')), 'deploy'):
         support.performEventsFor(APP_PREPARE)
         # In the second stage we parse the application arguments.

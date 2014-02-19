@@ -11,8 +11,7 @@ Contains the setup files for security.
 
 # --------------------------------------------------------------------
 
-NAME = 'Security'
-GROUP = 'Security'
+NAME = 'security'
 VERSION = '1.0'
 DESCRIPTION = 'This plugin provides the basic security models.'
 KEYWORDS = ['Ally', 'REST', 'plugin', 'support', 'security']

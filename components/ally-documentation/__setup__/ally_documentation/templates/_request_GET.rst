@@ -29,8 +29,9 @@
   {%- endif -%}
 {% endif %}
 
+::
 
-{{ request['doc'] }}
+{{ ident(request['doc']) }}
 
 
 {% if request['path_params'] -%}

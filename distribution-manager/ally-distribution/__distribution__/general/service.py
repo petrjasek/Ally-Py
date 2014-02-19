@@ -9,66 +9,72 @@ Created on Oct 3, 2013
 Provides the services setup for distribution.
 '''
 
+from ally.design.processor.assembly import Assembly
+from ally.design.processor.handler import Handler
+
 from ally.container import ioc, deploy
-from ally.distribution.packaging.broker import Broker
-from ally.distribution.packaging.packager import Packager
-from ally.distribution.packaging.builder import Builder
-from ally.distribution.packaging.publisher import Publisher
-from ally.distribution.packaging.scanner import Scanner
+from ally.distribution.packaging.impl.processor.arg_setup import ArgSetupHandler
+from ally.distribution.packaging.impl.processor.build import BuildHandler
+from ally.distribution.packaging.impl.scanner_package import ScannerPackage
+from ally.distribution.packaging.impl.processor.write_setup import WriteSetupHandler
+
+# --------------------------------------------------------------------
+
+@deploy.start
+def performBuild():
+    scanner().scan()
 
 # --------------------------------------------------------------------
 
 @ioc.config
-def package_location():
-    ''' The location path where the components/plugins eggs will be placed'''
-    return 'packaged-eggs'
+def path_sources():
+    ''' The location path where the packages sources are located, this configuration can be overridden 
+    with command line arguments, this path is relative from where the distribution is executed.'''
+    return ''
 
 @ioc.config
-def path_components():
-    ''' The location path where the components sources are located'''
-    return '../../components'
+def path_build():
+    ''' The location path where the packages are placed, this configuration can be overridden 
+    with command line arguments, this path is relative from where the distribution is executed.'''
+    return ''
 
-@ioc.config
-def path_plugins():
-    ''' The location path where the plugins sources are located'''
-    return '../../plugins'
-
-@ioc.config
-def path_ui():
-    ''' The location path where the UI plugins sources are located'''
-    return '../../ui'
-
-@ioc.config
-def path_plugins_ui():
-    ''' The location path to the build folder of UI plugins '''
-    return '../../plugins-ui'
-
-@ioc.config
-def setup_folder_names():
-    '''The name of the folderin which information about plugin/component is located'''
-    return {'plugins'    : '__plugin__',
-            'components' : '__setup__'}
-    
-@ioc.config 
-def actions_bucket():
-    '''Actions to be performed by distribution manager'''
-    return {}
 # --------------------------------------------------------------------
 
 @ioc.entity
-def actionWorker():
-    return {'package' : Packager,
-            'build'   : Builder,
-            'publish' : Publisher,
-            'scan'    : Scanner,
-            }
+def assemblyPackage() -> Assembly:
+    '''
+    The assembly used for packaging.
+    '''
+    return Assembly('Packaging')
 
-@deploy.start
-def runBroker():
-    b = Broker()
-    b.actions = actions_bucket()
-    b.path_ui = path_ui()
-    b.actionWorker = actionWorker()
-    b.destFolder = package_location()
-    b.process()
-    
+# --------------------------------------------------------------------
+
+@ioc.entity
+def buildPackages() -> list: return ['__setup__', '__plugin__']
+
+@ioc.entity
+def scanner() -> ScannerPackage:
+    b = ScannerPackage()
+    b.location = path_sources()
+    b.packages = buildPackages()
+    b.assembly = assemblyPackage()
+    return b
+
+@ioc.entity
+def argSetup() -> Handler: return ArgSetupHandler()
+
+@ioc.entity
+def writeSetup() -> Handler: return WriteSetupHandler()
+
+@ioc.entity
+def build() -> Handler:
+    b = BuildHandler()
+    b.pathBuild = path_build()
+    return b
+
+# --------------------------------------------------------------------
+
+@ioc.before(assemblyPackage)
+def updateAssemblyPackage():
+    assemblyPackage().add(argSetup(), writeSetup(), build())
+

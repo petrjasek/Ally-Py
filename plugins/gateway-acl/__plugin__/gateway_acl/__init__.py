@@ -16,4 +16,6 @@ GROUP = 'gateway'
 VERSION = '1.0'
 DESCRIPTION = '''This plugin provides the service gateways.'''
 INSTALL_REQUIRES = ['gateway >= 1.0', 'ally-core-http >= 1.0']
-LONG_DESCRIPTION = '''The ACL (access control layer) gateway plugin integrates gateways that are designed based on published REST models and services, basically makes the conversion between access allowed on a service call and a gateway REST model.'''
+LONG_DESCRIPTION = '''The ACL (access control layer) gateway plugin integrates gateways that are
+designed based on published REST models and services, basically makes the conversion between access allowed on a
+service call and a gateway REST model.'''

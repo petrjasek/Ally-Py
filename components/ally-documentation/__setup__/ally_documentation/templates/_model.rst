@@ -9,9 +9,10 @@ The model is defined by the following API model classes.
 .. _entity-{{ entity['name'] }}:
 
 ``{{ entity['name'] }}``
--------------------------------------
+-------------------------------------------------------------------
+::
 
-{{ entity['doc'] }}
+{{ ident(entity['doc']) }}
 
 
 

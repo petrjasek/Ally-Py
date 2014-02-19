@@ -8,8 +8,10 @@ Created on Oct 8, 2013
  
 Functionality for building eggs.
 '''
+
 import logging
-from ally.distribution.util import SETUP_FILENAME, PYTHON_CLI, BUILD_EGG, runCmd
+import os
+from distutils.core import run_setup
 
 # --------------------------------------------------------------------
 
@@ -34,5 +36,6 @@ class Builder:
         '''
         assert logging.info('*** BUILD egg *** {0}'.format(self.packageName)) or True
         
-        cmd = ' '.join([PYTHON_CLI, SETUP_FILENAME, BUILD_EGG]) 
-        runCmd(self.packagePath, cmd)
+        script = os.path.join(self.packagePath, 'setup.py')
+        if os.path.isfile(script): run_setup(script, script_args=('bdist_egg',))
+

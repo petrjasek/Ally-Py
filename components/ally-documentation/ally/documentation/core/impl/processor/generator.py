@@ -113,6 +113,10 @@ class GeneratorHandler(HandlerProcessor):
         environment.globals['upperFirst'] = lambda value: modifyFirst(value, True)
         environment.globals['transform'] = lambda coll, format: [format % item for item in coll]
         environment.globals['TextTable'] = TextTable
+        environment.globals['ident'] = self.ident
         
         return doRender
     
+    def ident(self, text, ident='   '):
+        ''' Escapes a restructured text.'''
+        return ident + text.replace('\n', '\n%s' % ident)

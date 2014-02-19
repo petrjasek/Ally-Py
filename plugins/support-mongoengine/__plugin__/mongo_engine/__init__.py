@@ -12,7 +12,6 @@ Contains the mongo engine setup files.
 # --------------------------------------------------------------------
 
 NAME = 'Mongo engine support'
-GROUP = 'Mongo'
 VERSION = '1.0'
 DESCRIPTION = 'Provides the support for using Mongo engine ORM'
 INSTALL_REQUIRES = ['ally-api >= 1.0', 'mongoengine >= 0.8.4']

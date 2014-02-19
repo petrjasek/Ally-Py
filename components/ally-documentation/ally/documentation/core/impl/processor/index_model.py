@@ -14,7 +14,7 @@ from inspect import getdoc
 from ally.api.operator.type import TypeModel, TypeProperty, \
     TypePropertyContainer
 from ally.api.type import Iter, Boolean, Integer, Number, String, Time, Date, \
-    DateTime, TypeReference
+    DateTime, TypeReference, typeFor
 from ally.design.processor.attribute import requires, defines
 from ally.design.processor.context import Context
 from ally.design.processor.handler import HandlerProcessor
@@ -26,8 +26,16 @@ class Register(Context):
     The register context.
     '''
     # ---------------------------------------------------------------- Required
-    relations = requires(dict)
+    invokers = requires(list)
 
+class Invoker(Context):
+    '''
+    The invoker context.
+    '''
+    # ---------------------------------------------------------------- Required
+    target = requires(TypeModel)
+    links = requires(set)
+    
 class Document(Context):
     '''
     The introspect context.
@@ -56,7 +64,7 @@ class IndexModelHandler(HandlerProcessor):
     
     def __init__(self):
         assert isinstance(self.hintName, str), 'Invalid hint name %s' % self.hintName
-        super().__init__()
+        super().__init__(Invoker=Invoker)
     
     def process(self, chain, register:Register, document:Document, **keyargs):
         '''
@@ -66,13 +74,24 @@ class IndexModelHandler(HandlerProcessor):
         '''
         assert isinstance(register, Register), 'Invalid register %s' % register
         assert isinstance(document, Document), 'Invalid document %s' % document
-        if not register.relations: return  # No relations to process.
+        if not register.invokers: return  # No invokers to process.
+        
+        typeModels = set()
+        for invoker in register.invokers:
+            assert isinstance(invoker, Invoker)
+            if invoker.target: typeModels.add(invoker.target)
+            if invoker.links: typeModels.update(invoker.links)
+        
+        # We need to remove the allowed model since is part of filtering.
+        try: from gateway.api.gateway import Allowed
+        except ImportError: pass
+        else: typeModels.discard(typeFor(Allowed))
         
         if document.data is None: document.data = {}
         if document.modelData is None: document.modelData = {}
         
         models = {}
-        for model in register.relations:
+        for model in typeModels:
             assert isinstance(model, TypeModel), 'Invalid model %s' % model
             
             entityName = '%s.%s' % (model.clazz.__module__, model.clazz.__name__)

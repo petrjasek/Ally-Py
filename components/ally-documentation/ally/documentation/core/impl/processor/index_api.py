@@ -12,7 +12,7 @@ Processor that provides the API data to be documented.
 from ally.api.operator.type import TypeModel, TypeCall, TypeService, \
     TypeProperty
 from ally.api.type import Type, Iter
-from ally.design.processor.attribute import requires, defines
+from ally.design.processor.attribute import requires, defines, optional
 from ally.design.processor.context import Context
 from ally.design.processor.handler import HandlerProcessor
 from ally.http.spec.server import HTTP_PUT, HTTP_GET, HTTP_DELETE
@@ -30,6 +30,8 @@ class Invoker(Context):
     '''
     The invoker context.
     '''
+    # ---------------------------------------------------------------- Optional
+    filterName = optional(str)
     # ---------------------------------------------------------------- Required
     path = requires(list)
     methodHTTP = requires(str)
@@ -37,7 +39,6 @@ class Invoker(Context):
     target = requires(TypeModel)
     isCollection = requires(bool)
     call = requires(TypeCall)
-    filterName = requires(str)
     links = requires(set)
     
 class Element(Context):
@@ -96,7 +97,8 @@ class IndexAPIHandler(HandlerProcessor):
         for invoker in register.invokers:
             assert isinstance(invoker, Invoker), 'Invalid invoker %s' % invoker
             if not invoker.path: continue
-            if invoker.filterName is not None: continue  # We remove the filters which are not direct part of the API.
+            if Invoker.filterName in invoker and invoker.filterName is not None: continue 
+            # We remove the filters which are not direct part of the API.
             
             request = {}
             requests.append(request)
@@ -126,8 +128,8 @@ class IndexAPIHandler(HandlerProcessor):
                                             invoker.call.parent.clazz.__name__, invoker.call.name)
             
             models = set()
-            if invoker.links: models.update(invoker.links)
             if invoker.target: models.add(invoker.target)
+            elif invoker.links: models.update(invoker.links)
             
             for target in models:
                 assert isinstance(target, TypeModel), 'Invalid target %s' % target

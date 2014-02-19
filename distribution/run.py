@@ -16,7 +16,6 @@ import sys
 import time
 import timeit
 import traceback
-import warnings
 
 # --------------------------------------------------------------------
 
@@ -37,9 +36,6 @@ if __name__ == '__main__':
     # Loading the components.
     for path in findLibraries('components'):
         if path not in sys.path: sys.path.append(path)
-
-    warnings.filterwarnings('ignore', '.*already imported.*ally*')
-    # To remove the warnings of pkg utils from setup tools
 
     try: import application
     except ImportError:

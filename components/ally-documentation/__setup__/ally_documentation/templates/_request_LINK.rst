@@ -4,7 +4,7 @@
 **{{ request['path'] }}**
 ==========================================================
 
-* Use the HTTP **PUT** method in order to link
+* Use the HTTP **PUT** method with no content body in order to link
 * The request is defined by API call ``{{ request['call'] }}``
 * The request will link, each entry matches a **\*** in their respective order:
 {% for param in request['path_params'] %}
@@ -12,7 +12,9 @@
 {%- endfor %}
 
 
-{{ request['doc'] }}
+::
+
+{{ ident(request['doc']) }}
 
 
 Response

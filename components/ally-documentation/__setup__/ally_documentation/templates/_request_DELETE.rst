@@ -9,7 +9,9 @@
 * Delete the entity :ref:`entity-{{ request['path_params'][0]['entity']['name'] }}` based on **{{ request['path_params'][0]['name'] }}**.
 
 
-{{ request['doc'] }}
+::
+
+{{ ident(request['doc']) }}
 
 
 Response

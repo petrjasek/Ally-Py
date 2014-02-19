@@ -10,22 +10,22 @@ Contains ally base setup files.
 '''
 
 # --------------------------------------------------------------------
-
+# 'httplib2==0.7.7',
+# 'Jinja2==2.6',
+# 'sunburnt==0.6',
+# 'lxml==3.0'
+                    
 NAME = 'ally'
 VERSION = '1.0'
 DESCRIPTION = 'Ally framework - utilities component'
 AUTHOR = 'Gabriel Nistor'
 AUTHOR_EMAIL = 'gabriel.nistor@sourcefabric.org'
 KEYWORDS = ['Ally', 'REST']
-INSTALL_REQUIRES = ['httplib2==0.7.7', 
-                    'Jinja2==2.6',
-                    'PyYAML==3.10',
-                    'SQLAlchemy==0.7.1',
-                    'sunburnt==0.6',
-                    'lxml==3.0']
+INSTALL_REQUIRES = ['PyYAML==3.10']
 LONG_DESCRIPTION = '''This is the main component and is the application entry point. 
-'This component provides also support for inversion of control container.
-'Basically this component contains general support for the application that is not in any way linked with a particular technology.'''
+This component provides also support for inversion of control container.
+Basically this component contains general support for the application that is not in any way linked with a
+particular technology.'''
 TEST_SUITE = '__unit_test__'
 CLASSIFIERS = ['Development Status :: 4 - Beta']
 __extra__ = dict(py_modules = ['application', 'package_extender'],

@@ -1,2 +1,0 @@
-include gui-resources/*.*
-recursive-include gui-resources *

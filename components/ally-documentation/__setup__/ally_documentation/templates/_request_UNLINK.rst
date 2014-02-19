@@ -12,7 +12,9 @@
 {%- endfor %}
 
 
-{{ request['doc'] }}
+::
+
+{{ ident(request['doc']) }}
 
 
 Response

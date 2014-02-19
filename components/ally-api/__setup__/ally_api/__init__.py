@@ -18,6 +18,6 @@ AUTHOR_EMAIL = 'gabriel.nistor@sourcefabric.org'
 KEYWORDS = ['Ally', 'REST', 'API']
 INSTALL_REQUIRES = ['ally >= 1.0']
 DESCRIPTION = 'Provides the REST API support for marking REST services and models'
-LONG_DESCRIPTION = '''Contains HTTP specific handling for requests and also the basic HTTP server based on the python built in server.'''
+LONG_DESCRIPTION = '''Contains support for marking the models and services.'''
 TEST_SUITE = '__unit_test__'
 CLASSIFIERS = ['Development Status :: 4 - Beta']

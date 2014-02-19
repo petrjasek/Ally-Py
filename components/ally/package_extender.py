@@ -11,12 +11,17 @@ any problems in locating the extender itself.
 '''
 
 from imp import is_builtin
-from pkgutil import get_importer, iter_importers, find_loader
+from inspect import ismodule
 import os
+from pkgutil import get_importer, iter_importers, find_loader
 import sys
 import traceback
-from inspect import ismodule
+import warnings
 
+
+# --------------------------------------------------------------------
+warnings.filterwarnings('ignore', '.*already imported.*ally*')
+# To remove the warnings of pkg utils from setup tools
 # --------------------------------------------------------------------
 
 class PackageExtender:

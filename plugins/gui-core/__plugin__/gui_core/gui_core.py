@@ -35,6 +35,11 @@ def gui_folder_format():
     '''Describes where the gui files are published '''
     return 'lib/%s'
 
+@ioc.config
+def publish_gui_resources():
+    '''Allow for the publish of the gui resources'''
+    return True
+
 # --------------------------------------------------------------------
 
 @ioc.entity

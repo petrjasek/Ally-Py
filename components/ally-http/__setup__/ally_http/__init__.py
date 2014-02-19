@@ -12,7 +12,6 @@ Contains setup and configuration files for the HTTP REST server.
 # --------------------------------------------------------------------
 
 NAME = 'ally HTTP'
-GROUP = 'ally'
 VERSION = '1.0'
 DESCRIPTION = 'Provides the HTTP communication support'
 AUTHOR = 'Gabriel Nistor'

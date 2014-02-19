@@ -21,6 +21,7 @@ def getDirs(path):
     '''
     returns the list of directories filtering out IGNORE_DIRS
     '''
+    if not os.path.isdir(path): return []
     children = os.listdir(path)
     return [child for child in children if os.path.isdir(os.path.join(path, child)) 
                                         and child not in IGNORE_DIRS]

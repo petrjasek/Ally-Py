@@ -22,7 +22,7 @@ LONG_DESCRIPTION = '''Similar to the asyncore server but provides support for us
 0MQ messaging in order to communicate with Mongrel2 HTTP server.'''
 TEST_SUITE = '__unit_test__'
 CLASSIFIERS = ['Development Status :: 4 - Beta']
-INSTALL_REQUIRES = ['ally-http >= 1.0']
+INSTALL_REQUIRES = ['ally-http >= 1.0']  # TODO: Gabriel: add dependencies of ZMQ
 # --------------------------------------------------------------------
 # The extra configurations
 __extra__ = dict(package_data={'': ['*.txt', '*.conf']})

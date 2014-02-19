@@ -14,9 +14,9 @@ import os
 import sys
 from types import ModuleType
 import imp
-from ally.distribution.util import getDirs, SETUP_FILENAME, SETUP_CFG_FILENAME,\
+from ally.distribution.util import getDirs, SETUP_FILENAME, SETUP_CFG_FILENAME, \
     INIT_FILENAME
-from ally.distribution.templates import SETUP_TEMPLATE_BEGIN, SETUP_TEMPLATE_END,\
+from ally.distribution.templates import SETUP_TEMPLATE_BEGIN, SETUP_TEMPLATE_END, \
     SETUP_CFG_TEMPLATE
 # --------------------------------------------------------------------
 
@@ -69,7 +69,7 @@ class Packager:
             try:
                 self._writeSetupFile()
                 self._writeSetupCfgFile()
-                assert log.info('*** Setup file succesfully writen *** {0} *** OK'.format(self.packagePath)) or True
+                assert log.info('*** Setup file successfully written *** {0} *** OK'.format(self.packagePath)) or True
             except Exception as e:
                 assert log.info('*** Setup file writing failed *** {0} *** NOK'.format(self.packageName)) or True
                 assert log.error('Error while writing setup files for {0}: {1}'.format(self.packageName, e)) or True
@@ -98,7 +98,7 @@ class Packager:
         with open(filename, 'w') as f:
             f.write(SETUP_TEMPLATE_BEGIN)
             for attribute in self.info:
-                f.write(' '*5 + attribute + '=' + repr(self.info[attribute]) + ',\n')
+                f.write(' ' * 5 + attribute + '=' + repr(self.info[attribute]) + ',\n')
             f.write(SETUP_TEMPLATE_END)
         
     def _writeSetupCfgFile(self):
@@ -106,8 +106,7 @@ class Packager:
         Writes setup.cfg file to path
         '''
         filename = os.path.abspath(os.path.join(self.packagePath, SETUP_CFG_FILENAME))
-        with open(filename, 'w') as f:
-            f.write(SETUP_CFG_TEMPLATE.format(self.destFolder))
+        with open(filename, 'w') as f: f.write(SETUP_CFG_TEMPLATE.format(self.destFolder))
         
     def _getPackageInfoModule(self):
         '''

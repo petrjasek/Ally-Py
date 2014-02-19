@@ -19,14 +19,16 @@ from ally.documentation.core.impl.processor.definition_register import \
     DefinitionRegisterHandler
 from ally.documentation.core.impl.processor.generator import GeneratorHandler
 from ally.documentation.core.impl.processor.index_api import IndexAPIHandler
+from ally.documentation.core.impl.processor.index_model import IndexModelHandler
+from ally.documentation.core.impl.processor.mapping import MappingDumpHandler
 from ally.documentation.core.impl.processor.templates import TemplateHandler
 
 from ..ally_core.definition import descriptions
+from ..ally_core.parsing_rendering import CATEGORY_CONTENT_OBJECT
 from ..ally_core.resources import assemblyAssembler, injectorAssembly, register
 from ..ally_core_http import definition_header, definition_parameter
 from ..ally_core_http.definition_header import parameterHeaderVerifier
-from ally.documentation.core.impl.processor.mapping import MappingDumpHandler
-from ally.documentation.core.impl.processor.index_model import IndexModelHandler
+from ally.core.impl.definition import Category
 
 
 # --------------------------------------------------------------------
@@ -125,6 +127,14 @@ def indexParameter() -> Handler:
     return b
 
 @ioc.entity
+def indexProperties() -> Handler:
+    b = DefinitionInvokerHandler()
+    b.name = 'properties'
+    b.verifier = Category(CATEGORY_CONTENT_OBJECT)
+    b.descriptions = descriptions()
+    return b
+
+@ioc.entity
 def template() -> Handler:
     b = TemplateHandler()
     b.pathDocumentation = path_documentation()
@@ -156,7 +166,7 @@ def disableUnusedReport():
 @ioc.before(assemblyDocumentation)
 def updateAssemblyDocumentation():
     assemblyDocumentation().add(injectorAssembly(), indexModel(), indexAPI(), indexHeader(), indexHeaderParameters(),
-                                indexParameter(), template(), generator())
+                                indexParameter(), indexProperties(), template(), generator())
 
 @ioc.before(assemblyMapping)
 def updateAssemblyMapping():

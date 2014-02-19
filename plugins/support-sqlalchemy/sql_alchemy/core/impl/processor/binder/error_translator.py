@@ -141,7 +141,7 @@ class ProxyTransalator(IProxyHandler):
                 iexc = IdError()
             
             elif isinstance(exc, IntegrityError):
-                iexc = InputError(_('There is already an entity having this unique properties'))
+                iexc = InputError(_('There is already an entity having this unique property'))
                 
             elif isinstance(exc, OperationalError):
                 if invoker.method == DELETE: iexc = InputError(_('Cannot delete because is used'))

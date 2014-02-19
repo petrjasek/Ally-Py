@@ -13,7 +13,7 @@ from ally.api.operator.type import TypeProperty, TypeModel
 from ally.design.processor.attribute import requires, defines
 from ally.design.processor.context import Context
 from ally.design.processor.handler import HandlerProcessor
-from ally.http.spec.server import HTTP_GET
+from ally.http.spec.server import HTTP_GET, HTTP_POST, HTTP_PUT
 from collections import deque
 
 # --------------------------------------------------------------------
@@ -59,6 +59,14 @@ class Node(Context):
     The invokers contexts that can be used to get a model by a property model indexed by the property model that makes
     the invoker accessible based on the current node.
     ''')
+    invokersPost = defines(dict, doc='''
+    @rtype: dictionary{TypeModel: Context}
+    The invokers contexts that can be used to insert a model indexed by the model received as input by the invoker.
+    ''')
+    invokersPut = defines(dict, doc='''
+    @rtype: dictionary{TypeModel: Context}
+    The invokers contexts that can be used to update a model indexed by the model received as input by the invoker.
+    ''')
     # ---------------------------------------------------------------- Required
     child = requires(Context)
     childByName = requires(dict)
@@ -85,38 +93,48 @@ class PathGetModelHandler(HandlerProcessor):
         
         # We get all the nodes
         stack, nstack = deque(), deque()
-        stack.append((register.root, {}))
-        stackNodes = set()
+        stack.append((register.root, {}, {}, {}))
         while stack:
-            current, invokersGet = stack.popleft()
+            current, invokersGet, invokersPost, invokersPut = stack.popleft()
             nstack.append(current)
-            current.invokersGet = dict(invokersGet)
+            current.invokersGet, current.invokersPost, current.invokersPut = dict(invokersGet), dict(invokersPost), dict(invokersPut)
             while nstack:
                 node = nstack.popleft()
                 assert isinstance(node, Node), 'Invalid node %s' % node
-                    
+                
                 if node.childByName:
                     nstack.extend(node.childByName.values())
-                    stack.extend((nod, current.invokersGet) for nod in node.childByName.values())
+                    stack.extend((nod, current.invokersGet, current.invokersPost, current.invokersPut)
+                                 for nod in node.childByName.values())
+                    
+                    for cnode in node.childByName.values():
+                        if cnode.invokers and cnode.invokers.get(HTTP_POST):
+                            invoker = cnode.invokers.get(HTTP_POST)
+                            assert isinstance(invoker, Invoker), 'Invalid invoker %s' % invoker
+                            if invoker.target:
+                                assert isinstance(invoker.target, TypeModel)
+                                current.invokersPost[invoker.target] = invoker
                 elif node.child:
                     assert isinstance(node.child, Node), 'Invalid node %s' % node.child
                     if not node.child.invokers: continue  # Not invokers available for node
-                    invoker = node.child.invokers.get(HTTP_GET)
-                    if not invoker: continue  # Not GET invoker
-                    assert isinstance(invoker, Invoker), 'Invalid invoker %s' % invoker
-                    # Is a collection or is not a model so it cannot be used
-                    if invoker.isCollection or not invoker.isModel or not invoker.target: continue
-                    assert isinstance(invoker.target, TypeModel), 'Invalid target %s' % invoker.target
-                    
-                    for el in reversed(invoker.path):
-                        assert isinstance(el, Element), 'Invalid element %s' % el
-                        if not el.property: continue
-                        assert isinstance(el.property, TypeProperty), 'Invalid element property %s' % el.property
-                        if el.property.parent == invoker.target: current.invokersGet[el.property] = invoker
-                        break
-                    if not node.child in stackNodes:
-                        stack.append((node.child, current.invokersGet))
-            
+                    for method, invokers, propKey in ((HTTP_GET, current.invokersGet, True), (HTTP_PUT, current.invokersPut, False)):
+                        invoker = node.child.invokers.get(method)
+                        if not invoker: continue
+                        assert isinstance(invoker, Invoker), 'Invalid invoker %s' % invoker
+                        # Is a collection or is not a model so it cannot be used
+                        if invoker.isCollection or not invoker.isModel or not invoker.target: continue
+                        assert isinstance(invoker.target, TypeModel), 'Invalid target %s' % invoker.target
+                        
+                        for el in reversed(invoker.path):
+                            assert isinstance(el, Element), 'Invalid element %s' % el
+                            if not el.property: continue
+                            assert isinstance(el.property, TypeProperty), 'Invalid element property %s' % el.property
+                            if el.property.parent == invoker.target:
+                                if propKey: invokers[el.property] = invoker
+                                else: invokers[el.property.parent] = invoker
+                            break
+                    stack.append((node.child, current.invokersGet, current.invokersPost, current.invokersPut))
+        
         for invoker in register.invokers:
             assert isinstance(invoker, Invoker), 'Invalid invoker %s' % invoker
             if not invoker.target: continue

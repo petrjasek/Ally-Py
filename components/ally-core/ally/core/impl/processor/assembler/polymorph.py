@@ -10,7 +10,6 @@ Provides the polymorph indexing.
 '''
 
 import logging
-
 from ally.api.operator.type import TypeModel, TypeProperty, TypeQuery
 from ally.api.type import typeFor, Input
 from ally.container.ioc import injected
@@ -21,9 +20,10 @@ from ally.design.processor.handler import HandlerProcessor
 from ally.support.api.util_service import isAvailableIn
 from ally.api.config import GET
 from ally.api.operator.extract import inheritedTypesFrom
-
+from collections import OrderedDict
 
 # --------------------------------------------------------------------
+
 log = logging.getLogger(__name__)
 
 # --------------------------------------------------------------------
@@ -57,6 +57,7 @@ class Invoker(Context):
     isModel = requires(bool)
     isCollection = requires(bool)
     location = requires(str)
+    decodingContent = requires(Context)
 
 class PolymorphModel(Context):
     '''
@@ -120,7 +121,7 @@ class PolymorphHandler(HandlerProcessor):
                 assert isinstance(invoker.modelInput, Input)
                 target = invoker.modelInput.type
             else: continue
-                
+            
             assert isinstance(target, TypeModel), 'Invalid target %s' % target
             
             if self.hintName not in target.hints: continue
@@ -154,7 +155,7 @@ class PolymorphHandler(HandlerProcessor):
                     aborted.append(invoker)
                     continue
                 
-                polymorph.values = {}
+                polymorph.values = OrderedDict()
                 valid = False
                 if isinstance(hint, dict) and hint:
                     valid = True
@@ -171,7 +172,7 @@ class PolymorphHandler(HandlerProcessor):
                             valid = isinstance(key, str)
                             polymorph.values[key] = value
                         if not valid: break
-                    
+                
                 if not valid:
                     log.error('Cannot use invoker because the model %s polymorph \'%s\' is invalid, at:%s',
                               target, hint, invoker.location)
@@ -184,7 +185,6 @@ class PolymorphHandler(HandlerProcessor):
                                       polymorph.parents[0], invoker.location)
                             aborted.append(invoker)
                             break
-    
                 
                 if register.polymorphed is None: register.polymorphed = {}
                 polymorphed = register.polymorphed.get(polymorph.parents[-1])

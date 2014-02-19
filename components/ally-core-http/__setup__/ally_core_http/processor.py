@@ -38,6 +38,7 @@ from ally.http.impl.processor.header_parameter import HeaderParameterHandler
 from ally.http.impl.processor.method_override import METHOD_OVERRIDE
 from ally.http.impl.processor.status import StatusHandler
 from ally.http.spec.headers import CONTENT_TYPE
+from ally.core.http.impl.processor.assembler.polymorph_persist import PolymorphPersistHandler
 
 # --------------------------------------------------------------------
 # Creating the processors used in handling the request
@@ -150,6 +151,11 @@ def errorExplain() -> Handler:
     b = ErrorExplainHandler()
     b.descriptions = descriptions()
     return b
+
+@ioc.entity
+def polymorphPersist() -> Handler:
+    p = PolymorphPersistHandler()
+    return p
 
 # --------------------------------------------------------------------
 

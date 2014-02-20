@@ -11,8 +11,7 @@ Contains the gateway setup files.
 
 # --------------------------------------------------------------------
 
-NAME = 'gateway service'
-GROUP = 'gateway'
+NAME = 'ally-service-gateway'
 VERSION = '1.0'
 DESCRIPTION = 'Provides the gateway service'
 AUTHOR = 'Gabriel Nistor'

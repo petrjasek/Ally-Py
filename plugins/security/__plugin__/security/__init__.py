@@ -11,10 +11,10 @@ Contains the setup files for security.
 
 # --------------------------------------------------------------------
 
-NAME = 'security'
+NAME = 'ally-security'
 VERSION = '1.0'
 DESCRIPTION = 'This plugin provides the basic security models.'
 KEYWORDS = ['Ally', 'REST', 'plugin', 'support', 'security']
 AUTHOR = 'Ioan Pocol'
 AUTHOR_EMAIL = "gabriel.nistor@sourcefabric.org",
-INSTALL_REQUIRES = ['ally-api >= 1.0', 'support-sqlalchemy >= 1.0'] 
+INSTALL_REQUIRES = ['ally-api >= 1.0', 'ally-support-sqlalchemy >= 1.0'] 

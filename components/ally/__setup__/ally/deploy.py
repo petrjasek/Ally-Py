@@ -18,7 +18,7 @@ import unittest
 from ally.container import event, ioc, context, aop, support, deploy
 from ally.container.impl.config import load, save
 from ally.design.priority import Priority, PRIORITY_NORMAL
-from application import parser, options
+from ally_start import parser, options
 
 from .logging import format, debug_for, info_for, warning_for, log_file
 

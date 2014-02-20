@@ -80,6 +80,7 @@ class RequestNodeHandler(HandlerProcessor):
                     subnode = current.requests.get(name)
                     if subnode is None:
                         current.parameters.append(('.'.join(names[k:]), value))
+                        break
                     else: current = subnode
                     
         request.parameters = assemblage.requestNode.parameters

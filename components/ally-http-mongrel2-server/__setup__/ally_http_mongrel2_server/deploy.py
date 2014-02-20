@@ -17,7 +17,7 @@ from uuid import uuid4
 from ally.container import ioc, support, context, deploy
 from ally.support.util_io import openURI, ReplaceInStream, pipe
 from ally.support.util_sys import pythonPath
-from application import options, parser
+from ally_start import options, parser
 
 from ..ally.deploy import FLAG_START, saveConfigurations, prepareActions
 from ..ally_http.server import server_port, server_type

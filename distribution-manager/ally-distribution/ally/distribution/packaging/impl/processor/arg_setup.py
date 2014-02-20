@@ -24,11 +24,22 @@ log = logging.getLogger(__name__)
 
 # --------------------------------------------------------------------
 
+class Distribution(Context):
+    '''
+    The distribution context.
+    '''
+    # ---------------------------------------------------------------- Required
+    packages = requires(list)
+    
 class Package(Context):
     '''
     The package context.
     '''
     # ---------------------------------------------------------------- Defined
+    name = defines(str, doc='''
+    @rtype: string
+    The package name.
+    ''')
     arguments = defines(dict, doc='''
     @rtype: dictionary{string: object}
     The arguments to be used by setup distutils for building the eggs.
@@ -37,7 +48,6 @@ class Package(Context):
     packageSetup = requires(str)
     path = requires(str)
     pathSetup = requires(str)
-    name = requires(str)
 
 # --------------------------------------------------------------------
 
@@ -47,7 +57,8 @@ class ArgSetupHandler(HandlerProcessor):
     Implementation for a processor that provides the arguments extracted from setup file.
     '''
     
-    attributes = {'VERSION'         : 'version',
+    attributes = {'NAME'            : 'name',
+                  'VERSION'         : 'version',
                   'AUTHOR'          : 'author',
                   'AUTHOR_EMAIL'    : 'author_email',
                   'KEYWORDS'        : 'keywords',
@@ -67,35 +78,39 @@ class ArgSetupHandler(HandlerProcessor):
         assert isinstance(self.attributes, dict), 'Invalid attributes %s' % self.attributes
         assert isinstance(self.attributeExtra, str), 'Invalid attribute extra %s' % self.attributeExtra
         assert isinstance(self.argumentName, str), 'Invalid name argument %s' % self.argumentName
-        super().__init__()
+        super().__init__(Package=Package)
 
-    def process(self, chain, package:Package, **keyargs):
+    def process(self, chain, distribution:Distribution, **keyargs):
         '''
         @see: HandlerProcessor.process
         
         Provides the package build arguments.
         '''
         assert isinstance(chain, Chain), 'Invalid chain %s' % chain
-        assert isinstance(package, Package), 'Invalid package %s' % package
-        assert isinstance(package.packageSetup, str), 'Invalid package setup %s' % package.packageSetup
-        assert isinstance(package.pathSetup, str), 'Invalid setup path %s' % package.pathSetup
+        assert isinstance(distribution, Distribution), 'Invalid distribution %s' % distribution
+        if not distribution.packages: return
         
-        arguments = {}
-        setupPath = os.path.join(package.pathSetup, '__init__.py')
-        if os.path.isfile(setupPath):
-            g, l = {}, {}
-            with open(setupPath, 'rb') as f: exec(f.read(), g, l)
+        for package in distribution.packages:
+            assert isinstance(package, Package), 'Invalid package %s' % package
+            assert isinstance(package.packageSetup, str), 'Invalid package setup %s' % package.packageSetup
+            assert isinstance(package.pathSetup, str), 'Invalid setup path %s' % package.pathSetup
             
-            for name, attr in self.attributes.items():
-                if name not in l: continue
-                arguments[attr] = l[name]
-            
-            if self.attributeExtra in l: arguments.update(l[self.attributeExtra])
-            
-        if not arguments:
-            log.info('Discarded \'%s\' because no specifications found', package.path)
-            chain.cancel()
-        else:
-            arguments[self.argumentName] = package.name
-            if package.arguments is None: package.arguments = arguments
-            else: package.arguments.update(arguments)
+            arguments = {}
+            setupPath = os.path.join(package.pathSetup, '__init__.py')
+            if os.path.isfile(setupPath):
+                g, l = {}, {}
+                with open(setupPath, 'rb') as f: exec(f.read(), g, l)
+                
+                for name, attr in self.attributes.items():
+                    if name not in l: continue
+                    arguments[attr] = l[name]
+                
+                if self.attributeExtra in l: arguments.update(l[self.attributeExtra])
+                
+            if self.argumentName not in arguments:
+                log.info('Discarded \'%s\' because no package name found', package.path)
+                chain.cancel()
+            else:
+                package.name = arguments[self.argumentName]
+                if package.arguments is None: package.arguments = arguments
+                else: package.arguments.update(arguments)

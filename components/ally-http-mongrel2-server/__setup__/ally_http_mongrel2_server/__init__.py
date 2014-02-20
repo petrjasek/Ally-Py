@@ -12,7 +12,7 @@ Contains setup and configuration files for the HTTP REST server.
 # The default configurations
 # --------------------------------------------------------------------
 
-NAME = 'ally HTTP mongrel2 server'
+NAME = 'ally-http-mongrel2-server'
 VERSION = '1.0'
 DESCRIPTION = 'Provides the HTTP mongrel2 server'
 AUTHOR = 'Gabriel Nistor'

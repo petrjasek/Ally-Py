@@ -12,7 +12,6 @@ Publish a package to an egg.
 import logging
 import os
 
-from ally.container.ioc import injected
 from ally.design.processor.attribute import requires
 from ally.design.processor.context import Context
 from ally.design.processor.handler import HandlerProcessor
@@ -25,6 +24,13 @@ log = logging.getLogger(__name__)
 
 # --------------------------------------------------------------------
 
+class Distribution(Context):
+    '''
+    The distribution context.
+    '''
+    # ---------------------------------------------------------------- Required
+    packages = requires(list)
+    
 class Package(Context):
     '''
     The package context.
@@ -35,31 +41,36 @@ class Package(Context):
 
 # --------------------------------------------------------------------
 
-@injected
 class PublishHandler(HandlerProcessor):
     '''
     Implementation for a processor that provides the package egg publish.
     '''
     
     def __init__(self):
-        super().__init__()
+        super().__init__(Package=Package)
 
-    def process(self, chain, package:Package, **keyargs):
+    def process(self, chain, distribution:Distribution, **keyargs):
         '''
         @see: HandlerProcessor.process
         
         Provides the package publish.
         '''
-        assert isinstance(package, Package), 'Invalid package %s' % package
-        
+        assert isinstance(distribution, Distribution), 'Invalid distribution %s' % distribution
+        if not distribution.packages: return
+            
         savedCwd = os.getcwd()
-        os.chdir(package.path)
-        
-        run_setup(package.pathSetupPy, ('sdist', 'bdist_egg', 'upload'))
-        
-        # Cleaning setup directories.
-        rmtree('build')
-        rmtree('%s.egg-info' % package.name)
+             
+        for package in distribution.packages:
+            assert isinstance(package, Package), 'Invalid package %s' % package
+            
+            os.chdir(package.path)
+            
+            run_setup(package.pathSetupPy, ('register', 'sdist', 'bdist_egg', 'upload'))
+            
+            # Cleaning setup directories.
+            rmtree('build')
+            rmtree('dist')
+            rmtree('%s.egg-info' % package.name.replace('-', '_'))
         
         # Restoring environment. 
         os.chdir(savedCwd)

@@ -10,11 +10,7 @@ Contains ally base setup files.
 '''
 
 # --------------------------------------------------------------------
-# 'httplib2==0.7.7',
-# 'Jinja2==2.6',
-# 'sunburnt==0.6',
-# 'lxml==3.0'
-                    
+                  
 NAME = 'ally'
 VERSION = '1.0'
 DESCRIPTION = 'Ally framework - utilities component'
@@ -28,5 +24,5 @@ Basically this component contains general support for the application that is no
 particular technology.'''
 TEST_SUITE = '__unit_test__'
 CLASSIFIERS = ['Development Status :: 4 - Beta']
-__extra__ = dict(py_modules = ['application', 'package_extender'],
+__extra__ = dict(py_modules=['ally_start', 'package_extender'],
                  dependency_links = ["https://github.com/sourcefabric/Ally-Py/tree/master/distribution/libraries"])

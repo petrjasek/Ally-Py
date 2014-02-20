@@ -14,7 +14,7 @@ import logging
 
 from ally.container import ioc, deploy, context
 from ally.container.context import activate
-from application import parser, options
+from ally_start import parser, options
 
 from ..ally.deploy import FLAG_START, prepareActions, preparePreferences
 from ..ally_plugin.deploy import plugins

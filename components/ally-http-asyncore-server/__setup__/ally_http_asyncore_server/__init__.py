@@ -11,7 +11,7 @@ Contains setup and configuration files for the HTTP REST server.
 
 # --------------------------------------------------------------------
 
-NAME = 'ally HTTP asyncore server'
+NAME = 'ally-http-asyncore-server'
 VERSION = '1.0'
 DESCRIPTION = 'Provides the HTTP asyncore server'
 AUTHOR = 'Gabriel Nistor'

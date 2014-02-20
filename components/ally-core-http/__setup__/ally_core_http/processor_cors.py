@@ -9,7 +9,7 @@ Created on Nov 24, 2011
 Provides the processors for handling Cross-Origin Resource Sharing.
 '''
 
-from .processor import headersCustom, updateAssemblyResources, assemblyResources, \
+from .processor import headersCorsAllow, updateAssemblyResources, assemblyResources, \
     methodInvoker, parametersAsHeaders, read_from_params
 from ally.container import ioc
 from ally.design.processor.handler import Handler
@@ -36,7 +36,7 @@ def allow_headers() -> list:
 @ioc.entity
 def crossOriginOthersOptions() -> dict:
     return {
-            ALLOW_HEADERS: sorted(set(chain(allow_headers(), headersCustom()))),
+            ALLOW_HEADERS: sorted(set(chain(allow_headers(), headersCorsAllow()))),
             }
 
 @ioc.entity

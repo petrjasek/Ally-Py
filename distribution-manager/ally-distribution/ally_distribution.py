@@ -44,6 +44,6 @@ def __distribution__():
         support.performEventsFor(APP_START)
 
 if __name__ == '__main__':
-    sys.modules['distribution'] = sys.modules['__main__']
+    sys.modules['ally_distribution'] = sys.modules['__main__']
     deployTime = timeit.timeit(__distribution__, number=1)
     print('=' * 50, 'Distribution performed in %.2f seconds' % deployTime)

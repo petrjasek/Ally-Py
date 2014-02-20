@@ -11,8 +11,7 @@ Contains content delivery manager setup files.
 
 # --------------------------------------------------------------------
 
-NAME = 'Content delivery manager (CDM) service'
-GROUP = 'CDM'
+NAME = 'ally-service-cdm'
 VERSION = '1.0'
 DESCRIPTION = 'Provides the content delivery manager and support for handling it'
 AUTHOR = 'Gabriel Nistor'

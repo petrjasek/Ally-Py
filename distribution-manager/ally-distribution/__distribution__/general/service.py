@@ -12,52 +12,54 @@ Provides the services setup for distribution.
 from ally.design.processor.assembly import Assembly
 from ally.design.processor.handler import Handler
 
-from ally.container import ioc, deploy
+from ally.container import ioc
 from ally.distribution.packaging.impl.processor.arg_setup import ArgSetupHandler
 from ally.distribution.packaging.impl.processor.build import BuildHandler
-from ally.distribution.packaging.impl.scanner_package import ScannerPackage
-from ally.distribution.packaging.impl.processor.write_setup import WriteSetupHandler
+from ally.distribution.packaging.impl.processor.publish import PublishHandler
+from ally.distribution.packaging.impl.processor.scanner import Scanner
+from ally.distribution.packaging.impl.processor.write_setup import \
+    WriteSetupHandler
+
 
 # --------------------------------------------------------------------
-
-@deploy.start
-def performBuild():
-    scanner().scan()
-
-# --------------------------------------------------------------------
+@ioc.config
+def sources():
+    ''' The location(s) path where the packages sources are located, this configuration can be overridden 
+    with command line arguments, the paths are relative from where the distribution is executed.'''
+    return []
 
 @ioc.config
-def path_sources():
-    ''' The location path where the packages sources are located, this configuration can be overridden 
-    with command line arguments, this path is relative from where the distribution is executed.'''
-    return ''
-
-@ioc.config
-def path_build():
+def path_build() -> str:
     ''' The location path where the packages are placed, this configuration can be overridden 
     with command line arguments, this path is relative from where the distribution is executed.'''
-    return ''
+    return None
 
 # --------------------------------------------------------------------
 
 @ioc.entity
-def assemblyPackage() -> Assembly:
+def assemblyBuild() -> Assembly:
     '''
-    The assembly used for packaging.
+    The assembly used for building packages.
     '''
-    return Assembly('Packaging')
+    return Assembly('Packaging Build')
+
+@ioc.entity
+def assemblyPublish() -> Assembly:
+    '''
+    The assembly used for publishing packages.
+    '''
+    return Assembly('Packaging Publish')
 
 # --------------------------------------------------------------------
 
 @ioc.entity
-def buildPackages() -> list: return ['__setup__', '__plugin__']
+def packages() -> list: return ['__setup__', '__plugin__']
 
 @ioc.entity
-def scanner() -> ScannerPackage:
-    b = ScannerPackage()
-    b.location = path_sources()
-    b.packages = buildPackages()
-    b.assembly = assemblyPackage()
+def scanner() -> Handler:
+    b = Scanner()
+    b.locations = sources()
+    b.packages = packages()
     return b
 
 @ioc.entity
@@ -72,9 +74,16 @@ def build() -> Handler:
     b.pathBuild = path_build()
     return b
 
+@ioc.entity
+def publish() -> Handler: return PublishHandler()
+
 # --------------------------------------------------------------------
 
-@ioc.before(assemblyPackage)
-def updateAssemblyPackage():
-    assemblyPackage().add(argSetup(), writeSetup(), build())
+@ioc.before(assemblyBuild)
+def updateAssemblyBuild():
+    assemblyBuild().add(scanner(), argSetup(), writeSetup(), build())
+    
+@ioc.before(assemblyPublish)
+def updateAssemblyPublish():
+    assemblyPublish().add(scanner(), argSetup(), writeSetup(), publish())
 

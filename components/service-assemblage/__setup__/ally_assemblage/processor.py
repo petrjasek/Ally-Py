@@ -127,14 +127,14 @@ def assemblyAssemblage() -> Assembly:
 # --------------------------------------------------------------------
 
 @ioc.entity
-def headersCustom() -> set:
+def headersCorsAllow() -> set:
     '''
     Provides the custom header names defined by processors.
     '''
     return set()
 
 @ioc.entity
-def parametersAsHeaders() -> list: return sorted(headersCustom())
+def parametersAsHeaders() -> list: return sorted(headersCorsAllow())
 
 # --------------------------------------------------------------------
 # Creating the processors used in handling the request
@@ -205,9 +205,9 @@ def externalForwardREST() -> Handler:
 
 # --------------------------------------------------------------------
 
-@ioc.before(headersCustom)
+@ioc.before(headersCorsAllow)
 def updateHeadersCustom():
-    headersCustom().add(ASSEMBLAGE.name)
+    headersCorsAllow().add(ASSEMBLAGE.name)
     
 @ioc.before(assemblyAssemblage)
 def updateAssemblyAssemblage():

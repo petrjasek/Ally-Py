@@ -19,8 +19,8 @@ from ally.container.error import SetupError
 from ally.container.impl.config import save, load
 from ally.design.priority import Priority, PRIORITY_FIRST
 from ally.support.util_sys import isPackage
-from application import parser, options
-import application
+from ally_start import parser, options
+import ally_start
 from package_extender import PACKAGE_EXTENDER
 
 from ..ally.deploy import PRIORITY_PREFERENCE, dump, FLAG_DUMP, \
@@ -53,10 +53,9 @@ def preparePluginPreferences():
 
 @deploy.prepare(PRIORITY_PREPARE_PLUGIN)
 def preparePreferences():
-    
-    application.parser = parser.add_argument_group('ally-py application plugins options.')
+    ally_start.parser = parser.add_argument_group('ally-py application plugins options.')
     with activate(plugins(), 'deploy'): support.performEventsFor(deploy.APP_PREPARE)
-    application.parser = parser
+    ally_start.parser = parser
 
 # --------------------------------------------------------------------
 

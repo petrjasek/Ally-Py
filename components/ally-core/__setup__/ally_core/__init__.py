@@ -11,7 +11,7 @@ The core of ally py framework for REST.
 
 # --------------------------------------------------------------------
 
-NAME = 'ally core'
+NAME = 'ally-core'
 VERSION = '1.0'
 DESCRIPTION = 'Provides the core functionality for handling the REST API decorated services and models'
 AUTHOR = 'Gabriel Nistor'

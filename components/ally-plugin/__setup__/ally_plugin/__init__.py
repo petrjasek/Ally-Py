@@ -11,7 +11,7 @@ The plugin support for REST.
 
 # --------------------------------------------------------------------
 
-NAME = 'ally plugin'
+NAME = 'ally-plugin'
 VERSION = '1.0'
 DESCRIPTION = 'The plugin support for REST.'
 AUTHOR = 'Gabriel Nistor'

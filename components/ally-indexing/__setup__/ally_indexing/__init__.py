@@ -11,7 +11,7 @@ The support for content indexing and content transformation.
 
 # --------------------------------------------------------------------
 
-NAME = 'ally indexing'
+NAME = 'ally-indexing'
 VERSION = '1.0'
 DESCRIPTION = 'Provides the support for content indexing and content transformation'
 AUTHOR = 'Gabriel Nistor'

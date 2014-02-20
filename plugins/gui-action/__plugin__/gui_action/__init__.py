@@ -11,8 +11,7 @@ Contains the GUI setup files.
 
 # --------------------------------------------------------------------
 
-NAME = 'GUI action'
-GROUP = 'GUI'
+NAME = 'ally-gui-action'
 VERSION = '1.0'
 AUTHOR = 'Mihai Balaceanu'
 AUTHOR_EMAIL = 'mihai.balaceanu@sourcefabric.org'

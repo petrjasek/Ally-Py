@@ -11,9 +11,7 @@ Contains the gateway setup files.
 
 # --------------------------------------------------------------------
 
-NAME = 'gateway reCAPTCHA service'
+NAME = 'ally-service-gateway-recaptcha'
 GROUP = 'gateway'
 VERSION = '1.0'
 DESCRIPTION = 'Provides the gateway reCAPTCHA service'
-
-__extra__ = dict(package_data = {'': ['*.zip']})

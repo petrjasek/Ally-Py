@@ -11,7 +11,7 @@ Contains the assemblage setup files.
 
 # --------------------------------------------------------------------
 
-NAME = 'assemblage service'
+NAME = 'ally-service-assemblage'
 VERSION = '1.0'
 DESCRIPTION = 'Provides the assemblage service'
 AUTHOR = 'Gabriel Nistor'

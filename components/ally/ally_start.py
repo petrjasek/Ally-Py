@@ -44,6 +44,6 @@ def __deploy__():
         support.performEventsFor(APP_START)
 
 if __name__ == '__main__':
-    sys.modules['application'] = sys.modules['__main__']
+    sys.modules['ally_start'] = sys.modules['__main__']
     deployTime = timeit.timeit(__deploy__, number=1)
     print('=' * 50, 'Application deployed in %.2f seconds' % deployTime)

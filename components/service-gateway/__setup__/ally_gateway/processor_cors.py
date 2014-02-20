@@ -9,7 +9,7 @@ Created on Nov 24, 2011
 Provides the processors for handling OPTIONS requests.
 '''
 
-from .processor import updateAssemblyGateway, assemblyGateway, headersCustom, \
+from .processor import updateAssemblyGateway, assemblyGateway, headersCorsAllow, \
     parametersAsHeaders, read_from_params, gatewayForward
 from ally.container import ioc
 from ally.design.processor.handler import Handler
@@ -29,7 +29,7 @@ def allow_origin() -> list:
 @ioc.entity
 def crossOriginOthersOptions() -> dict:
     return {
-            ALLOW_HEADERS: sorted(headersCustom()),
+            ALLOW_HEADERS: sorted(headersCorsAllow()),
             }
 
 @ioc.entity

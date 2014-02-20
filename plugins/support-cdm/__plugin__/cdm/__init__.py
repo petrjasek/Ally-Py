@@ -10,8 +10,7 @@ Contains setup and configuration files for cdm file system.
 '''
 # --------------------------------------------------------------------
 
-NAME = 'cdm'
-GROUP = 'cdm'
+NAME = 'ally-support-cdm'
 VERSION = '1.0'
 DESCRIPTION = 'Provides the cdm file system service'
 KEYWORDS = ['Ally', 'REST', 'plugin', 'cdm']

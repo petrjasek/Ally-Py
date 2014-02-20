@@ -11,7 +11,7 @@ Contains the sql alchemy setup files.
 
 # --------------------------------------------------------------------
 
-NAME = 'SQL alchemy support'
+NAME = 'ally-support-sqlalchemy '
 VERSION = '1.0'
 DESCRIPTION = 'Provides the support for SQL alchemy'
 INSTALL_REQUIRES = ['ally-api >= 1.0', 'SQLAlchemy>=0.7.1']

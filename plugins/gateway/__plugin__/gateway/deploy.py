@@ -14,7 +14,7 @@ import logging
 from __setup__.ally.deploy import FLAG_START
 from ally.container import deploy
 from ally.container.support import entityFor
-from application import parser, options
+from ally_start import parser, options
 from gateway.api.gateway import IGatewayService, Custom
 
 

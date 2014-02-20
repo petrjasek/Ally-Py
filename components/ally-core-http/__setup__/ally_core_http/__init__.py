@@ -11,7 +11,7 @@ Contains setup and configuration files for the HTTP REST server.
 
 # --------------------------------------------------------------------
 
-NAME = 'ally core HTTP'
+NAME = 'ally-core-http'
 VERSION = '1.0'
 DESCRIPTION = 'Provides the HTTP communication support'
 UTHOR = 'Gabriel Nistor'

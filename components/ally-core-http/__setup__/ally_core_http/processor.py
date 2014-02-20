@@ -37,6 +37,7 @@ from ally.design.processor.handler import Handler
 from ally.http.impl.processor.header_parameter import HeaderParameterHandler
 from ally.http.impl.processor.method_override import METHOD_OVERRIDE
 from ally.http.impl.processor.status import StatusHandler
+from ally.http.spec.headers import CONTENT_TYPE
 
 # --------------------------------------------------------------------
 # Creating the processors used in handling the request
@@ -65,7 +66,7 @@ def header_parameters():
 # --------------------------------------------------------------------
 
 @ioc.entity
-def headersCustom() -> set:
+def headersCorsAllow() -> set:
     '''
     Provides the custom header names defined by processors.
     '''
@@ -74,7 +75,7 @@ def headersCustom() -> set:
 @ioc.entity
 def parametersAsHeaders() -> list:
     parameters = set(header_parameters())
-    parameters.update(headersCustom())
+    parameters.update(headersCorsAllow())
     parameters = sorted(parameters)
     return parameters
 
@@ -175,9 +176,11 @@ def assemblyBlocks() -> Assembly:
 
 # --------------------------------------------------------------------
     
-@ioc.before(headersCustom)
+@ioc.before(headersCorsAllow)
 def updateHeadersCustom():
-    if allow_method_override(): headersCustom().add(METHOD_OVERRIDE.name)
+    headersCorsAllow().add(CONTENT_TYPE.name)
+    if allow_method_override():
+        headersCorsAllow().add(METHOD_OVERRIDE.name)
 
 @ioc.before(assemblyResources)
 def updateAssemblyResources():

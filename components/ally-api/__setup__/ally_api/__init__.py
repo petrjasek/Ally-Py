@@ -11,7 +11,7 @@ The API of ally py framework for REST.
 
 # --------------------------------------------------------------------
 
-NAME = 'ally API'
+NAME = 'ally-api'
 VERSION = '1.0'
 AUTHOR = 'Gabriel Nistor'
 AUTHOR_EMAIL = 'gabriel.nistor@sourcefabric.org'

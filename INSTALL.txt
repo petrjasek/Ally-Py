@@ -1,2 +1,5 @@
+Install the required dependencies:
+sudo pip install requirements.txt
+
 Clone the Ally-Py repository:
 git clone https://github.com/sourcefabric/Ally-Py.git

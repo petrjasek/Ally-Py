@@ -13,8 +13,10 @@ Contains the setup files for gateway.
 
 NAME = 'ally-gateway'
 VERSION = '1.0'
+AUTHOR = 'Gabriel Nistor'
+AUTHOR_EMAIL = 'gabriel.nistor@sourcefabric.org'
 DESCRIPTION = '''This plugin provides the default gateway service.'''
-INSTALL_REQUIRES = ['ally-support-sqlalchemy >= 1.0']
 LONG_DESCRIPTION = '''This plugin provides the Gateway API and also the means of setting up custom gateways,
 for instance allowing for a certain IP full access to REST models. The gateway plugin is agnostic to the actual
 services that are published by the REST server and any type of URLs and rules can be placed with this plugin.'''
+INSTALL_REQUIRES = ['ally-support-sqlalchemy >= 1.0']

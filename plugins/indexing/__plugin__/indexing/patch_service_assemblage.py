@@ -34,4 +34,9 @@ else:
         '''
         The assemblage indexes URI.
         '''
-        return ''.join((root_uri_resources(), '/', DOMAIN, nameForModel(Block), '/%s'))
+        uri = []
+        if root_uri_resources(): uri.append(root_uri_resources())
+        uri.append(DOMAIN.strip('/'))
+        uri.append(nameForModel(Block))
+        uri.append('%s')
+        return '/'.join(uri)

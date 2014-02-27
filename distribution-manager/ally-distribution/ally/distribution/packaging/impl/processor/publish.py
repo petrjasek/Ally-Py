@@ -38,6 +38,7 @@ class Package(Context):
     # ---------------------------------------------------------------- Required
     path = requires(str)
     name = requires(str)
+    setup = requires(str)
 
 # --------------------------------------------------------------------
 
@@ -65,12 +66,18 @@ class PublishHandler(HandlerProcessor):
             
             os.chdir(package.path)
             
-            run_setup(package.pathSetupPy, ('register', 'sdist', 'bdist_egg', 'upload'))
+            with open('setup.py', 'w') as f: print(package.setup, file=f)
+            log.info('%s Publishing %s', '=' * 50, package.name)
+            try: run_setup('setup.py', ('register', 'sdist', 'bdist_egg', 'upload'))
+            except: log.exception('Cannot publish \'%s\'', package.path)
             
             # Cleaning setup directories.
-            rmtree('build')
-            rmtree('dist')
-            rmtree('%s.egg-info' % package.name.replace('-', '_'))
+            os.remove('setup.py')
+            if os.path.exists('build'): rmtree('build')
+            if os.path.exists('dist'): rmtree('dist')
+            eggInfo = '%s.egg-info' % package.name.replace('-', '_')
+            if os.path.exists(eggInfo): rmtree(eggInfo)
         
         # Restoring environment. 
         os.chdir(savedCwd)
+        

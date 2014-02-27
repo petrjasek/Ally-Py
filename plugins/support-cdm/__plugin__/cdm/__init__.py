@@ -12,10 +12,9 @@ Contains setup and configuration files for cdm file system.
 
 NAME = 'ally-support-cdm'
 VERSION = '1.0'
-DESCRIPTION = 'Provides the cdm file system service'
-KEYWORDS = ['Ally', 'REST', 'plugin', 'cdm']
 AUTHOR = 'Gabriel Nistor'
-AUTHOR_EMAIL = "gabriel.nistor@sourcefabric.org"
+AUTHOR_EMAIL = 'gabriel.nistor@sourcefabric.org'
+KEYWORDS = ['Ally', 'REST', 'plugin', 'cdm']
+DESCRIPTION = 'Provides the cdm file system service'
+LONG_DESCRIPTION = ''' The content delivery manager support for publishing binary resources to different platforms.'''
 INSTALL_REQUIRES = ['ally >= 1.0'] 
-
-# --------------------------------------------------------------------

@@ -14,7 +14,7 @@ Contains setup and configuration files for the HTTP REST server.
 NAME = 'ally-core-http'
 VERSION = '1.0'
 DESCRIPTION = 'Provides the HTTP communication support'
-UTHOR = 'Gabriel Nistor'
+AUTHOR = 'Gabriel Nistor'
 AUTHOR_EMAIL = 'gabriel.nistor@sourcefabric.org'
 KEYWORDS = ['Ally', 'REST', 'core', 'http ']
 INSTALL_REQUIRES = ['ally-core >= 1.0', 'ally-http >= 1.0']

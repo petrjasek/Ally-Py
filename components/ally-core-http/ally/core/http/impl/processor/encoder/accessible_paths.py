@@ -9,23 +9,22 @@ Created on Mar 18, 2013
 Provides the accessible paths for a model.
 '''
 
+from collections import OrderedDict
+import logging
+
 from ally.api.operator.type import TypeModel
+from ally.api.type import Type
 from ally.container.ioc import injected
 from ally.core.http.impl.index import NAME_BLOCK_REST, ACTION_REFERENCE
 from ally.core.spec.transform import ITransfrom, IRender
-from ally.design.processor.attribute import requires, defines, optional
+from ally.design.processor.attribute import requires, defines
 from ally.design.processor.context import Context
 from ally.design.processor.handler import HandlerProcessor
 from ally.support.util import firstOf
-from ally.support.util_sys import locationStack
-from collections import OrderedDict
-import logging
 from ally.support.util_spec import IDo
-from ally.api.type import Type
-from ally.design.processor.execution import Abort
+
 
 # --------------------------------------------------------------------
-
 log = logging.getLogger(__name__)
 
 # --------------------------------------------------------------------
@@ -44,6 +43,7 @@ class Invoker(Context):
     # ---------------------------------------------------------------- Required
     target = requires(TypeModel)
     doEncodePath = requires(IDo)
+    isCollection = requires(bool)
 
 class Create(Context):
     '''
@@ -54,8 +54,6 @@ class Create(Context):
     @rtype: ITransfrom
     The encoder for the accessible paths.
     ''')
-    # ---------------------------------------------------------------- Optional
-    name = optional(str)
     # ---------------------------------------------------------------- Required
     objType = requires(Type)
     
@@ -69,9 +67,12 @@ class AccessiblePathEncode(HandlerProcessor):
     
     nameRef = 'href'
     # The reference attribute name.
+    nameMarkedList = '%sList'
+    # The name to use for rendering paths to collections, contains the '%s' mark where to place the actual name.
     
     def __init__(self):
         assert isinstance(self.nameRef, str), 'Invalid reference name %s' % self.nameRef
+        assert isinstance(self.nameMarkedList, str), 'Invalid name list %s' % self.nameMarkedList
         super().__init__()
         
     def process(self, chain, node:Node, invoker:Invoker, create:Create, **keyargs):
@@ -90,23 +91,13 @@ class AccessiblePathEncode(HandlerProcessor):
         if not node.invokersAccessible or create.objType not in node.invokersAccessible: return  # No accessible paths
         assert isinstance(invoker.target, TypeModel), 'Invalid target %s' % invoker.target
         
-        if Create.name in create and create.name: prefix = create.name
-        else: prefix = invoker.target.name
-
-        corrupted = False
-        for pname in invoker.target.properties:
-            if pname.startswith(prefix):
-                log.error('Illegal property name \'%s\', is not allowed to start with the model name, at:%s',
-                          pname, locationStack(invoker.target.clazz))
-                corrupted = True
-                break
-            
-        if corrupted: raise Abort(invoker)
-
         accessible = []
         for name, ainvoker in node.invokersAccessible[create.objType].items():
             assert isinstance(ainvoker, Invoker), 'Invalid invoker %s' % ainvoker
-            accessible.append(('%s%s' % (prefix, name), ainvoker))
+            if ainvoker.isCollection: name = self.nameMarkedList % name
+            if name in invoker.target.properties: continue
+            
+            accessible.append((name, ainvoker))
         accessible.sort(key=firstOf)
         
         if accessible: create.encoder = EncoderAccessiblePath(self.nameRef, OrderedDict(accessible))

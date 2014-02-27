@@ -35,6 +35,7 @@ class Invoker(Context):
     '''
     # ---------------------------------------------------------------- Optional
     shadowing = optional(Context)
+    filterName = optional(str)
     # ---------------------------------------------------------------- Required
     node = requires(Context)
     target = requires(TypeModel)
@@ -101,6 +102,7 @@ class PathGetAccesibleHandler(HandlerProcessor):
         for invoker in register.invokers:
             assert isinstance(invoker, Invoker), 'Invalid invoker %s' % invoker
             if invoker.methodHTTP != HTTP_GET: continue
+            if Invoker.filterName in invoker and invoker.filterName: continue
             
             if not invoker.isModel or not invoker.target: continue
             
@@ -115,6 +117,7 @@ class PathGetAccesibleHandler(HandlerProcessor):
         for invoker in register.invokers:
             assert isinstance(invoker, Invoker), 'Invalid invoker %s' % invoker
             if invoker.methodHTTP != HTTP_GET: continue
+            if Invoker.filterName in invoker and invoker.filterName: continue
             if not invoker.isModel or not invoker.target or not invoker.node.nodesByProperty: continue
             if invoker.target not in register.polymorphed: continue
             
@@ -174,6 +177,7 @@ class PathGetAccesibleHandler(HandlerProcessor):
         for invoker in invokers:
             assert isinstance(invoker, Invoker)
             if invoker.methodHTTP != HTTP_GET: continue
+            if Invoker.filterName in invoker and invoker.filterName: continue
             if not invoker.isCollection and invoker.target in types: continue
             if Invoker.shadowing in invoker and invoker.shadowing: continue
             if shadowing == invoker: continue

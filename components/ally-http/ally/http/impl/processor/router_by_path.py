@@ -53,10 +53,11 @@ class RoutingByPathHandler(HandlerBranching):
     
     def __init__(self):
         assert isinstance(self.assembly, Assembly), 'Invalid assembly %s' % self.assembly
-        assert isinstance(self.rootURI, str), 'Invalid root URI %s' % self.rootURI
+        assert self.rootURI is None or isinstance(self.rootURI, str), 'Invalid root URI %s' % self.rootURI
         super().__init__(Routing(self.assembly))
         
-        self._regex = re.compile('^%s(?:/|(?=\\.)|$)(.*)' % re.escape(self.rootURI))
+        if self.rootURI: self._regex = re.compile('^%s(?:/|(?=\\.)|$)(.*)' % re.escape(self.rootURI))
+        else: self._regex = re.compile('(.*)')
             
     def process(self, chain, processing, request:Request, **keyargs):
         '''

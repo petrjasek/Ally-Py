@@ -16,4 +16,5 @@ VERSION = '1.0'
 AUTHOR = 'Mihai Balaceanu'
 AUTHOR_EMAIL = 'mihai.balaceanu@sourcefabric.org'
 DESCRIPTION = 'Provides the core for the GUI (Graphical User Interface)'
+LONG_DESCRIPTION = ''' Provides the support for publishing and communicating with the UI resources.'''
 INSTALL_REQUIRES = ['ally-api >= 1.0', 'ally-support-cdm >= 1.0']

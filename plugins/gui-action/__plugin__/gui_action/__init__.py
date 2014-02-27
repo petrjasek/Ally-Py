@@ -16,4 +16,6 @@ VERSION = '1.0'
 AUTHOR = 'Mihai Balaceanu'
 AUTHOR_EMAIL = 'mihai.balaceanu@sourcefabric.org'
 DESCRIPTION = 'Provides the the GUI actions'
+LONG_DESCRIPTION = ''' Provides the services required for having actions that can be used by UI in order to define
+application menus or other things that the server has an impact on.'''
 INSTALL_REQUIRES = ['ally-api >= 1.0']

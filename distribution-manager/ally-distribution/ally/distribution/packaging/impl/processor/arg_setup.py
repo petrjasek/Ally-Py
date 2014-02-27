@@ -15,8 +15,8 @@ import os
 from ally.container.ioc import injected
 from ally.design.processor.attribute import requires, defines
 from ally.design.processor.context import Context
-from ally.design.processor.execution import Chain
 from ally.design.processor.handler import HandlerProcessor
+import re
 
 
 # --------------------------------------------------------------------
@@ -86,11 +86,12 @@ class ArgSetupHandler(HandlerProcessor):
         
         Provides the package build arguments.
         '''
-        assert isinstance(chain, Chain), 'Invalid chain %s' % chain
         assert isinstance(distribution, Distribution), 'Invalid distribution %s' % distribution
         if not distribution.packages: return
         
-        for package in distribution.packages:
+        packages = distribution.packages
+        distribution.packages = []
+        for package in packages:
             assert isinstance(package, Package), 'Invalid package %s' % package
             assert isinstance(package.packageSetup, str), 'Invalid package setup %s' % package.packageSetup
             assert isinstance(package.pathSetup, str), 'Invalid setup path %s' % package.pathSetup
@@ -109,8 +110,12 @@ class ArgSetupHandler(HandlerProcessor):
                 
             if self.argumentName not in arguments:
                 log.info('Discarded \'%s\' because no package name found', package.path)
-                chain.cancel()
             else:
                 package.name = arguments[self.argumentName]
-                if package.arguments is None: package.arguments = arguments
-                else: package.arguments.update(arguments)
+                if re.findall('\s+', package.name):
+                    log.info('Discarded \'%s\' because the package name \'%s\' contains white spaces',
+                             package.path, package.name)
+                else:
+                    if package.arguments is None: package.arguments = arguments
+                    else: package.arguments.update(arguments)
+                    distribution.packages.append(package)

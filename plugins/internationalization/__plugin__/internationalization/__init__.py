@@ -13,8 +13,9 @@ Contains the internationalization setup files.
 
 NAME = 'ally-internationalization'
 VERSION = '1.0'
-DESCRIPTION = 'Provides the scanning and persistance for the localized messages'
 AUTHOR = 'Gabriel Nistor'
 AUTHOR_EMAIL = 'gabriel.nistor@sourcefabric.org'
 KEYWORDS = ['Ally', 'REST', 'plugin', 'internationalization']
-INSTALL_REQUIRES = ['ally-api >= 1.0', 'ally-support-sqlalchemy >= 1.0', 'ally-support-cdm >= 1.0']
+DESCRIPTION = 'Provides the managmenet for the localized messages'
+LONG_DESCRIPTION = ''' Provides the services for managing PO and POT files.'''
+INSTALL_REQUIRES = ['ally-api >= 1.0', 'ally-support-sqlalchemy >= 1.0', 'ally-support-cdm >= 1.0', 'Babel >= 1.3']

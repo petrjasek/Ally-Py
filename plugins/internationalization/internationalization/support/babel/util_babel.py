@@ -10,9 +10,7 @@ Contains Babel utils
 '''
 
 from functools import reduce
-from babel.messages.catalog import Message, Catalog
-from babel._compat import BytesIO
-from babel.messages.pofile import write_po
+from babel.messages.catalog import Message
 
 def msgId(msg):
     '''

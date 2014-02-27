@@ -13,10 +13,10 @@ Contains the superdesk language setup files.
 
 NAME = 'ally-language'
 VERSION = '1.0'
-DESCRIPTION = 'Provides the languages'
-LONG_DESCRIPTION = 'Language management functionality (model, service)'
 AUTHOR = 'Gabriel Nistor'
 AUTHOR_EMAIL = 'gabriel.nistor@sourcefabric.org'
 KEYWORDS = ['Ally', 'REST', 'plugin', 'language']
+DESCRIPTION = 'Provides the languages'
+LONG_DESCRIPTION = '''Language management functionality (model, service)'''
 INSTALL_REQUIRES = ['ally-api >= 1.0', 'ally-support-sqlalchemy >= 1.0']
 TEST_SUITE = '__unit_test__'

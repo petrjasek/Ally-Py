@@ -379,7 +379,7 @@ class RenderJSON(IRender):
         '''
         @see: IRender.beginCollection
         '''
-        self.begin(name, OF_COLLECTION, **specifications)
+        self.begin('collection', OF_COLLECTION, **specifications)
         return self
 
     def end(self):

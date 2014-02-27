@@ -78,7 +78,8 @@ def persistMarkers():
         if name in used(): group = 'current markers'
         else: group = 'unused markers'
         configs[name[plen:]] = Config(name, value, group)
-    with open(distribution_file_path(), 'w') as f: save(configs, f)
+    if configs:
+        with open(distribution_file_path(), 'w') as f: save(configs, f)
 
 # --------------------------------------------------------------------
 

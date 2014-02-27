@@ -17,8 +17,7 @@ if True:
 # --------------------------------------------------------------------
 
 from ally.api.config import model
-from ally.api.type import typeFor
-from sql_alchemy.support.mapper import DeclarativeMetaModel, validate, \
+from sql_alchemy.support.mapper import DeclarativeMetaModel, \
     mapperSimple
 from sqlalchemy.dialects.mysql.base import INTEGER
 from sqlalchemy.engine import create_engine
@@ -57,7 +56,6 @@ class User(Person):
     '''
     Name = str
 
-@validate
 class PersonMapped(Base, Person):
     '''
     Provides the mapping for Person entity.
@@ -81,7 +79,6 @@ class PersonMapped(Base, Person):
                                     case([(cls.LastName == None, cls.FirstName)], else_=
                                     cls.FirstName + ' ' + cls.LastName)))
 
-@validate
 class UserMapped(PersonMapped, User):
     '''
     Provides the mapping for User entity.

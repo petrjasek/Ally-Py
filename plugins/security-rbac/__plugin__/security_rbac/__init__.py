@@ -13,9 +13,10 @@ Contains the setup files for security rbac.
 
 NAME = 'ally-security-rbac'
 VERSION = '1.0'
-DESCRIPTION = '''This plugin handles the support for RBAC security.'''
-KEYWORDS = ['Ally', 'REST', 'plugin', 'support', 'RBAC']
 AUTHOR = 'Ioan Pocol'
 AUTHOR_EMAIL = 'ioan.pocol@sourcefabric.org'
+KEYWORDS = ['Ally', 'REST', 'plugin', 'support', 'RBAC']
+DESCRIPTION = '''This plugin handles the support for RBAC security.'''
+LONG_DESCRIPTION = ''' Provides the services for organizing rights based on roles or other entities.'''
 INSTALL_REQUIRES = ['ally-security >= 1.0'] 
 

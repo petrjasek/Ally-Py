@@ -24,7 +24,7 @@ from ally.api.error import InputError
 
 log = logging.getLogger(__name__)
 
-asPattern = lambda rootURI: '^%s(?:/|(?=\\.)|$)(.*)' % re.escape(rootURI)
+asPattern = lambda rootURI: '^%s(?:/|(?=\\.)|$)(.*)' % re.escape(rootURI) if rootURI else '(.*)'
 # Make the root URI into a gateway pattern.
 
 # --------------------------------------------------------------------

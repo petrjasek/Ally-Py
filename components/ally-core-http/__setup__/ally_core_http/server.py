@@ -66,4 +66,4 @@ def updateAssemblyServerForResources():
 
 @ioc.after(updateAssemblyServerForResources)
 def updateAssemblyServerForError():
-    if server_provide_errors(): assemblyServer().add(errorsRouter())
+    if server_provide_errors(): assemblyServer().add(errorsRouter(), before=resourcesRouter())

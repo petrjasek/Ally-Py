@@ -38,7 +38,7 @@ class RootURIHandler(HandlerProcessor):
     # The root URI to use for generated paths.
     
     def __init__(self):
-        assert isinstance(self.rootURI, str), 'Invalid root URI %s' % self.rootURI
+        assert self.rootURI is None or isinstance(self.rootURI, str), 'Invalid root URI %s' % self.rootURI
         super().__init__()
     
     def process(self, chain, solicit:Solicit, **keyargs):
@@ -48,4 +48,4 @@ class RootURIHandler(HandlerProcessor):
         Populate the roor URI.
         '''
         assert isinstance(solicit, Solicit), 'Invalid solicit %s' % solicit
-        solicit.rootURI = self.rootURI.strip('/')
+        solicit.rootURI = self.rootURI.strip('/') if self.rootURI else []

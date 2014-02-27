@@ -17,7 +17,7 @@ from ally.container.ioc import injected
 from ally.design.processor.attribute import defines
 from ally.design.processor.context import Context
 from ally.design.processor.handler import HandlerProcessor
-
+from collections import deque
 
 # --------------------------------------------------------------------
 log = logging.getLogger(__name__)
@@ -79,33 +79,44 @@ class Scanner(HandlerProcessor):
         assert isinstance(distribution, Distribution), 'Invalid distribution %s' % distribution
         
         if distribution.packages is None: distribution.packages = []
-        for location in self.locations:
-            if not os.path.isdir(location): continue
+        locations = deque(self.locations)
+        while locations:
+            location = locations.popleft()
+            assert isinstance(location, str), 'Invalid location %s' % location
+            if location.endswith('*'):
+                location = os.path.dirname(location)
+                for folder in os.listdir(location):
+                    fullPath = join(location, folder)
+                    if not isdir(fullPath): continue
+                    locations.append(fullPath)
+                continue
             
-            for folder in os.listdir(location):
-                fullPath = join(location, folder)
-                if not isdir(fullPath): continue
+            if not isdir(location):
+                log.info('Invalid folder \'%s\'', location)
+                continue
                 
-                packageName = name = None
-                for current in self.packages:
-                    packagePath = join(fullPath, current)
-                    if not isdir(packagePath): continue
-                    
-                    packages = [name for name in os.listdir(packagePath) if isdir(join(packagePath, name))
-                                and not name.startswith('__')]
-                    if len(packages) != 1:
-                        log.info('Not a package \'%s\' for \'%s\' because found to many root setup packages \'%s\'',
-                                 fullPath, current, ', '.join(packages))
-                    else:
-                        packageName = current
-                        name = packages[0]
-                    break  # We stop for the first found setup folder.
+            packageName = name = None
+            for current in self.packages:
+                packagePath = join(location, current)
+                if not isdir(packagePath): continue
                 
-                if name is None: continue
-                
-                package = Package()
-                assert isinstance(package, PackageScan), 'Invalid package %s' % package
-                package.packageSetup = '%s.%s' % (packageName, name)
-                package.path = fullPath
-                package.pathSetup = join(packagePath, name)
-                distribution.packages.append(package)
+                packages = [name for name in os.listdir(packagePath) if isdir(join(packagePath, name))
+                            and not name.startswith('__')]
+                if len(packages) != 1:
+                    log.info('Not a package \'%s\' for \'%s\' because found to many root setup packages \'%s\'',
+                             location, current, ', '.join(packages))
+                else:
+                    packageName = current
+                    name = packages[0]
+                break  # We stop for the first found setup folder.
+            else:
+                log.info('Not a package folder \'%s\'', location)
+            
+            if name is None: continue
+            
+            package = Package()
+            assert isinstance(package, PackageScan), 'Invalid package %s' % package
+            package.packageSetup = '%s.%s' % (packageName, name)
+            package.path = os.path.abspath(location)
+            package.pathSetup = os.path.abspath(join(packagePath, name))
+            distribution.packages.append(package)

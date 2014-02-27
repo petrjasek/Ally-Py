@@ -33,5 +33,8 @@ else:
         '''
         The anonymous gateway URI.
         '''
-        return '/'.join((root_uri_resources(), nameForModel(Gateway)))
+        uri = []
+        if root_uri_resources(): uri.append(root_uri_resources())
+        uri.append(nameForModel(Gateway))
+        return '/'.join(uri)
 

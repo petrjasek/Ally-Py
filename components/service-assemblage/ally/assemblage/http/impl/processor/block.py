@@ -80,12 +80,12 @@ class BlockHandler(HandlerProcessor):
         oblock = self.requesterGetJSON.request(self.uri % id)
         if oblock is None: block = None
         else:
-            uri = oblock['BlockAction']['href']
+            uri = oblock['ActionList']['href']
             oactions = self.requesterGetJSON.request(uri)
             
             actions = []
             if oactions is not None:
-                for oaction in oactions['ActionList']:
+                for oaction in oactions['collection']:
                     actions.append(self._obtainAction(oaction['href']))
             block = Block(*actions, keys=oblock.get('Keys'))
             
@@ -100,11 +100,11 @@ class BlockHandler(HandlerProcessor):
         if action is not None: return action
         
         oaction = self.requesterGetJSON.request(uri)
-        operforms = self.requesterGetJSON.request(oaction['ActionPerform']['href'])
+        operforms = self.requesterGetJSON.request(oaction['PerformList']['href'])
 
         performs = []
         if operforms is not None:
-            for operform in operforms['PerformList']:
+            for operform in operforms['collection']:
                 performs.append(self._obtainPerform(operform['href']))
             
         action = Action(oaction['Name'], *performs, before=oaction.get('Before'), final=oaction['Final'] == True,

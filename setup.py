@@ -62,14 +62,14 @@ class AllyDevelop(develop):
             pkg = os.path.join(folder, 'setup.pkg')
             if os.path.isfile(pkg):
                 with open(pkg, 'r') as f:
-                    for line in f.readlines(): argv.append(os.path.join(folder, *line.split('/')))
+                    for line in f.readlines(): argv.append(os.path.join(folder, *line.strip().split('/')))
             else: argv.append(os.path.join(folder, '*'))
-        print('*', argv)
-        #argv.append('-build')
-        #argv.append(os.path.dirname(self.egg_path))
-        #argv.append('--dist')
-        #sys.argv = argv
-        #ally_distribution.__distribution__()
+        
+        argv.append('-build')
+        argv.append(os.path.dirname(self.egg_path))
+        argv.append('--dist')
+        sys.argv = argv
+        ally_distribution.__distribution__()
         
 setup(platforms=['all'],
       license='GPL v3',

@@ -12,7 +12,7 @@ Provides the JSON encoder processor handler.
 from .base import RenderBaseHandler, Content
 from ally.container.ioc import injected
 from ally.core.impl.index import ACTION_STREAM, ACTION_DISCARD, NAME_BLOCK, \
-    ACTION_INJECT, Index, ACTION_NAME
+    ACTION_INJECT, ADJUST_STANDARD, Index, ACTION_NAME
 from ally.core.spec.resources import Converter
 from ally.core.spec.transform import IRender
 from ally.design.processor.attribute import optional
@@ -37,8 +37,8 @@ PSIND_ATTR_CAPTURE = 'JSON start capture %s'  # The pattern used for start index
 PEIND_ATTR_CAPTURE = 'JSON end capture %s'  # The pattern used for indexes used in capturing attributes.
 
 # The names.
-NAME_JSON_START_ADJUST = 'JSON start adjust'
-NAME_JSON_END_ADJUST = 'JSON end adjust'
+PATTERN_JSON_START_ADJUST = 'JSON start %s adjust'
+PATTERN_JSON_END_ADJUST = 'JSON end %s adjust'
 
 # Variables
 VAR_JSON_NAME = 'JSON tag name'  # The name used for the tag name.
@@ -94,7 +94,7 @@ BLOCK_JSON_UNNAMED = Block(
 
 # Provides the JSON standard block definitions.
 BLOCKS_JSON = {
-               NAME_JSON_START_ADJUST:
+               PATTERN_JSON_START_ADJUST % ADJUST_STANDARD:
                Block(
                      Action(ACTION_JSON_ADJUST,
                             feed(SIND_ATTRS),
@@ -113,7 +113,7 @@ BLOCKS_JSON = {
               
               PATTERN_JSON_BLOCK_UNAMED % NAME_BLOCK: BLOCK_JSON_UNNAMED,
               
-              NAME_JSON_END_ADJUST:
+              PATTERN_JSON_END_ADJUST % ADJUST_STANDARD:
               Block(
                     Action(ACTION_JSON_ADJUST,
                            feed(EIND_ENTRY)),
@@ -387,9 +387,9 @@ class RenderJSON(IRender):
         @see: IRender.collectionEnd
         '''
         assert self._stack, 'No collection to end'
-        of, index, isAdjust = self._stack.popleft()
+        of, index, adjust = self._stack.popleft()
         
-        if isAdjust: index = self._index(NAME_JSON_END_ADJUST)
+        if adjust: index = self._index(PATTERN_JSON_END_ADJUST % adjust)
         if of == OF_COLLECTION: self._out.write(']}')
         elif of == OF_OBJECT: self._out.write('}')
         if index:
@@ -406,7 +406,7 @@ class RenderJSON(IRender):
         
     # ----------------------------------------------------------------
 
-    def begin(self, name, of, attributes=None, indexBlock=None, indexAttributesCapture=immut()):
+    def begin(self, name, of, attributes=None, indexBlock=None, adjust=ADJUST_STANDARD, indexAttributesCapture=immut()):
         '''
         Used to open a JSON object.
         
@@ -424,7 +424,7 @@ class RenderJSON(IRender):
             if indexBlock is None:
                 assert not indexAttributesCapture, 'No attributes capture expected, but got %s' % indexAttributesCapture
                 assert of in (OF_OBJECT, OF_COLLECTION), 'Invalid adjusting for of %s action' % of
-                index = self._index(NAME_JSON_START_ADJUST)
+                index = self._index(PATTERN_JSON_START_ADJUST % adjust)
                 isAdjust = True
             self._adjust = False
         if not isAdjust:
@@ -454,7 +454,7 @@ class RenderJSON(IRender):
             self._out.write(':')
         elif index: index(SIND_NAME, EIND_NAME)
         
-        self._stack.appendleft((of, index, isAdjust))
+        self._stack.appendleft((of, index, adjust if isAdjust else None))
         if of == OF_PROPERTY: return
         
         if index: index(SIND_VALUE)

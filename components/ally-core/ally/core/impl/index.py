@@ -20,6 +20,8 @@ ACTION_DISCARD = 'discard'  # The action name for discarding a block.
 ACTION_INJECT = 'inject'  # The action name for injecting in a block.
 ACTION_NAME = 'get_name'  # The action name for providing the block name.
 
+ADJUST_STANDARD = 'standard'  # The standard adjust
+
 # --------------------------------------------------------------------
 
 class Index:

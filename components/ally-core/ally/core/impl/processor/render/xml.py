@@ -12,7 +12,7 @@ Provides the XML encoder processor handler.
 from .base import Content, RenderBaseHandler
 from ally.container.ioc import injected
 from ally.core.impl.index import NAME_BLOCK, ACTION_DISCARD, ACTION_STREAM, \
-    ACTION_INJECT, ACTION_NAME, Index
+    ACTION_INJECT, ACTION_NAME, ADJUST_STANDARD, Index
 from ally.core.spec.transform import IRender
 from ally.indexing.spec.model import Block, Action
 from ally.indexing.spec.perform import skip, feed, feedValue, feedName, \
@@ -43,8 +43,8 @@ PSIND_ATTR_CAPTURE = 'XML start capture %s'  # The pattern used for start indexe
 PEIND_ATTR_CAPTURE = 'XML end capture %s'  # The pattern used for indexes used in capturing attributes.
 
 # The names.
-NAME_XML_START_ADJUST = 'XML start adjust'
-NAME_XML_END_ADJUST = 'XML end adjust'
+PATTERN_XML_START_ADJUST = 'XML start %s adjust'
+PATTERN_XML_END_ADJUST = 'XML end %s adjust'
 
 # Variables
 VAR_XML_NAME = 'XML tag name'  # The name used for the tag name.
@@ -83,7 +83,7 @@ BLOCK_XML = Block(
                                   
 # Provides the XML standard block definitions.
 BLOCKS_XML = {
-              NAME_XML_START_ADJUST:  
+              PATTERN_XML_START_ADJUST % ADJUST_STANDARD:  
               Block(
                     Action(ACTION_XML_ADJUST,
                            skip(IND_DECL),
@@ -96,7 +96,7 @@ BLOCKS_XML = {
               
               PATTERN_XML_BLOCK % NAME_BLOCK: BLOCK_XML,
               
-              NAME_XML_END_ADJUST:
+              PATTERN_XML_END_ADJUST % ADJUST_STANDARD:
               Block(
                     Action(ACTION_XML_ADJUST,
                            skip(SIND_CLOSE_TAG),
@@ -297,9 +297,9 @@ class RenderXML(XMLGenerator, IRender):
         @see: IRender.end
         '''
         assert self._stack, 'No object to end'
-        name, index, isAdjust = self._stack.pop()
+        name, index, adjust = self._stack.pop()
         
-        if isAdjust: index = self._index(NAME_XML_END_ADJUST)
+        if adjust: index = self._index(PATTERN_XML_END_ADJUST % adjust)
         if self._pending_start_element:
             self._write('/>')
             if self._pendingStart: self._pendingStart(EIND_TAG)
@@ -327,7 +327,7 @@ class RenderXML(XMLGenerator, IRender):
         
     # ----------------------------------------------------------------
     
-    def begin(self, name, attributes=None, indexBlock=None, indexAttributesCapture=immut()):
+    def begin(self, name, attributes=None, indexBlock=None, adjust=ADJUST_STANDARD, indexAttributesCapture=immut()):
         '''
         Begins a XML tag.
         
@@ -344,7 +344,7 @@ class RenderXML(XMLGenerator, IRender):
             self.startDocument()  # Start the document
             if indexBlock is None:
                 assert not indexAttributesCapture, 'No attributes capture expected, but got %s' % indexAttributesCapture
-                index = self._index(NAME_XML_START_ADJUST)
+                index = self._index(PATTERN_XML_START_ADJUST % adjust)
                 index(IND_DECL)
                 isAdjust = True
             self._adjust = False
@@ -395,7 +395,7 @@ class RenderXML(XMLGenerator, IRender):
             self._write('>')
             if index: index(EIND_TAG)
             
-        self._stack.append((name, index, isAdjust))
+        self._stack.append((name, index, adjust if isAdjust else None))
         return self
     
     def _index(self, block):

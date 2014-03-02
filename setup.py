@@ -63,6 +63,7 @@ class AllyDevelop(develop):
             if os.path.isfile(pkg):
                 with open(pkg, 'r') as f:
                     for line in f.readlines(): argv.append(os.path.join(folder, *line.split('/')))
+            else: argv.append(os.path.join(folder, '*'))
         
         argv.append('-build')
         argv.append(os.path.dirname(self.egg_path))

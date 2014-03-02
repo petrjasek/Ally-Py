@@ -38,8 +38,8 @@ class AllyDevelop(develop):
     
     def run(self):
         repositories = [self.egg_path]
+        root = os.path.dirname(self.egg_path)
         if self.add_git:
-            folder = os.path.dirname(self.egg_path)
             for path in self.add_git.split('|'):
                 url = urlsplit(path)
                 badFragment = False
@@ -47,7 +47,7 @@ class AllyDevelop(develop):
                     fragments = parse_qs(url.fragment)
                     egg = fragments.get('egg')
                     if not egg: badFragment = True
-                    else: egg = os.path.join(folder, egg[0])
+                    else: egg = os.path.join(root, egg[0])
                 else: badFragment = True
                 if badFragment:
                     raise DistutilsOptionError('Missing the git URL egg fragment ex:\'https://github.com/../somwhere#eqq=somwhere\'')
@@ -69,15 +69,14 @@ class AllyDevelop(develop):
             else: argv.append(os.path.join(folder, '*'))
         
         argv.append('-build')
-        argv.append(os.path.dirname(self.egg_path))
+        argv.append(root)
         argv.append('--dist')
         sys.argv = argv
         ally_distribution.__distribution__()
         
         if self.install:
-            sys.argv = [None, 'install', self.install, '--find-links', 'file://%s' % self.egg_path]
-            print('****', sys.argv)
-            #pip.main()
+            sys.argv = [None, 'install', self.install, '--find-links', 'file://%s' % root]
+            pip.main()
         
 setup(platforms=['all'],
       license='GPL v3',

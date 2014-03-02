@@ -74,7 +74,7 @@ class AllyDevelop(develop):
         ally_distribution.__distribution__()
         
         if self.install:
-            sys.argv = [None, 'install', self.install, '--find-links', 'file://' % self.egg_path]
+            sys.argv = [None, 'install', self.install, '--find-links', 'file://%s' % self.egg_path]
             pip.main()
         
 setup(platforms=['all'],

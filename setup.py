@@ -26,11 +26,13 @@ class AllyDevelop(develop):
     
     user_options = develop.user_options + [
         ('add-git=', None, 'Additional git repositories to fetch ally packages, in order to provide more then one git repository '\
-         'then provide a pipe \'|\' separator between the git URLs. The git URLs need to be identical to those in \'-e\' command.')
+         'then provide a pipe \'|\' separator between the git URLs. The git URLs need to be identical to those in \'-e\' command.'),
+        ('install=', None, 'The name of the package to be installed from the git repositories.')
         ]
     
     def initialize_options(self):
         self.add_git = None
+        self.install = None
         super().initialize_options()
     
     def run(self):
@@ -70,6 +72,10 @@ class AllyDevelop(develop):
         argv.append('--dist')
         sys.argv = argv
         ally_distribution.__distribution__()
+        
+        if self.install:
+            sys.argv = [None, 'install', self.install, '--find-links', 'file://' % self.egg_path]
+            pip.main()
         
 setup(platforms=['all'],
       license='GPL v3',

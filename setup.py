@@ -11,6 +11,7 @@ Provides the means of installing as a development environment through git.
 
 from distutils.errors import DistutilsOptionError
 from os.path import os
+import pip
 from pip.vcs.git import Git
 from setuptools import setup
 from setuptools.command.develop import develop

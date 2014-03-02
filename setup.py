@@ -76,7 +76,8 @@ class AllyDevelop(develop):
         
         if self.install:
             sys.argv = [None, 'install', self.install, '--find-links', 'file://%s' % self.egg_path]
-            pip.main()
+            print('****', sys.argv)
+            #pip.main()
         
 setup(platforms=['all'],
       license='GPL v3',

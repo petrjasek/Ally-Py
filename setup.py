@@ -65,11 +65,11 @@ class AllyDevelop(develop):
                     for line in f.readlines(): argv.append(os.path.join(folder, *line.split('/')))
             else: argv.append(os.path.join(folder, '*'))
         print('*', argv)
-        argv.append('-build')
-        argv.append(os.path.dirname(self.egg_path))
-        argv.append('--dist')
-        sys.argv = argv
-        ally_distribution.__distribution__()
+        #argv.append('-build')
+        #argv.append(os.path.dirname(self.egg_path))
+        #argv.append('--dist')
+        #sys.argv = argv
+        #ally_distribution.__distribution__()
         
 setup(platforms=['all'],
       license='GPL v3',

@@ -42,7 +42,7 @@ class AllyDevelop(develop):
         if self.add_git:
             for path in self.add_git.split('|'):
                 badFragment = False
-                fragments = path.split(path, '#', 1)
+                fragments = path.split('#')
                 if len(fragments) == 2:
                     fragments = parse_qs(fragments[1])
                     egg = fragments.get('egg')

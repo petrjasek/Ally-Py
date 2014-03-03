@@ -380,6 +380,7 @@ class CallConfig(WithCall, WithType, WithListeners):
         self.description = description
         
         self._hasValue = False
+        self._hasReturned = False
         self._external = False
         self._processed = False
         self._config = None
@@ -412,7 +413,7 @@ class CallConfig(WithCall, WithType, WithListeners):
             Flag indicating the value is from an external source.
         '''
         assert isinstance(external, bool), 'Invalid external flag %s' % external
-        if self._processed: raise SetupError('Already processed cannot set value to \'%s\'' % self.name)
+        if self._hasReturned: raise SetupError('Already processed cannot set value to \'%s\'' % self.name)
         self._hasValue = True
         self._value = self.validate(value)
         if external: self._external = True
@@ -445,7 +446,8 @@ class CallConfig(WithCall, WithType, WithListeners):
                     if not self._external: listener() 
                     # We only call the listeners if the configuration was not provided externally
                 else: listener()
-                
+        
+        self._hasReturned = True
         if isinstance(self._value, Exception): raise self._value
         return self._value
 

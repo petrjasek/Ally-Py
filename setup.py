@@ -16,7 +16,7 @@ from pip.vcs.git import Git
 from setuptools import setup
 from setuptools.command.develop import develop
 import sys
-from urllib.parse import parse_qs, urlsplit
+from urllib.parse import parse_qs
 
 
 # --------------------------------------------------------------------
@@ -41,15 +41,15 @@ class AllyDevelop(develop):
         root = os.path.dirname(self.egg_path)
         if self.add_git:
             for path in self.add_git.split('|'):
-                url = urlsplit(path)
                 badFragment = False
-                if url.fragment:
-                    fragments = parse_qs(url.fragment)
+                fragments = path.split(path, '#', 1)
+                if len(fragments) == 2:
+                    fragments = parse_qs(fragments[1])
                     egg = fragments.get('egg')
                     if not egg: badFragment = True
                     else: egg = os.path.join(root, egg[0])
                 else: badFragment = True
-                print('******', badFragment, self.add_git, url.fragment)
+                
                 if badFragment:
                     raise DistutilsOptionError('Missing the git URL egg fragment ex:\'https://github.com/../somwhere#eqq=somwhere\'')
                 

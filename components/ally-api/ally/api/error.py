@@ -69,6 +69,7 @@ class InputError(Exception):
             if isinstance(item, str): self.messages.append(item)
             else:
                 typ = typeFor(item)
+                if not typ: continue
                 assert isinstance(typ, Type), 'Invalid type %s' % typ
                 assert self.messages, 'Please provide messages for type %s' % typ
                 if typ not in self.messageByType: self.messageByType[typ] = self.messages

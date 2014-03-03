@@ -49,6 +49,7 @@ class AllyDevelop(develop):
                     if not egg: badFragment = True
                     else: egg = os.path.join(root, egg[0])
                 else: badFragment = True
+                print('******', badFragment, self.add_git, url.fragment)
                 if badFragment:
                     raise DistutilsOptionError('Missing the git URL egg fragment ex:\'https://github.com/../somwhere#eqq=somwhere\'')
                 

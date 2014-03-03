@@ -9,7 +9,6 @@ Created on Mar 8, 2013
 Provides the paths for a model.
 '''
 
-from ally.api.type import Type
 from ally.container.ioc import injected
 from ally.core.http.impl.index import ACTION_REFERENCE, NAME_BLOCK_REST
 from ally.core.spec.transform import ISpecifier, ITransfrom

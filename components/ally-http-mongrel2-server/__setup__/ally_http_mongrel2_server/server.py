@@ -13,7 +13,6 @@ from ..ally_http.server import assemblyServer, server_host, server_port, \
     server_type, server_version
 from ally.container import ioc
 from threading import Thread
-from ally.design.priority import PRIORITY_LAST
 
 # --------------------------------------------------------------------
 
@@ -85,8 +84,9 @@ def serverMongrel2():
 
 # --------------------------------------------------------------------
 
-@ioc.start(priority=PRIORITY_LAST)
+@ioc.start
 def runServer():
-    if server_type() == 'mongrel2': 
+    if server_type() == 'mongrel2':
         from ally.http.server import server_mongrel2
         Thread(target=server_mongrel2.run, args=(serverMongrel2(),)).start()
+        

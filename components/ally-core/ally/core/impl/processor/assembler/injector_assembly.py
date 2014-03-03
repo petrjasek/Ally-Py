@@ -23,6 +23,7 @@ from ally.design.processor.spec import IProcessor, LIST_UNAVAILABLE, \
 from ally.support.util import FlagSet
 from ally.support.util_spec import IDo
 from collections import Iterable
+import time
 
 # --------------------------------------------------------------------
 
@@ -68,6 +69,7 @@ class InjectorAssemblyHandler(Handler, IProcessor):
         super().__init__(self)
         
         self.done = False
+        self.assembled = None
         
         self.resolvers = {}
         self.extensions = {}
@@ -91,8 +93,9 @@ class InjectorAssemblyHandler(Handler, IProcessor):
         '''
         Injects in the chain the assembly contexts.
         '''
-        assert self.done, 'Cannot process because no service registering has been performed'
         assert isinstance(chain, Chain), 'Invalid chain %s' % chain
+        
+        while not self.assembled: time.sleep(1)
         chain.process(self.assembled)
         
     # ----------------------------------------------------------------

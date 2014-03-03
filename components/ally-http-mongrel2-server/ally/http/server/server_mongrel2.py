@@ -79,8 +79,8 @@ class RequestHandler:
         if RequestHTTP.parameters in request: request.parameters = parse_qsl(req.headers.pop('QUERY', ''), True, False)
         
         if RequestContentHTTP.source in requestCnt:
-            if isinstance(request.body, IInputStream): requestCnt.source = request.body
-            else: requestCnt.source = BytesIO(request.body)
+            if isinstance(req.body, IInputStream): requestCnt.source = req.body
+            else: requestCnt.source = BytesIO(req.body)
         
         arg = proc.execute(FILL_ALL, request=request, requestCnt=requestCnt)
         response, responseCnt = arg.response, arg.responseCnt
@@ -159,9 +159,9 @@ class Mongrel2Server:
         assert isinstance(self.recvSpec, str), 'Invalid receive spec %s' % self.recvSpec
         assert callable(self.requestHandler), 'Invalid request handler %s' % self.requestHandler
         
-        if self.sendIdent is None: self.sendIdent = uuid4().hex.encode('utf8')
+        if not self.sendIdent: self.sendIdent = uuid4().hex.encode('utf8')
         elif isinstance(self.sendIdent, str): self.sendIdent = self.sendIdent.encode('utf8')
-        if self.recvIdent is None: self.recvIdent = uuid4().hex.encode('utf8')
+        if not self.recvIdent: self.recvIdent = uuid4().hex.encode('utf8')
         elif isinstance(self.recvIdent, str): self.recvIdent = self.recvIdent.encode('utf8')
         
         self.context = zmq.Context()

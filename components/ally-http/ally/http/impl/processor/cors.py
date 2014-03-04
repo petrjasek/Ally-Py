@@ -48,6 +48,8 @@ class CrossOriginResourceSharingHandler(HandlerProcessor):
     othersOptions = None
     # Other cross origin resource sharing headers for options, this is a dictionary having as a key the HeaderCmx
     # and as a value the values to push for that header.
+    optionSpecific = None
+    # The headers that are specific only for the OPTIONS method.
 
     def __init__(self):
         assert self.allowOrigin is None or isinstance(self.allowOrigin, list), \
@@ -56,6 +58,8 @@ class CrossOriginResourceSharingHandler(HandlerProcessor):
         'Invalid allow methods %s' % self.allowMethods
         assert self.othersOptions is None or isinstance(self.othersOptions, dict), \
         'Invalid other options %s' % self.othersOptions
+        assert self.optionSpecific is None or isinstance(self.optionSpecific, set), \
+        'Invalid option specific headers %s' % self.optionSpecific
         super().__init__()
 
     def process(self, chain, request:Request, response:Response, **keyargs):
@@ -69,16 +73,16 @@ class CrossOriginResourceSharingHandler(HandlerProcessor):
         
         if self.allowOrigin: ALLOW_ORIGIN.encode(response, *self.allowOrigin)
 
-        if request.method == HTTP_OPTIONS:
-            allows = set(ALLOW_METHODS.decode(response))
-            allows.add(HTTP_OPTIONS)
-            if Response.allows in response and response.allows: allows.update(response.allows)
-            if self.allowMethods: allows.update(self.allowMethods)
-            if allows: ALLOW_METHODS.encode(response, *sorted(allows))
+        allows = set(ALLOW_METHODS.decode(response))
+        allows.add(HTTP_OPTIONS)
+        if Response.allows in response and response.allows: allows.update(response.allows)
+        if self.allowMethods: allows.update(self.allowMethods)
+        if allows: ALLOW_METHODS.encode(response, *sorted(allows))
+        
+        if self.othersOptions:
+            for header, values in self.othersOptions.items():
+                assert isinstance(header, HeaderCmx), 'Invalid header %s' % header
+                assert isinstance(values, list), 'Invalid values %s' % values
+                if self.optionSpecific and request.method != HTTP_OPTIONS and header in self.optionSpecific: continue
+                header.extend(response, *values)
             
-            if self.othersOptions:
-                for header, values in self.othersOptions.items():
-                    assert isinstance(header, HeaderCmx), 'Invalid header %s' % header
-                    assert isinstance(values, list), 'Invalid values %s' % values
-                    header.extend(response, *values)
-                

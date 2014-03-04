@@ -119,9 +119,10 @@ class MethodInvokerHandler(Handler):
         'Invalid request node invokers %s' % request.node.invokers
         
         request.invoker = request.node.invokers.get(request.method)
+        if response.allows is None: response.allows = set()
+        response.allows.update(request.node.invokers)
+
         if request.invoker is None:
-            if response.allows is None: response.allows = set()
-            response.allows.update(request.node.invokers)
             METHOD_NOT_AVAILABLE.set(response)
             return
         

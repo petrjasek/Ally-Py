@@ -19,6 +19,10 @@ from ally.http.spec.headers import ALLOW_HEADERS, PARAMETERS_AS_HEADERS
 # --------------------------------------------------------------------
 
 @ioc.entity
+def optionSpecificHeaders() -> set:
+    return {PARAMETERS_AS_HEADERS}
+
+@ioc.entity
 def crossOriginOthersOptions() -> dict:
     return {
             ALLOW_HEADERS: sorted(headersCorsAllow()),
@@ -27,6 +31,7 @@ def crossOriginOthersOptions() -> dict:
 @ioc.entity
 def crossOriginResourceSharing() -> Handler:
     b = CrossOriginResourceSharingHandler()
+    b.optionSpecific = optionSpecificHeaders()
     b.othersOptions = crossOriginOthersOptions()
     return b
 

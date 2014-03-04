@@ -34,15 +34,20 @@ def allow_headers() -> list:
 # --------------------------------------------------------------------
 
 @ioc.entity
+def optionSpecificHeaders() -> set:
+    return {PARAMETERS_AS_HEADERS}
+    
+@ioc.entity
 def crossOriginOthersOptions() -> dict:
     return {
             ALLOW_HEADERS: sorted(set(chain(allow_headers(), headersCorsAllow()))),
             }
-
+    
 @ioc.entity
 def crossOriginResourceSharing() -> Handler:
     b = CrossOriginResourceSharingHandler()
     b.allowOrigin = allow_origin()
+    b.optionSpecific = optionSpecificHeaders()
     b.othersOptions = crossOriginOthersOptions()
     return b
 

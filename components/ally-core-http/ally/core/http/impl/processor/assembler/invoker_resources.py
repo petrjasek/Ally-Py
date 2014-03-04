@@ -21,6 +21,7 @@ from ally.support.util_spec import IDo
 from ally.support.util_sys import locationStack
 from collections import deque
 from ally.api.operator.type import TypeModel
+from itertools import chain
 
 # --------------------------------------------------------------------
 
@@ -72,6 +73,8 @@ class InvokerResourcesHandler(HandlerProcessor):
     # The name used for resources paths.
     nameRef = 'href'
     # The reference attribute name.
+    nameRel = 'rel'
+    # The relation attribute name.
     
     def __init__(self):
         assert isinstance(self.nameResources, str), 'Invalid resources name %s' % self.nameResources
@@ -97,7 +100,7 @@ class InvokerResourcesHandler(HandlerProcessor):
         invoker.location = locationStack(self.__class__)
         invoker.methodHTTP = HTTP_GET
         invoker.path = []
-        invoker.encoder = EncoderResources(self.nameResources, self.nameRef, invoker)
+        invoker.encoder = EncoderResources(self.nameResources, self.nameRef, self.nameRel, invoker)
 
 # --------------------------------------------------------------------
 
@@ -106,7 +109,7 @@ class EncoderResources(ITransfrom):
     Implementation for a @see: ITransfrom for resources.
     '''
     
-    def __init__(self, nameResources, nameRef, invoker):
+    def __init__(self, nameResources, nameRef, nameRel, invoker):
         '''
         Construct the resources encoder.
         '''
@@ -116,6 +119,7 @@ class EncoderResources(ITransfrom):
         
         self.nameResources = nameResources
         self.nameRef = nameRef
+        self.nameRel = nameRel
         self.invoker = invoker
         
     def transform(self, value, target, support):
@@ -127,18 +131,19 @@ class EncoderResources(ITransfrom):
         target.beginCollection(self.nameResources)
         if self.invoker.node:
             accessible, stack = [], deque()
-            stack.append(('', self.invoker.node))
+            stack.append(([], self.invoker.node))
             while stack:
-                name, node = stack.popleft()
+                names, node = stack.popleft()
                 assert isinstance(node, Node)
-                if node.invokers and HTTP_GET in node.invokers and name:
-                    accessible.append((name, node.invokers[HTTP_GET]))
+                if node.invokers and HTTP_GET in node.invokers and names:
+                    accessible.append((names, node.invokers[HTTP_GET]))
                 if node.childByName:
-                    stack.extend(('%s%s' % (name, cname), cnode) for cname, cnode in node.childByName.items())
+                    stack.extend((list(chain(names, (cname,))), cnode) for cname, cnode in node.childByName.items())
             
             indexes = dict(indexBlock=NAME_BLOCK_REST, indexAttributesCapture={self.nameRef: ACTION_REFERENCE})
-            for name, invoker in sorted(accessible, key=firstOf):
+            for names, invoker in sorted(accessible, key=firstOf):
                 assert isinstance(invoker, InvokerResources), 'Invalid invoker %s' % invoker
                 assert isinstance(invoker.doEncodePath, IDo), 'Invalid path encode %s' % invoker.doEncodePath
-                target.beginObject(name, attributes={self.nameRef: invoker.doEncodePath(support)}, **indexes).end()
+                target.beginObject(''.join(names), attributes={self.nameRef: invoker.doEncodePath(support),
+                                                               self.nameRel: '/'.join(names)}, **indexes).end()
         target.end()

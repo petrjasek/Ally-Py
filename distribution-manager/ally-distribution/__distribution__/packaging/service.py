@@ -20,6 +20,7 @@ from ally.distribution.packaging.impl.processor.scanner import Scanner
 from ally.distribution.packaging.impl.processor.generate_setup import GenerateSetupHandler
 from ally.support.util_spec import IDo
 from ally.distribution.packaging.impl.index_pip import IndexPip
+from ally.distribution.packaging.impl.processor.dev_versioner import VersionerDevHandler
 
 
 # --------------------------------------------------------------------
@@ -77,6 +78,12 @@ def scanner() -> Handler:
 
 @ioc.entity
 def argSetup() -> Handler: return ArgSetupHandler()
+
+@ioc.entity
+def versionerDev() -> Handler:
+    b = VersionerDevHandler()
+    b.pathBuild = path_build()
+    return b
 
 @ioc.entity
 def generateSetup() -> Handler: return GenerateSetupHandler()

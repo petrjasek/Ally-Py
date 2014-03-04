@@ -77,6 +77,7 @@ def configureMongrel2():
 # Sample configuration for Mongrel2 and ally-py
 # load this file in linux by using: m2sh load -config ally.conf
 # start mongrle2 in linux by using: m2sh start -host localhost
+# Attention!!! Do not use '_' in any of the values that you place in *_spec or *_ident 
 # --------------------------------------------------------------------------------------
 ''', file=f)
         print(

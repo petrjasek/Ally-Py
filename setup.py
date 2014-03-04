@@ -71,12 +71,12 @@ class AllyDevelop(develop):
         
         argv.append('-build')
         argv.append(root)
-        argv.append('--dist')
+        argv.append('--dev')
         sys.argv = argv
         ally_distribution.__distribution__()
         
         if self.install:
-            sys.argv = [None, 'install', self.install, '-I', '--find-links', 'file://%s' % root]
+            sys.argv = [None, 'install', self.install, '--upgrade', '--find-links', 'file://%s' % root]
             pip.main()
         
 setup(platforms=['all'],

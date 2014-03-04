@@ -22,6 +22,7 @@ from ally.container import deploy
 from ally_distribution import parser, options
 
 from .service import assemblyBuild, assemblyPublish, indexPip, sources, path_build, root_uri, build_cmds
+from .service import versionerDev, generateSetup
 
 
 # --------------------------------------------------------------------
@@ -32,6 +33,8 @@ FLAG_BUILD = 'build'
 FLAG_ONLY_EGG = 'egg'
 # Flag indicating the build eggs action.
 FLAG_ONLY_DIST = 'dist'
+# Flag indicating the build eggs action.
+FLAG_ONLY_DEV = 'dev'
 # Flag indicating the build eggs action.
 FLAG_PIP_INDEX = 'pip_index'
 # Flag indicating that the source should have created pip index file.
@@ -45,6 +48,7 @@ def prepare():
     options.registerFlag(FLAG_PIP_INDEX)
     options.registerFlag(FLAG_ONLY_EGG)
     options.registerFlag(FLAG_ONLY_DIST)
+    options.registerFlag(FLAG_ONLY_DEV)
     
     destSources = options.registerConfiguration(sources)
     destBuild = options.registerConfiguration(path_build)
@@ -64,12 +68,18 @@ def prepare():
                         help='Provide this flag in order to build only the eggs.')
     parser.add_argument('--dist', dest=FLAG_ONLY_DIST, action='store_true',
                         help='Provide this flag in order to build only source distribution packages.')
+    parser.add_argument('--dev', dest=FLAG_ONLY_DEV, action='store_true',
+                        help='Provide this flag in order to build only source distribution packages for development '\
+                        'purposes, provides auto development versions.')
 
 @deploy.start(priority=PRIORITY_FIRST)
 def deploy():
     if options.isFlag(FLAG_BUILD):
         if options.isFlag(FLAG_ONLY_EGG): build_cmds().append('bdist_egg')
         elif options.isFlag(FLAG_ONLY_DIST): build_cmds().append('sdist')
+        elif options.isFlag(FLAG_ONLY_DEV):
+            assemblyBuild().add(versionerDev(), before=generateSetup())
+            build_cmds().append('sdist')
         else:
             build_cmds().append('bdist_egg')
             build_cmds().append('sdist')

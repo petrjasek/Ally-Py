@@ -94,17 +94,19 @@ class VersionerDevHandler(HandlerProcessor):
             paths, versionHash = deque(), hashlib.md5()
             paths.append(package.path)
             while paths:
-                path = paths.popleft()
+                path = paths.popleft()                
                 for name in os.listdir(path):
                     if self._exc.match(name): continue
                     full = os.path.join(path, name)
+                    print(full)
                     if os.path.isdir(full): paths.append(full)
                     else:
                         versionHash.update(full.encode())
                         with open(full, 'rb') as f:
-                            data = f.read(1024)
-                            if not data: break
-                            versionHash.update(data)
+                            while True:
+                                data = f.read(1024)
+                                if not data: break
+                                versionHash.update(data)
             
             currentHash = versionHash.hexdigest()
             versionMinor = 1
@@ -129,5 +131,7 @@ class VersionerDevHandler(HandlerProcessor):
             package.arguments[self.attributeVersion] = '%s.%s' % \
             (package.arguments.get(self.attributeVersion, '0.0'), versionMinor)
             packages.append(package)
+            
+            break
         
         distribution.packages = packages

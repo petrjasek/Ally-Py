@@ -119,7 +119,7 @@ class VersionerDevHandler(HandlerProcessor):
                     continue
                 else:
                     versionMinor += 1
-                    packageDist = meta['dist']
+                    packageDist = os.path.join(self.pathBuild, meta['dist'])
                     if os.path.isfile(packageDist): os.remove(packageDist)
             else: meta = {}
             

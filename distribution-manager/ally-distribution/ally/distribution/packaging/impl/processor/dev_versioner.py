@@ -98,7 +98,6 @@ class VersionerDevHandler(HandlerProcessor):
                 for name in os.listdir(path):
                     if self._exc.match(name): continue
                     full = os.path.join(path, name)
-                    print(full)
                     if os.path.isdir(full): paths.append(full)
                     else:
                         versionHash.update(full.encode())
@@ -132,6 +131,4 @@ class VersionerDevHandler(HandlerProcessor):
             (package.arguments.get(self.attributeVersion, '0.0'), versionMinor)
             packages.append(package)
             
-            break
-        
         distribution.packages = packages

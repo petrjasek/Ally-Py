@@ -33,7 +33,7 @@ class IndexPip:
     # The index root URI that can be used for fetching the files. 
     fileIndex = 'pip'
     # The name of the pip index file.
-    regex = '([^\.]+)(?=.*)-([0-9]{1}.[0-9]{1}).tar.gz'
+    regex = '([^\.]+)(?=.*)-([0-9\.]+).tar.gz'
     # The regex used for extracting the name and version based on the file name.
     template = '''
 <html><head><title>Pip Install Listing</title><meta name="api-version" value="1"/></head><body>

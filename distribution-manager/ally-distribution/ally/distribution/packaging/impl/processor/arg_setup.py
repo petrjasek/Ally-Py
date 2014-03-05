@@ -90,7 +90,7 @@ class ArgSetupHandler(HandlerProcessor):
         if not distribution.packages: return
         
         packages = distribution.packages
-        distribution.packages = []
+        distribution.packages, present = [], {}
         for package in packages:
             assert isinstance(package, Package), 'Invalid package %s' % package
             assert isinstance(package.packageSetup, str), 'Invalid package setup %s' % package.packageSetup
@@ -118,4 +118,8 @@ class ArgSetupHandler(HandlerProcessor):
                 else:
                     if package.arguments is None: package.arguments = arguments
                     else: package.arguments.update(arguments)
+                    if package.name in present:
+                        log.info('Discarded \'%s\' because the package name \'%s\' is already configured for path \'%s\'',
+                             package.path, package.name, present[name].path)
+                    present[package.name] = package
                     distribution.packages.append(package)

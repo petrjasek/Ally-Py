@@ -68,7 +68,7 @@ class PublishHandler(HandlerProcessor):
             
             with open('setup.py', 'w') as f: print(package.setup, file=f)
             log.info('%s Publishing %s', '=' * 50, package.name)
-            try: run_setup('setup.py', ('register', 'sdist', 'bdist_egg', 'upload'))
+            try: run_setup('setup.py', ('-q', 'register', 'sdist', 'bdist_egg', 'upload'))
             except: log.exception('Cannot publish \'%s\'', package.path)
             
             # Cleaning setup directories.

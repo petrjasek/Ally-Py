@@ -78,8 +78,10 @@ class AllyDevelop(develop):
         if self.install:
             sys.argv = [None, 'install', self.install, '--upgrade', '--find-links', 'file://%s' % root]
             pip.main()
-        
+ 
 setup(platforms=['all'],
+      name='ally-installation',
+      version='1.0',
       license='GPL v3',
       url='http://www.sourcefabric.org/en/superdesk/',
       author='Gabriel Nistor',

@@ -10,12 +10,14 @@ Provides versioning for development source distribution.
 '''
 
 from collections import deque
+import hashlib
+import json
 import logging
 import os
 import re
 
 from ally.container.ioc import injected
-from ally.design.processor.attribute import requires
+from ally.design.processor.attribute import requires, defines
 from ally.design.processor.context import Context
 from ally.design.processor.handler import HandlerProcessor
 
@@ -29,6 +31,11 @@ class Distribution(Context):
     '''
     The distribution context.
     '''
+    # ---------------------------------------------------------------- Defined
+    versions = defines(dict, doc='''
+    @rtype: dictionary{string: dictionary{string: string}}
+    The versions meta data indexed by package name.
+    ''')
     # ---------------------------------------------------------------- Required
     packages = requires(list)
     
@@ -73,11 +80,18 @@ class VersionerDevHandler(HandlerProcessor):
         assert isinstance(distribution, Distribution), 'Invalid distribution %s' % distribution
         if not distribution.packages: return
         
-        available, packages = set(os.listdir(self.pathBuild)), []
+        versionsPath = os.path.join(self.pathBuild, 'versions.json')
+        if os.path.exists(versionsPath):
+            with open(versionsPath, 'r') as f: versions = json.load(f)
+        else: versions = {}
+        
+        if distribution.versions is None: distribution.versions = {}
+        
+        packages = []
         for package in distribution.packages:
             assert isinstance(package, Package), 'Invalid package %s' % package
             
-            paths, last = deque(), None
+            paths, versionHash = deque(), hashlib.md5()
             paths.append(package.path)
             while paths:
                 path = paths.popleft()
@@ -86,23 +100,34 @@ class VersionerDevHandler(HandlerProcessor):
                     full = os.path.join(path, name)
                     if os.path.isdir(full): paths.append(full)
                     else:
-                        mtime = os.path.getmtime(full)
-                        if last is None: last = mtime
-                        else: last = max(mtime, last)
+                        versionHash.update(full.encode())
+                        with open(full, 'rb') as f:
+                            data = f.read(1024)
+                            if not data: break
+                            versionHash.update(data)
             
-            version = package.arguments.get(self.attributeVersion, '0.0')
-            versionDev = str(int(round(last * 1000)))
+            currentHash = versionHash.hexdigest()
+            versionMinor = 1
             
-            packageName = '%s-%s' % (package.name, version)
-            versionMark, build = '.%s' % versionDev, True
-            for current in available:
-                if current.startswith(packageName):
-                    if current[len(packageName):].startswith(versionMark): build = False
-                    else: os.remove(os.path.join(self.pathBuild, current))
+            meta = versions.get(package.name)
+            if meta:
+                versionMinor, packageHash = meta['minor'], meta['hash']
+                if packageHash == currentHash:
+                    distribution.versions[package.name] = meta
+                    log.info('%s Up to date: %s', '=' * 50, package.name)
+                    continue
+                else:
+                    versionMinor += 1
+                    packageDist = meta['dist']
+                    if os.path.isfile(packageDist): os.remove(packageDist)
+            else: meta = {}
             
-            if build:
-                packages.append(package)
-                package.arguments[self.attributeVersion] = '%s.%s' % (version, versionDev)
-            else: log.info('%s Up to date: %s', '=' * 50, package.name)
+            meta['minor'] = versionMinor
+            meta['hash'] = currentHash
+            distribution.versions[package.name] = meta
+        
+            package.arguments[self.attributeVersion] = '%s.%s' % \
+            (package.arguments.get(self.attributeVersion, '0.0'), versionMinor)
+            packages.append(package)
         
         distribution.packages = packages

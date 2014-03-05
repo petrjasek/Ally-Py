@@ -81,7 +81,7 @@ class BuildHandler(HandlerProcessor):
             buildPath = os.path.join(savedCwd, self.pathBuild)
             log.info('%s Building %s', '=' * 50, package.name)
             
-            commands = []
+            commands = ['-q']
             for cmd in self.cmds:
                 commands.append(cmd)
                 commands.append('--dist-dir')

@@ -11,15 +11,16 @@ Provides the services setup for distribution.
 
 from ally.design.processor.assembly import Assembly
 from ally.design.processor.handler import Handler
+from ally.support.util_spec import IDo
 
 from ally.container import ioc
+from ally.distribution.packaging.impl.index_pip import IndexPip
 from ally.distribution.packaging.impl.processor.arg_setup import ArgSetupHandler
 from ally.distribution.packaging.impl.processor.build import BuildHandler
+from ally.distribution.packaging.impl.processor.build_dev import BuildDevHandler
+from ally.distribution.packaging.impl.processor.generate_setup import GenerateSetupHandler
 from ally.distribution.packaging.impl.processor.publish import PublishHandler
 from ally.distribution.packaging.impl.processor.scanner import Scanner
-from ally.distribution.packaging.impl.processor.generate_setup import GenerateSetupHandler
-from ally.support.util_spec import IDo
-from ally.distribution.packaging.impl.index_pip import IndexPip
 from ally.distribution.packaging.impl.processor.dev_versioner import VersionerDevHandler
 
 
@@ -56,6 +57,13 @@ def assemblyBuild() -> Assembly:
     The assembly used for building packages.
     '''
     return Assembly('Packaging Build')
+
+@ioc.entity
+def assemblyBuildDev() -> Assembly:
+    '''
+    The assembly used for building development packages.
+    '''
+    return Assembly('Packaging Build for Development')
 
 @ioc.entity
 def assemblyPublish() -> Assembly:
@@ -96,6 +104,12 @@ def build() -> Handler:
     return b
 
 @ioc.entity
+def buildDev() -> Handler:
+    b = BuildDevHandler()
+    b.pathBuild = path_build()
+    return b
+
+@ioc.entity
 def publish() -> Handler: return PublishHandler()
 
 @ioc.entity
@@ -110,7 +124,11 @@ def indexPip() -> IDo:
 @ioc.before(assemblyBuild)
 def updateAssemblyBuild():
     assemblyBuild().add(scanner(), argSetup(), generateSetup(), build())
-    
+
+@ioc.before(assemblyBuildDev)
+def updateAssemblyBuildDev():
+    assemblyBuildDev().add(scanner(), argSetup(), versionerDev(), generateSetup(), buildDev())
+
 @ioc.before(assemblyPublish)
 def updateAssemblyPublish():
     assemblyPublish().add(scanner(), argSetup(), generateSetup(), publish())

@@ -21,8 +21,7 @@ from ally.design.processor.execution import FILL_ALL
 from ally.container import deploy
 from ally_distribution import parser, options
 
-from .service import assemblyBuild, assemblyPublish, indexPip, sources, path_build, root_uri, build_cmds
-from .service import versionerDev, generateSetup
+from .service import assemblyBuild, assemblyBuildDev, assemblyPublish, indexPip, sources, path_build, root_uri, build_cmds
 
 
 # --------------------------------------------------------------------
@@ -75,16 +74,16 @@ def prepare():
 @deploy.start(priority=PRIORITY_FIRST)
 def deploy():
     if options.isFlag(FLAG_BUILD):
-        if options.isFlag(FLAG_ONLY_EGG): build_cmds().append('bdist_egg')
-        elif options.isFlag(FLAG_ONLY_DIST): build_cmds().append('sdist')
-        elif options.isFlag(FLAG_ONLY_DEV):
-            assemblyBuild().add(versionerDev(), before=generateSetup())
-            build_cmds().append('sdist')
+        if options.isFlag(FLAG_ONLY_DEV):
+            assemblyBuildDev().create().execute(FILL_ALL)
         else:
-            build_cmds().append('bdist_egg')
-            build_cmds().append('sdist')
-            
-        assemblyBuild().create().execute(FILL_ALL)
+            if options.isFlag(FLAG_ONLY_EGG): build_cmds().append('bdist_egg')
+            elif options.isFlag(FLAG_ONLY_DIST): build_cmds().append('sdist')
+            else:
+                build_cmds().append('bdist_egg')
+                build_cmds().append('sdist')
+                
+            assemblyBuild().create().execute(FILL_ALL)
     elif options.isFlag(FLAG_PIP_INDEX):
         indexPip()()
     else:

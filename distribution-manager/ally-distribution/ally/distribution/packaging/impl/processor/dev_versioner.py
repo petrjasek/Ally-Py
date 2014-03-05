@@ -113,13 +113,14 @@ class VersionerDevHandler(HandlerProcessor):
             meta = versions.get(package.name)
             if meta:
                 versionMinor, packageHash = meta['minor'], meta['hash']
+                packageDist = os.path.join(self.pathBuild, meta['dist'])
                 if packageHash == currentHash:
-                    distribution.versions[package.name] = meta
-                    log.info('%s Up to date: %s', '=' * 50, package.name)
-                    continue
+                    if os.path.isfile(packageDist):
+                        distribution.versions[package.name] = meta
+                        log.info('%s Up to date: %s', '=' * 50, package.name)
+                        continue
                 else:
                     versionMinor += 1
-                    packageDist = os.path.join(self.pathBuild, meta['dist'])
                     if os.path.isfile(packageDist): os.remove(packageDist)
             else: meta = {}
             

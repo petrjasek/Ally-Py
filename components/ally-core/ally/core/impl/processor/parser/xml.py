@@ -29,13 +29,12 @@ class Decoding(base.Decoding):
     The decoding context.
     '''
     # ---------------------------------------------------------------- Optional
-    isMandatory = optional(bool)
+    doBegin = optional(IDo)
+    doEnd = optional(IDo)
     # ---------------------------------------------------------------- Required
     name = requires(str)
     children = requires(dict)
-    doBegin = requires(IDo)
     doDecode = requires(IDo)
-    doEnd = requires(IDo)
     
 # --------------------------------------------------------------------
 
@@ -76,7 +75,7 @@ class Parse(ContentHandler):
     '''
     Content handler used for parsing the xml content.
     '''
-    __slots__ = ('parser', 'decoding', 'target', 'last', 'isInvalid', 'path', 'content', 'contains', 'visited')
+    __slots__ = ('parser', 'decoding', 'target', 'last', 'isInvalid', 'path', 'content', 'contains')
 
     def __init__(self, parser, decoding, target):
         '''
@@ -143,8 +142,6 @@ class Parse(ContentHandler):
         self.content.append([])
         self.contains[-1] = True
         self.contains.append(False)
-        self.visited[-1].add(name)
-        self.visited.append(set())
 
     def characters(self, content):
         '''
@@ -170,18 +167,9 @@ class Parse(ContentHandler):
         
         assert isinstance(current, Decoding), 'Invalid decoding %s' % current
         self.last = previous
-        visited, contains, content = self.visited.pop(), self.contains.pop(), '\n'.join(self.content.pop())
+        contains, content = self.contains.pop(), '\n'.join(self.content.pop())
         
         abort = False
-        if current.children:
-            for cname, child in current.children.items():
-                assert isinstance(child, Decoding), 'Invalid decoding %s' % child
-                if cname not in visited and Decoding.isMandatory in child and child.isMandatory:
-                    addFailure(self.target, current,
-                               'Expected a value for element \'%(path)s\' at line %(line)s and column %(column)s',
-                               **self.located(path=asPath(self.path, name, cname)))
-                    abort = True
-        
         if not abort:
             if contains or not current.doDecode:
                 if content.strip():

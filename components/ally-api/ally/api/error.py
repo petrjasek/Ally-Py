@@ -11,7 +11,6 @@ Provides the exceptions that are used in communicating issues in the API.
 
 from ..internationalization import _
 from .type import typeFor, Type
-from ally.api.operator.type import TypeModel, TypeProperty
 from itertools import chain
 
 # --------------------------------------------------------------------
@@ -21,74 +20,56 @@ class InputError(Exception):
     Exception to be raised when the input is invalid.
     '''
 
-    def __init__(self, msg, *items, **data):
+    def __init__(self, *items, errCode=None, **data):
         '''
         Initializes the exception based on the items(s).
         
         ex:
-            raise InputError('No idea what is wrong %(reason)s', reason='blame Gabriel')
+            raise InputError('No idea what is wrong %(reason)s')
             # The message is not associated with any type.
             
             raise InputError('Something wrong with the id', Entity.Id) # The message is associated with the entity id.
             
-            raise InputError('Something wrong with the id', Entity.Id, 'And with the name', 'Is To long', Entity.Name)
+            raise InputError('Something wrong with the id', Entity.Id, )
             # The first message is associated with the entity id, and the following two with the entity name.
         
-        @param msg: string
+        @param items: parameters
+            List of parameters: the first
             The mandatory message to be associated with the error, optionally with place holders which have the value provided
             in the data
-        @param items: arguments[string|Type reference]
-            Other item(s) that compose this input error, they can be messages optionally with place holders which have the value 
-            provided in the data or type references linking all the previous messages with a type.
+        @param refType: Type
+            The type to which the error refers.
+        @param errCode: string
+            The code identifying this error.
         @param data: key arguments
             Data that will be used in the messages place holders.
         '''
-        assert isinstance(msg, str), 'Invalid message %s' % msg
-        
+        self.message = None
+        self.type = None
+        for item in items:
+            if isinstance(item, str):
+                if not self.message: self.message = item
+            elif not self.type:
+                typ = typeFor(item)
+                if typ is not None:
+                    assert isinstance(typ, Type), 'Invalid type %s' % typ
+                    self.type = typ
+        self.errCode = errCode
         self.data = data
-        self.messageByType = {}
-        self.messages = []
-        self.update(msg, *items)
         
         super().__init__()
-        
-    def update(self, *items, **data):
-        '''
-        Updates the input error with new information.
-
-        @param msg: string
-            The mandatory message to be associated with the error, optionally with place holders which have the value provided
-            in the data
-        @param items: arguments[string|Type reference]
-            Item(s) that update this input error, they can be messages optionally with place holders which have the value 
-            provided in the data or type references linking all the previous messages with a type.
-        @param data: key arguments
-            Data that will be used in the messages place holders.
-        '''
-        for item in items:
-            if isinstance(item, str): self.messages.append(item)
-            else:
-                typ = typeFor(item)
-                if not typ: continue
-                assert isinstance(typ, Type), 'Invalid type %s' % typ
-                assert self.messages, 'Please provide messages for type %s' % typ
-                if typ not in self.messageByType: self.messageByType[typ] = self.messages
-                else: self.messageByType[typ].extend(self.messages)
-                self.messages = []
-                
-        self.data.update(data)
-        
+    
     def __str__(self):
         '''
         @see: Exception.__str__
         '''
-        message = []
-        message.extend(msg % self.data for msg in self.messages)
-        for typ, msgs in self.messageByType.items():
-            message.append(str(typ))
-            message.extend('\t%s' % (msg % self.data) for msg in msgs)
+        header = []
+        if self.type: header.append(str(self.type))
+        if self.errCode: header.append(str(self.errCode))
+        message = [':'.join(header)]
+        message.append('\t%s' % self.message)
         return '\n'.join(message)
-        
+
 # --------------------------------------------------------------------
 
 class IdError(InputError):
@@ -101,42 +82,8 @@ class IdError(InputError):
         Initializes the invalid id exception based on the items(s).
         @see: InputError.__init__
         '''
-        self._hasId = False
-        super().__init__(_('Unknown value'), *items, **data)
-        
-    def update(self, *items, **data):
-        '''
-        @see: InputError.update
-        '''
-        if not self._hasId:
-            for k, item in enumerate(items):
-                if not isinstance(item, str):
-                    typ = typeFor(item)
-                    if isinstance(typ, TypeProperty):
-                        propertyId = typ
-                    else:
-                        assert isinstance(typ, TypeModel), 'Invalid model type %s' % typ
-                        assert isinstance(typ.propertyId, TypeProperty), \
-                        'Invalid property id % for model %s' % (typ.propertyId, typ)
-                        propertyId = typ.propertyId
-                    items = chain(items[:k], (propertyId,), items[k + 1:])
-                    self._hasId = True
-                    break
-        super().update(*items, **data)
-        
-class ExistError(InputError):
-    '''
-    Exception to be raised when a model already exists from a business logic key.
-    '''
-    
-    def __init__(self, target, *items, **data):
-        '''
-        Initializes the exist exception based on the items(s). This exception is usually raised in insert methods that have
-        complex business logic keys that is broken.
-        @see: InputError.__init__
-        
-        @param target: model container
-            The model that already exists.
-        '''
-        assert isinstance(typeFor(target), TypeModel), 'Invalid target model %s' % target
-        super().__init__(_('Already exists a model with the provided data'), target, *items, **data)
+        for item in items:
+            if isinstance(item, str): break
+        else:
+            items = tuple(chain((_('Unknown value'),), items))
+        super().__init__(*items, **data)

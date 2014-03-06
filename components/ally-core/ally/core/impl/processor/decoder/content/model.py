@@ -23,6 +23,7 @@ from ally.design.processor.handler import HandlerBranching
 from ally.support.util_context import listing
 from ally.support.util_spec import IDo
 import logging
+from ally.internationalization import _
     
 # --------------------------------------------------------------------
 
@@ -67,7 +68,8 @@ class Decoding(Context):
         The value to be decoded.
     ''')
     # ---------------------------------------------------------------- Optional
-    isMandatory = optional(bool)
+    doBegin = optional(IDo)
+    doEnd = optional(IDo)
     # ---------------------------------------------------------------- Required
     type = requires(Type)
     doSet = requires(IDo)
@@ -184,21 +186,16 @@ class ModelDecode(HandlerBranching):
             
             if not isinstance(value, dict): addFailure(target, decoding, value=value)
             else:
-                decodings = dict(decoding.children)
                 for pname, pvalue in value.items():
-                    cdecoding = decodings.pop(pname, None)
+                    cdecoding = decoding.children.get(pname)
                     if not cdecoding:
                         addFailure(target, decoding, value=pname)
                         continue
+                    if Decoding.doBegin in cdecoding and cdecoding.doBegin: cdecoding.doBegin(target)
                     assert isinstance(cdecoding, Decoding), 'Invalid decoding %s' % cdecoding
                     assert isinstance(cdecoding.doDecode, IDo), 'Invalid decode %s' % cdecoding.doDecode
                     cdecoding.doDecode(target, pvalue)
-                
-                if decodings:
-                    for name, cdecoding in decodings.items():
-                        assert isinstance(cdecoding, Decoding), 'Invalid decoding %s' % cdecoding
-                        if Decoding.isMandatory in cdecoding and cdecoding.isMandatory:
-                            addFailure(target, decoding, 'Expected a value for \'%(name)s\'', name=name)
+                    if Decoding.doEnd in cdecoding and cdecoding.doEnd: cdecoding.doEnd(target)
                 
         return doDecode
     

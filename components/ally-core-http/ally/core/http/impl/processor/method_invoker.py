@@ -12,7 +12,7 @@ Provides the requested method validation handler.
 from ally.api.type import Type
 from ally.container.ioc import injected
 from ally.core.http.impl.processor.base import ErrorResponseHTTP
-from ally.core.impl.processor.base import addError
+from ally.core.impl.processor.base import addFailure
 from ally.core.spec.resources import Converter
 from ally.design.processor.attribute import requires, defines
 from ally.design.processor.context import Context
@@ -141,7 +141,7 @@ class MethodInvokerHandler(Handler):
         if target.failures:
             PATH_ERROR.set(response)
             for type, values, messages in self.indexFailures(target.failures):
-                addError(response, 'Expected type \'%(type)s\' instead of: %(values)s', messages, type=type, values=values)
+                addFailure(response, 'Expected type \'%(type)s\' instead of: %(values)s', messages, type=type, values=values)
         
     # --------------------------------------------------------------------
     

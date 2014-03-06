@@ -10,7 +10,7 @@ Provides the URI request node handler.
 '''
 
 from ally.core.http.impl.processor.base import ErrorResponseHTTP
-from ally.core.impl.processor.base import addError
+from ally.core.impl.processor.base import addFailure
 from ally.design.processor.attribute import requires, defines, definesIf
 from ally.design.processor.context import Context
 from ally.design.processor.handler import HandlerProcessor
@@ -120,7 +120,7 @@ class URIHandler(HandlerProcessor):
             if node.childByName:
                 if path not in node.childByName:
                     PATH_NOT_FOUND.set(response)
-                    addError(response, 'Unknown item \'%(item)s\', maybe you meant: %(paths)s',
+                    addFailure(response, 'Unknown item \'%(item)s\', maybe you meant: %(paths)s',
                              item=path, paths=['%s/%s/%s' % ('/'.join(paths[:k]), item, '/'.join(paths[k:]))
                                                for item in sorted(node.childByName)])
                     return
@@ -135,22 +135,22 @@ class URIHandler(HandlerProcessor):
                 continue
             
             PATH_NOT_FOUND.set(response)
-            addError(response, 'No more path items expected after \'%(path)s\'', path='/'.join(paths[:k]))
+            addFailure(response, 'No more path items expected after \'%(path)s\'', path='/'.join(paths[:k]))
             return
                 
         if not node.invokers:
             PATH_NOT_FOUND.set(response)
             if node.childByName:
-                addError(response, 'Expected additional path items, maybe you meant: %(paths)s',
+                addFailure(response, 'Expected additional path items, maybe you meant: %(paths)s',
                          paths=['%s/%s' % ('/'.join(paths), item) for item in sorted(node.childByName)])
-            else: addError(response, 'Expected a value path item')
+            else: addFailure(response, 'Expected a value path item')
             return
         
         if not clearExtension and node.hasMandatorySlash:
             # We need to check if the last path element is not a string property ant there might be confusion
             # with the extension
             MISSING_SLASH.set(response)
-            addError(response, 'Unclear extension, you need to add a trailing slash to URI, something like: %(paths)s',
+            addFailure(response, 'Unclear extension, you need to add a trailing slash to URI, something like: %(paths)s',
                      paths=['%s/.%s' % ('/'.join(paths), extension), '%s.%s/' % ('/'.join(paths), extension)])
             return
                 

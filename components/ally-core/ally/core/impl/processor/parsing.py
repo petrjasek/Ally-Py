@@ -10,7 +10,7 @@ Provides the parsing chain processors.
 '''
 
 from ally.container.ioc import injected
-from ally.core.impl.processor.base import ErrorResponse, addError
+from ally.core.impl.processor.base import ErrorResponse, addFailure
 from ally.core.impl.processor.decoder.base import importTarget
 from ally.core.spec.codes import ENCODING_UNKNOWN
 from ally.core.spec.resources import Converter
@@ -72,6 +72,15 @@ class TargetContent(Context):
     The converter to be used for decoding content.
     ''')
 
+class PolymorphDecoding(Context):
+    '''
+    The polymorph decoding context.
+    '''
+    # ---------------------------------------------------------------- Required
+    invoker = requires(Context)
+    values = requires(dict)
+    decodingContent = requires(Context)
+
 # --------------------------------------------------------------------
 
 @injected
@@ -131,5 +140,5 @@ class ParsingHandler(Handler):
             # We process the chain with the next content or no content.
         elif response.isSuccess is not False:
             ENCODING_UNKNOWN.set(response)
-            addError(response, 'Content type \'%(type)s\' not supported for parsing', type=requestCnt.type)
+            addFailure(response, 'Content type \'%(type)s\' not supported for parsing', type=requestCnt.type)
         

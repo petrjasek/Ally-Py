@@ -10,7 +10,8 @@ Provides the setup for the decode processors.
 '''
 
 from ally.container import ioc
-from ally.core.impl.processor.decoder.base import failureTargetExport
+from ally.core.impl.processor.decoder.base import failureTargetExport,\
+    errorTargetExport
 from ally.core.impl.processor.decoder.content.definition_content import \
     DefinitionContentHandler
 from ally.core.impl.processor.decoder.content.model import ModelDecode
@@ -302,4 +303,4 @@ def updateAssemblyDecode():
     
 @ioc.before(assemblyDecodeExport)
 def updateAssemblyDecodeExport():
-    assemblyDecodeExport().add(failureTargetExport)
+    assemblyDecodeExport().add(failureTargetExport, errorTargetExport)

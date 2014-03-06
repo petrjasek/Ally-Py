@@ -10,7 +10,7 @@ Provides the rendering processing.
 '''
 
 from ally.container.ioc import injected
-from ally.core.impl.processor.base import ErrorResponse, addError
+from ally.core.impl.processor.base import ErrorResponse, addFailure
 from ally.core.spec.codes import ENCODING_UNKNOWN
 from ally.design.processor.assembly import Assembly
 from ally.design.processor.attribute import defines, optional
@@ -100,7 +100,7 @@ class RenderingHandler(HandlerBranching):
             if chain.branch(processing).execute(CONSUMED):
                 if response.isSuccess is not False:
                     ENCODING_UNKNOWN.set(response)
-                    addError(response, 'Content type \'%(type)s\' not supported for rendering', type=responseCnt.type)
+                    addFailure(response, 'Content type \'%(type)s\' not supported for rendering', type=responseCnt.type)
             else: resolved = True
 
         if not resolved:
@@ -113,6 +113,6 @@ class RenderingHandler(HandlerBranching):
                 if not chain.branch(processing).execute(CONSUMED): break
             else:
                 ENCODING_UNKNOWN.set(response)
-                addError(response,
+                addFailure(response,
                          'There is no renderer available',
                          'This is more likely a setup issues since the default content types should have resolved the renderer')

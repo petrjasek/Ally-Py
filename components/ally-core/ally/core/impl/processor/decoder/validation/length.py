@@ -9,7 +9,6 @@ Created on Oct 30, 2013
 Provides the length validation.
 '''
 
-from ally.api.error import InputError
 from ally.api.operator.type import TypeProperty
 from ally.api.validate import MinLen, MaxLen
 from ally.design.processor.attribute import requires, definesIf
@@ -17,9 +16,10 @@ from ally.design.processor.context import Context
 from ally.design.processor.handler import HandlerProcessor
 from ally.support.util_spec import IDo
 from ally.internationalization import _
-
+from ally.core.impl.processor.decoder.base import addError
 
 # --------------------------------------------------------------------
+
 class Decoding(Context):
     '''
     The model decoding context.
@@ -71,33 +71,37 @@ class ValidateLen(HandlerProcessor):
         if lengthMax is not None:
             if Decoding.maximumLength in decoding:
                 decoding.maximumLength = lengthMax
-            decoding.doSet = self.createMaxSet(decoding.doSet, decoding.property, lengthMax)
+            decoding.doSet = self.createMaxSet(decoding.doSet, decoding.property, lengthMax, decoding)
             
         if lengthMin is not None:
             if Decoding.minimumLength in decoding:
                 decoding.minimumLength = lengthMin
-            decoding.doSet = self.createMinSet(decoding.doSet, decoding.property, lengthMin)
+            decoding.doSet = self.createMinSet(decoding.doSet, decoding.property, lengthMin, decoding)
 
     # ----------------------------------------------------------------
     
-    def createMaxSet(self, wrapped, prop, length):
+    def createMaxSet(self, wrapped, prop, length, decoding):
         '''
         Create the do maximum set to use with validation.
         '''
         assert callable(wrapped), 'Invalid wrapped set %s' % wrapped
         assert isinstance(prop, TypeProperty), 'Invalid property %s' % prop
         def doSet(target, value):
-            if len(value) > length: raise InputError(_('Maximum allowed text size exceed'), prop)
-            wrapped(target, value)
+            if len(value) > length:
+                addError(target, 'max_len', decoding, _('Maximum text size exceed'), value=length)
+            else:
+                wrapped(target, value)
         return doSet
     
-    def createMinSet(self, wrapped, prop, length):
+    def createMinSet(self, wrapped, prop, length, decoding):
         '''
         Create the do minimum set to use with validation.
         '''
         assert callable(wrapped), 'Invalid wrapped set %s' % wrapped
         assert isinstance(prop, TypeProperty), 'Invalid property %s' % prop
         def doSet(target, value):
-            if len(value) < length: raise InputError(_('Minimum allowed text size is not satisfied'), prop)
-            wrapped(target, value)
+            if len(value) < length:
+                addError(target, 'min_len', decoding, _('Minimum text size exceeded'), value=length)
+            else:
+                wrapped(target, value)
         return doSet

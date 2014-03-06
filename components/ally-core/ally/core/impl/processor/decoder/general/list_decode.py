@@ -13,7 +13,7 @@ from ..base import addFailure
 from ally.api.type import List, Type
 from ally.container.ioc import injected
 from ally.design.processor.assembly import Assembly
-from ally.design.processor.attribute import defines, requires
+from ally.design.processor.attribute import defines, requires, optional
 from ally.design.processor.branch import Branch
 from ally.design.processor.context import Context
 from ally.design.processor.execution import Processing, Abort
@@ -48,6 +48,9 @@ class Decoding(Context):
     @rtype: boolean
     Indicates that the decoding needs to have a value provided.
     ''')
+    # ---------------------------------------------------------------- Optional
+    doBegin = optional(IDo)
+    doEnd = optional(IDo)
     # ---------------------------------------------------------------- Required
     type = requires(Type)
     doSet = requires(IDo)
@@ -127,5 +130,8 @@ class ListDecode(HandlerBranching):
             '''
             if not isinstance(value, list): addFailure(target, decoding, value=value)
             else:
-                for item in value: decode(target, item)
+                for item in value:
+                    if Decoding.doBegin in decoding and decoding.doBegin: decoding.doBegin(target)
+                    decode(target, item)
+                    if Decoding.doEnd in decoding and decoding.doEnd: decoding.doEnd(target)
         return doDecode

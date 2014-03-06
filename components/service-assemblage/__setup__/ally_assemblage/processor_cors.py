@@ -14,24 +14,18 @@ from .processor import parametersAsHeaders, read_from_params, headersCorsAllow, 
 from ally.container import ioc
 from ally.design.processor.handler import Handler
 from ally.http.impl.processor.cors import CrossOriginResourceSharingHandler
-from ally.http.spec.headers import ALLOW_HEADERS, PARAMETERS_AS_HEADERS
+from ally.http.spec.headers import PARAMETERS_AS_HEADERS
 
 # --------------------------------------------------------------------
 
 @ioc.entity
-def optionSpecificHeaders() -> set:
-    return {PARAMETERS_AS_HEADERS}
-
-@ioc.entity
 def crossOriginOthersOptions() -> dict:
-    return {
-            ALLOW_HEADERS: sorted(headersCorsAllow()),
-            }
+    return {}
 
 @ioc.entity
 def crossOriginResourceSharing() -> Handler:
     b = CrossOriginResourceSharingHandler()
-    b.optionSpecific = optionSpecificHeaders()
+    b.allowHeaders = sorted(headersCorsAllow())
     b.othersOptions = crossOriginOthersOptions()
     return b
 

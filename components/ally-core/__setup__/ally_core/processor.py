@@ -9,11 +9,6 @@ Created on Nov 24, 2011
 Provides the configurations for the processors used in handling the request.
 '''
 
-from .decode import assemblyDecodeContentExport
-from .definition import errors
-from .encode import assemblyEncodeExport
-from .parsing_rendering import assemblyRendering, assemblyParsing, \
-    blocksDefinitions
 from ally.container import ioc
 from ally.core.impl.processor.block_indexing import BlockIndexingHandler
 from ally.core.impl.processor.content import ContentHandler
@@ -21,15 +16,22 @@ from ally.core.impl.processor.conversion_content import ConverterContentHandler
 from ally.core.impl.processor.error_definition import ErrorDefinitionHandler
 from ally.core.impl.processor.error_input import ErrorInputHandler
 from ally.core.impl.processor.invoking import InvokingHandler
+from ally.core.impl.processor.method_allow import MethodAllowHandler
 from ally.core.impl.processor.parsing import ParsingHandler
 from ally.core.impl.processor.render_encoder import RenderEncoderHandler
 from ally.core.impl.processor.rendering import RenderingHandler
 from ally.core.spec.resources import Converter
 from ally.design.processor.handler import Handler
 
+from .decode import assemblyDecodeContentExport
+from .definition import errors
+from .encode import assemblyEncodeExport
+from .parsing_rendering import assemblyRendering, assemblyParsing, \
+    blocksDefinitions
+
+
 # --------------------------------------------------------------------
 # Creating the processors used in handling the request
-
 @ioc.config
 def default_language() -> str:
     '''The default language to use in case none is provided in the request'''
@@ -51,6 +53,9 @@ def explain_detailed_error() -> bool:
 def converter() -> Converter: return Converter()
 
 # --------------------------------------------------------------------
+
+@ioc.entity
+def methodAllow() -> Handler: return MethodAllowHandler()
 
 @ioc.entity
 def rendering() -> Handler:

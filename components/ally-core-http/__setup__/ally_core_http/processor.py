@@ -10,7 +10,7 @@ Provides the configurations for the processors used in handling the request.
 '''
 
 from ..ally_core.definition import descriptions
-from ..ally_core.processor import converter, invoking, rendering, content, \
+from ..ally_core.processor import converter, invoking, methodAllow, rendering, content, \
     renderEncoder, converterContent, blockIndexing, errorDefinition, parsing, \
     errorInput
 from ..ally_core.resources import injectorAssembly
@@ -37,7 +37,7 @@ from ally.design.processor.handler import Handler
 from ally.http.impl.processor.header_parameter import HeaderParameterHandler
 from ally.http.impl.processor.method_override import METHOD_OVERRIDE
 from ally.http.impl.processor.status import StatusHandler
-from ally.http.spec.headers import CONTENT_TYPE
+from ally.http.spec import headers
 from ally.core.http.impl.processor.assembler.polymorph_persist import PolymorphPersistHandler
 
 # --------------------------------------------------------------------
@@ -74,11 +74,7 @@ def headersCorsAllow() -> set:
     return set()
 
 @ioc.entity
-def parametersAsHeaders() -> list:
-    parameters = set(header_parameters())
-    parameters.update(headersCorsAllow())
-    parameters = sorted(parameters)
-    return parameters
+def parametersAsHeaders() -> set: return set(header_parameters())
 
 # --------------------------------------------------------------------
 # Header decoders
@@ -183,14 +179,27 @@ def assemblyBlocks() -> Assembly:
 # --------------------------------------------------------------------
     
 @ioc.before(headersCorsAllow)
-def updateHeadersCustom():
-    headersCorsAllow().add(CONTENT_TYPE.name)
+def updateHeadersCors():
+    headersCorsAllow().add(headers.HOST.name)
+    headersCorsAllow().add(headers.ORIGIN.name)
+    headersCorsAllow().add(headers.ACCEPT.name)
+    headersCorsAllow().add(headers.ACCEPT_CHARSET.name)
+    headersCorsAllow().add(headers.CONNECTION.name)
+    headersCorsAllow().add(headers.CONTENT_TYPE.name)
+    headersCorsAllow().add(headers.CONTENT_LENGTH.name)
+    headersCorsAllow().add(headers.CONTENT_INDEX.name)
+    headersCorsAllow().add(headers.TRANSFER_ENCODING.name)
     if allow_method_override():
         headersCorsAllow().add(METHOD_OVERRIDE.name)
 
+@ioc.before(parametersAsHeaders)
+def updateHeadersParameter():
+    if allow_method_override():
+        parametersAsHeaders().add(METHOD_OVERRIDE.name)
+        
 @ioc.before(assemblyResources)
 def updateAssemblyResources():
-    assemblyResources().add(internalError(), injectorAssembly(), converterPath(), uri(),
+    assemblyResources().add(internalError(), injectorAssembly(), converterPath(), uri(), methodAllow(),
                             methodInvoker(), contentTypeRequestDecode(), contentLengthDecode(), acceptRequestDecode(),
                             converterContent(), rendering(), multipart(),
                             parsing(), content(), parameter(), scheme(), invoking(),

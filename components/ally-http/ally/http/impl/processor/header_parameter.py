@@ -9,15 +9,17 @@ Created on Apr 29, 2013
 Pushes parameters as header values.
 '''
 
+from collections import Iterable
+import logging
+
 from ally.container.ioc import injected
 from ally.design.processor.attribute import requires
 from ally.design.processor.handler import HandlerProcessor
 from ally.http.spec.headers import PARAMETERS_AS_HEADERS, encode, HeadersRequire
 from ally.support.http.request import RequesterOptions
-import logging
+
 
 # --------------------------------------------------------------------
-
 log = logging.getLogger(__name__)
 
 # --------------------------------------------------------------------
@@ -37,11 +39,11 @@ class HeaderParameterHandler(HandlerProcessor):
     Pushes parameters as header values.
     '''
     
-    parameters = list
+    parameters = set
     # The parameter names to have the values pushed as header values.
 
     def __init__(self):
-        assert isinstance(self.parameters, list), 'Invalid parameters %s' % self.parameters
+        assert isinstance(self.parameters, set), 'Invalid parameters %s' % self.parameters
         if __debug__:
             for name in self.parameters: assert isinstance(name, str), 'Invalid parameter name %s' % name
         super().__init__()
@@ -101,7 +103,7 @@ def pushHeaders(headers, parameters, names):
     Populates parameters as header values.
     '''
     assert isinstance(parameters, list), 'Invalid parameters %s' % parameters
-    assert isinstance(names, list), 'Invalid names %s' % names
+    assert isinstance(names, Iterable), 'Invalid names %s' % names
     
     for hname in names:
         assert isinstance(hname, str), 'Invalid name %s' % hname

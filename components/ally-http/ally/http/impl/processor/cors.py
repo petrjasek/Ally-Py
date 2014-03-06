@@ -11,15 +11,14 @@ Provides the cross origin resource sharing delivering.
 
 from ally.container.ioc import injected
 from ally.design.processor.attribute import requires, optional
-from ally.design.processor.context import Context
 from ally.design.processor.handler import HandlerProcessor
 from ally.http.spec.headers import ALLOW_ORIGIN, ALLOW_METHODS, HeaderCmx, \
-    HeadersDefines
+    HeadersDefines, ALLOW_REQUEST_HEADERS, HeadersRequire, ALLOW_HEADERS
 from ally.http.spec.server import HTTP_OPTIONS
 
-# --------------------------------------------------------------------
 
-class Request(Context):
+# --------------------------------------------------------------------
+class Request(HeadersRequire):
     '''
     The request context.
     '''
@@ -31,6 +30,7 @@ class Response(HeadersDefines):
     The response context.
     '''
     # ---------------------------------------------------------------- Optional
+    isSuccess = requires(bool)
     allows = optional(set)
 
 # --------------------------------------------------------------------
@@ -45,21 +45,25 @@ class CrossOriginResourceSharingHandler(HandlerProcessor):
     # The value to set for allow origin.
     allowMethods = None
     # The method names that are allowed.
+    allowHeaders = None
+    # The headers that are allowed.
     othersOptions = None
     # Other cross origin resource sharing headers for options, this is a dictionary having as a key the HeaderCmx
     # and as a value the values to push for that header.
-    optionSpecific = None
-    # The headers that are specific only for the OPTIONS method.
 
     def __init__(self):
         assert self.allowOrigin is None or isinstance(self.allowOrigin, list), \
         'Invalid allow origin %s' % self.allowOrigin
         assert self.allowMethods is None or isinstance(self.allowMethods, list), \
         'Invalid allow methods %s' % self.allowMethods
+        self._allowed = set()
+        if self.allowHeaders:
+            assert isinstance(self.allowHeaders, list), \
+            'Invalid allow headers %s' % self.allowHeaders
+            self._allowed.update(name.lower() for name in self.allowHeaders)
         assert self.othersOptions is None or isinstance(self.othersOptions, dict), \
         'Invalid other options %s' % self.othersOptions
-        assert self.optionSpecific is None or isinstance(self.optionSpecific, set), \
-        'Invalid option specific headers %s' % self.optionSpecific
+                
         super().__init__()
 
     def process(self, chain, request:Request, response:Response, **keyargs):
@@ -70,19 +74,29 @@ class CrossOriginResourceSharingHandler(HandlerProcessor):
         '''
         assert isinstance(request, Request), 'Invalid request %s' % request
         assert isinstance(response, Response), 'Invalid response %s' % response
-        
+        if response.isSuccess is False: return  # Skip in case the response is in error
+
         if self.allowOrigin: ALLOW_ORIGIN.encode(response, *self.allowOrigin)
 
-        allows = set(ALLOW_METHODS.decode(response))
-        allows.add(HTTP_OPTIONS)
-        if Response.allows in response and response.allows: allows.update(response.allows)
-        if self.allowMethods: allows.update(self.allowMethods)
-        if allows: ALLOW_METHODS.encode(response, *sorted(allows))
-        
-        if self.othersOptions:
-            for header, values in self.othersOptions.items():
-                assert isinstance(header, HeaderCmx), 'Invalid header %s' % header
-                assert isinstance(values, list), 'Invalid values %s' % values
-                if self.optionSpecific and request.method != HTTP_OPTIONS and header in self.optionSpecific: continue
-                header.extend(response, *values)
+        if request.method == HTTP_OPTIONS:
+            current = ALLOW_METHODS.decode(response)
+            if current: allows = set(current)
+            else: allows = set()
             
+            allows.add(HTTP_OPTIONS)
+            if Response.allows in response and response.allows: allows.update(response.allows)
+            if self.allowMethods: allows.update(self.allowMethods)
+            if allows: ALLOW_METHODS.encode(response, *sorted(allows))
+            
+            if self._allowed:
+                allowed = []
+                current = ALLOW_REQUEST_HEADERS.decode(request)
+                if current:
+                    for name in current:
+                        if name.lower() in self._allowed: allowed.append(name)
+                if allowed: ALLOW_HEADERS.extend(response, *allowed)
+            
+            if self.othersOptions:
+                for header, values in self.othersOptions.items():
+                    assert isinstance(header, HeaderCmx), 'Invalid header %s' % header
+                    header.extend(response, *values)

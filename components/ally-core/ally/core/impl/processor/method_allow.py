@@ -1,68 +1,68 @@
 '''
-Created on Nov 23, 2011
+Created on Mar 6, 2014
 
-@package: ally http
+@package: ally core http
 @copyright: 2011 Sourcefabric o.p.s.
 @license: http://www.gnu.org/licenses/gpl-3.0.txt
 @author: Gabriel Nistor
 
-Provides a processor that just sends an ok status as a response without any body. This is useful for the OPTIONS
-method for instance where we just want to deliver some response headers. 
+Provides the allowed methods handler.
 '''
 
 from ally.container.ioc import injected
 from ally.design.processor.attribute import requires, defines
 from ally.design.processor.context import Context
-from ally.design.processor.execution import Chain
 from ally.design.processor.handler import HandlerProcessor
-from ally.http.spec.codes import PATH_FOUND, CodedHTTP
+
 
 # --------------------------------------------------------------------
+class Node(Context):
+    '''
+    The node context.
+    '''
+    # ---------------------------------------------------------------- Required
+    invokers = requires(dict)
 
 class Request(Context):
     '''
     The request context.
     '''
     # ---------------------------------------------------------------- Required
-    method = requires(str)
+    node = requires(Context)
 
-class Response(CodedHTTP):
+class Response(Context):
     '''
     The response context.
     '''
     # ---------------------------------------------------------------- Defined
-    allows = defines(set)
-
+    allows = defines(set, doc='''
+    @rtype: set(string)
+    The allowed methods.
+    ''')
+    # ---------------------------------------------------------------- Optional
+    isSuccess = requires(bool)
+    
 # --------------------------------------------------------------------
 
 @injected
-class DeliverOkForMethodHandler(HandlerProcessor):
+class MethodAllowHandler(HandlerProcessor):
     '''
-    Handler that just sends an ok status.
+    Implementation for a processor that provides the allowed methods.
     '''
-
-    forMethod = str
-    # The method to respond with Ok for.
-
+    
     def __init__(self):
-        assert isinstance(self.forMethod, str), 'Invalid for method %s' % self.forMethod
-        super().__init__()
+        super().__init__(Node=Node)
 
     def process(self, chain, request:Request, response:Response, **keyargs):
         '''
-        @see: HandlerProcessor.process
-        
-        Delivers Ok if the request methos is the expected one.
+        Provide the allowed mehtods.
         '''
-        assert isinstance(chain, Chain), 'Invalid processors chain %s' % chain
         assert isinstance(request, Request), 'Invalid request %s' % request
         assert isinstance(response, Response), 'Invalid response %s' % response
         if response.isSuccess is False: return  # Skip in case the response is in error
 
-        if request.method == self.forMethod:
-            PATH_FOUND.set(response)
-            chain.cancel()
-            return
-
+        assert isinstance(request.node, Node), 'Invalid request node %s' % request.node
+        assert isinstance(request.node.invokers, dict) and request.node.invokers, \
+        'Invalid request node invokers %s' % request.node.invokers
         if response.allows is None: response.allows = set()
-        response.allows.add(self.forMethod)
+        response.allows.update(request.node.invokers)

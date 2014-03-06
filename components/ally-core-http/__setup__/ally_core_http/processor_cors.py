@@ -9,18 +9,20 @@ Created on Nov 24, 2011
 Provides the processors for handling Cross-Origin Resource Sharing.
 '''
 
-from .processor import headersCorsAllow, updateAssemblyResources, assemblyResources, \
-    methodInvoker, parametersAsHeaders, read_from_params
+from itertools import chain
+
 from ally.container import ioc
 from ally.design.processor.handler import Handler
 from ally.http.impl.processor.cors import CrossOriginResourceSharingHandler
 from ally.http.impl.processor.method_deliver_ok import DeliverOkForMethodHandler
-from ally.http.spec.headers import ALLOW_HEADERS, PARAMETERS_AS_HEADERS
+from ally.http.spec.headers import PARAMETERS_AS_HEADERS
 from ally.http.spec.server import HTTP_OPTIONS
-from itertools import chain
+
+from ..ally_core.processor import methodAllow
+from .processor import headersCorsAllow, updateAssemblyResources, assemblyResources, parametersAsHeaders, read_from_params
+
 
 # --------------------------------------------------------------------
-
 @ioc.config
 def allow_origin() -> list:
     '''The allow origin to dispatch for responses'''
@@ -32,22 +34,16 @@ def allow_headers() -> list:
     return []
 
 # --------------------------------------------------------------------
-
-@ioc.entity
-def optionSpecificHeaders() -> set:
-    return {PARAMETERS_AS_HEADERS}
     
 @ioc.entity
 def crossOriginOthersOptions() -> dict:
-    return {
-            ALLOW_HEADERS: sorted(set(chain(allow_headers(), headersCorsAllow()))),
-            }
+    return {}
     
 @ioc.entity
 def crossOriginResourceSharing() -> Handler:
     b = CrossOriginResourceSharingHandler()
     b.allowOrigin = allow_origin()
-    b.optionSpecific = optionSpecificHeaders()
+    b.allowHeaders = sorted(set(chain(allow_headers(), headersCorsAllow())))
     b.othersOptions = crossOriginOthersOptions()
     return b
 
@@ -67,4 +63,4 @@ def updateCrossOriginOthersOptionsForParams():
 @ioc.after(updateAssemblyResources)
 def updateAssemblyResourcesForOptions():
     assemblyResources().add(crossOriginResourceSharing(), deliverOkForOptionsHandler(),
-                            after=methodInvoker())
+                            after=methodAllow())

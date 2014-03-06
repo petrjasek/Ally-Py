@@ -297,6 +297,8 @@ class HeaderCmx(Header):
 
 HOST = HeaderRaw('Host')
 # Host as described at: http://www.w3.org/Protocols/rfc2616/rfc2616-sec14.html chapter 14.23
+ORIGIN = HeaderRaw('Origin')
+# The origin header.
 ACCEPT = HeaderCmx('Accept', False)
 # Accept as described at: http://www.w3.org/Protocols/rfc2616/rfc2616-sec14.html chapter 14.1
 ACCEPT_CHARSET = HeaderCmx('Accept-Charset', False)
@@ -323,6 +325,8 @@ ALLOW_HEADERS = HeaderCmx('Access-Control-Allow-Headers', False)
 # Allow headers as described at: http://www.w3.org/TR/cors/ chapter 5.6
 PARAMETERS_AS_HEADERS = HeaderCmx('Access-Control-Parameters-Headers', False)
 # The header used for delivering the parameters that need to be interpreted as headers.
+ALLOW_REQUEST_HEADERS = HeaderCmx('Access-Control-Request-Headers', False)
+# Allow request headers as described at: http://www.w3.org/TR/cors/ chapter 5.9
 
 # --------------------------------------------------------------------
 

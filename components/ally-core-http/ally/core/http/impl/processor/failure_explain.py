@@ -11,7 +11,8 @@ Provides support for explaining the failures in the content of the request.
 
 from ally.container.ioc import injected
 from ally.core.spec.definition import IValue, IVerifier
-from ally.design.processor.attribute import requires, optional, defines
+from ally.design.processor.attribute import requires, optional, defines, \
+    definesIf
 from ally.design.processor.context import Context
 from ally.design.processor.handler import HandlerProcessor
 from ally.design.processor.resolvers import resolversFor
@@ -58,7 +59,7 @@ class ResponseContent(Context):
     # ---------------------------------------------------------------- Optional
     source = defines(IInputStream)
     type = defines(str)
-    charSet = defines(str)
+    charSet = definesIf(str)
     length = defines(int)
       
 # --------------------------------------------------------------------
@@ -135,7 +136,7 @@ class FailureExplainHandler(HandlerProcessor):
         responseCnt.length = responseCnt.source.tell()
         responseCnt.source.seek(0)
         
-        responseCnt.charSet = self.charSet
+        if ResponseContent.charSet in responseCnt: responseCnt.charSet = self.charSet
         responseCnt.type = self.type
 
     # ----------------------------------------------------------------

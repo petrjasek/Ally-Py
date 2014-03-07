@@ -10,19 +10,20 @@ Provides the basic web server based on the python build in http server (this typ
 thread serving requests one at a time).
 '''
 
+from http.server import HTTPServer, BaseHTTPRequestHandler
+import logging
+from socket import socket
+from urllib.parse import urlparse, parse_qsl
+
 from ally.container.ioc import injected
 from ally.design.processor.assembly import Assembly
 from ally.design.processor.execution import Processing, FILL_ALL
 from ally.http.spec.server import RequestHTTP, ResponseHTTP, RequestContentHTTP, \
-    ResponseContentHTTP, HTTP_GET, HTTP_POST, HTTP_PUT, HTTP_DELETE, HTTP_OPTIONS, \
-    HTTP
+    ResponseContentHTTP, HTTP
 from ally.support.util_io import readGenerator, IInputStream, keepOpen
-from http.server import HTTPServer, BaseHTTPRequestHandler
-from urllib.parse import urlparse, parse_qsl
-import logging
+
 
 # --------------------------------------------------------------------
-
 log = logging.getLogger(__name__)
 
 # --------------------------------------------------------------------
@@ -31,6 +32,9 @@ class RequestHandler(BaseHTTPRequestHandler):
     '''
     The server class that handles the HTTP requests.
     '''
+    
+    scheme = HTTP
+    # The server scheme
     
     def __init__(self, request, address, server):
         '''
@@ -48,20 +52,35 @@ class RequestHandler(BaseHTTPRequestHandler):
         self.server_version = server.serverVersion  # Needs to be before the __init__
         super().__init__(request, address, server)
 
-    def do_GET(self):
-        self._process(HTTP_GET)
+    def handle_one_request(self):
+        """Handle a single HTTP request.
 
-    def do_POST(self):
-        self._process(HTTP_POST)
+        You normally don't need to override this method; see the class
+        __doc__ string for information on how to handle specific HTTP
+        commands such as GET and POST.
 
-    def do_PUT(self):
-        self._process(HTTP_PUT)
-
-    def do_DELETE(self):
-        self._process(HTTP_DELETE)
-
-    def do_OPTIONS(self):
-        self._process(HTTP_OPTIONS)
+        """
+        try:
+            self.raw_requestline = self.rfile.readline(65537)
+            if len(self.raw_requestline) > 65536:
+                self.requestline = ''
+                self.request_version = ''
+                self.command = ''
+                self.send_error(414)
+                return
+            if not self.raw_requestline:
+                self.close_connection = 1
+                return
+            if not self.parse_request():
+                # An error code has been sent, just exit
+                return
+            self._process(self.command)
+            self.wfile.flush()  # actually send the response if not already done.
+        except socket.timeout as e:
+            # a read or a write timed out.  Discard this connection
+            self.log_error("Request timed out: %r", e)
+            self.close_connection = 1
+            return
 
     # ----------------------------------------------------------------
 
@@ -76,7 +95,7 @@ class RequestHandler(BaseHTTPRequestHandler):
         
         if RequestHTTP.clientIP in request: request.clientIP = self.client_address[0]
         url = urlparse(self.path)
-        request.scheme, request.method = HTTP, method.upper()
+        request.scheme, request.method = self.scheme, method.upper()
         request.uri = url.path.lstrip('/')
         if RequestHTTP.headers in request: request.headers = dict(self.headers)
         if RequestHTTP.parameters in request: request.parameters = parse_qsl(url.query, True, False)

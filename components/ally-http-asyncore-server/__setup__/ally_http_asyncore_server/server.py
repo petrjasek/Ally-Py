@@ -10,7 +10,7 @@ Runs the asyncore py web server.
 '''
 
 from ..ally_http.server import assemblyServer, server_type, server_protocol, \
-    server_version, server_host, server_port
+    server_version, server_host, server_port, server_scheme
 from ally.container import ioc
 from ally.http.server import server_asyncore
 from threading import Thread
@@ -33,7 +33,9 @@ def server_type_asyncore():
 
 @ioc.entity
 def serverAsyncoreRequestHandler():
-    return type('RequestHandler', (server_asyncore.RequestHandler,), {'protocol_version': server_protocol()})
+    return type('RequestHandler', (server_asyncore.RequestHandler,),
+                {'protocol_version': server_protocol(),
+                 'scheme': server_scheme()})
 
 @ioc.entity
 def serverAsyncore():

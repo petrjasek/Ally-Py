@@ -10,7 +10,7 @@ Runs the Mongrel2 web server.
 '''
 
 from ..ally_http.server import assemblyServer, server_host, server_port, \
-    server_type, server_version
+    server_type, server_version, server_scheme
 from ally.container import ioc
 from threading import Thread
 
@@ -67,6 +67,7 @@ ioc.doc(server_port, '''
 def serverMongrel2RequestHandler():
     from ally.http.server.server_mongrel2 import RequestHandler
     b = RequestHandler(); yield b
+    b.scheme = server_scheme()
     b.serverVersion = server_version()
     b.assembly = assemblyServer()
 

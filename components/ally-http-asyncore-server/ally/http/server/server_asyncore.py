@@ -47,6 +47,8 @@ class RequestHandler(dispatcher, BaseHTTPRequestHandler):
     and uses the async_chat to asynchronous communication.
     '''
     
+    scheme = HTTP
+    # The server scheme
     bufferSize = 10 * 1024
     # The buffer size used for reading and writing.
     maximumRequestSize = 1024 * 1024
@@ -279,7 +281,7 @@ class RequestHandler(dispatcher, BaseHTTPRequestHandler):
         
         if RequestHTTP.clientIP in request: request.clientIP = self.client_address[0]
         url = urlparse(self.path)
-        request.scheme, request.method = HTTP, method.upper()
+        request.scheme, request.method = self.scheme, method.upper()
         request.uri = url.path.lstrip('/')
         if RequestHTTP.headers in request: request.headers = dict(self.headers)
         if RequestHTTP.parameters in request: request.parameters = parse_qsl(url.query, True, False)

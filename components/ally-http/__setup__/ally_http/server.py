@@ -15,6 +15,7 @@ from ally.design.processor.assembly import Assembly
 from ally.design.processor.handler import Handler, RoutingHandler
 from ally.http.server import server_basic
 from threading import Thread
+from ally.http.spec.server import HTTP
 
 # --------------------------------------------------------------------
 
@@ -23,6 +24,13 @@ SERVER_BASIC = 'basic'
 
 # --------------------------------------------------------------------
 # The default configurations
+
+@ioc.config
+def server_scheme() -> str:
+    '''
+    The scheme protocol to be used for the server.
+    '''
+    return HTTP
 
 @ioc.config
 def server_type() -> str:
@@ -67,7 +75,9 @@ def assemblyServer() -> Assembly:
 
 @ioc.entity
 def serverBasicRequestHandler():
-    return type('RequestHandler', (server_basic.RequestHandler,), {'protocol_version': server_protocol()})
+    return type('RequestHandler', (server_basic.RequestHandler,),
+                {'protocol_version': server_protocol(),
+                 'scheme': server_scheme()})
 
 @ioc.entity
 def serverBasic():

@@ -9,35 +9,22 @@ Created on Jun 28, 2011
 Provides support for explaining the errors in the content of the request.
 '''
 
-from ally.container.ioc import injected
-from ally.design.processor.attribute import requires, optional, defines, \
-    definesIf
-from ally.design.processor.context import Context
-from ally.design.processor.handler import HandlerProcessor
-from ally.support.util_io import IInputStream
 from collections import Callable
 import logging
-from ally.core.spec.transform import IRender
-from ally.core.spec.resources import Converter
+
 from ally.api.type import typeFor
+from ally.container.ioc import injected
+from ally.core.spec.resources import Converter
+from ally.core.spec.transform import IRender
+from ally.design.processor.attribute import requires
+from ally.design.processor.context import Context
+from ally.design.processor.handler import HandlerProcessor
+
 
 # --------------------------------------------------------------------
-
 log = logging.getLogger(__name__)
 
 # --------------------------------------------------------------------
-  
-class Definition(Context):
-    '''
-    The definition context.
-    '''
-    # ---------------------------------------------------------------- Optional
-    isMandatory = optional(bool)
-    enumeration = optional(list)
-    references = optional(list)
-    # ---------------------------------------------------------------- Required
-    name = requires(str)
-    types = requires(list)
 
 class Request(Context):
     '''
@@ -51,19 +38,9 @@ class Response(Context):
     The response context.
     '''
     # ---------------------------------------------------------------- Required
-    code = requires(str)
     isSuccess = requires(bool)
-    status = requires(int)
-    text = requires(str)
     errors = requires(list)
     renderFactory = requires(Callable)
-
-class ResponseContent(Context):
-    '''
-    The response content context.
-    '''
-    # ---------------------------------------------------------------- Defines
-    source = defines(IInputStream)
 
 # --------------------------------------------------------------------
 
@@ -77,7 +54,7 @@ class ErrorExplainHandler(HandlerProcessor):
     def __init__(self):
         super().__init__()
     
-    def process(self, chain, request:Request, response:Response, responseCnt:ResponseContent, **keyargs):
+    def process(self, chain, request:Request, response:Response, responseCnt:Context, **keyargs):
         '''
         @see: HandlerProcessor.process
         
@@ -85,7 +62,6 @@ class ErrorExplainHandler(HandlerProcessor):
         '''
         assert isinstance(request, Request), 'Invalid request %s' % request
         assert isinstance(response, Response), 'Invalid response %s' % response
-        assert isinstance(responseCnt, ResponseContent), 'Invalid response content %s' % responseCnt
         
         if response.isSuccess is not False or not response.errors: return  # Not in error.
         

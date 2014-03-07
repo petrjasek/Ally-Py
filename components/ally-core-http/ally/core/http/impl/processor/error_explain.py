@@ -10,7 +10,8 @@ Provides support for explaining the errors in the content of the request.
 '''
 
 from ally.container.ioc import injected
-from ally.design.processor.attribute import requires, optional, defines
+from ally.design.processor.attribute import requires, optional, defines, \
+    definesIf
 from ally.design.processor.context import Context
 from ally.design.processor.handler import HandlerProcessor
 from ally.support.util_io import IInputStream
@@ -61,11 +62,8 @@ class ResponseContent(Context):
     '''
     The response content context.
     '''
-    # ---------------------------------------------------------------- Optional
+    # ---------------------------------------------------------------- Defines
     source = defines(IInputStream)
-    type = defines(str)
-    charSet = defines(str)
-    length = defines(int)
 
 # --------------------------------------------------------------------
 

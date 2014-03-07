@@ -127,7 +127,7 @@ class PathUpdaterSupportEncode(HandlerProcessor):
                         elements.append(el)
                         break
 
-        if isinstance(create.objType, TypeModel) and node.invokersAccessible:
+        if isinstance(create.objType, TypeModel):
 
             typeElements = {create.objType: elements}
             types = [create.objType]
@@ -136,22 +136,23 @@ class PathUpdaterSupportEncode(HandlerProcessor):
                     assert isinstance(polymorph, Polymorph), 'Invalid polymorph %s' % polymorph
                     assert isinstance(polymorph.target, TypeModel)
                     types.append(polymorph.target)
-                
-            for objType in types:
-                if objType not in node.invokersAccessible: continue
-                invokersAccessible = node.invokersAccessible[objType]
-                
-                assert isinstance(invokersAccessible, OrderedDict), 'Invalid accessible invokers %s' % invokersAccessible
-                for _name, invoker in invokersAccessible.items():
-                    assert isinstance(invoker, Invoker), 'Invalid invoker %s' % invoker
+            
+            if node.invokersAccessible:
+                for objType in types:
+                    if objType not in node.invokersAccessible: continue
+                    invokersAccessible = node.invokersAccessible[objType]
                     
-                    for el in reversed(invoker.path):
-                        assert isinstance(el, Element), 'Invalid element %s' % el
-                        if el.property:
-                            elements = typeElements.get(objType)
-                            if not elements: elements = typeElements[objType] = []
-                            elements.append(el)
-                            break
+                    assert isinstance(invokersAccessible, OrderedDict), 'Invalid accessible invokers %s' % invokersAccessible
+                    for _name, invoker in invokersAccessible.items():
+                        assert isinstance(invoker, Invoker), 'Invalid invoker %s' % invoker
+                        
+                        for el in reversed(invoker.path):
+                            assert isinstance(el, Element), 'Invalid element %s' % el
+                            if el.property:
+                                elements = typeElements.get(objType)
+                                if not elements: elements = typeElements[objType] = []
+                                elements.append(el)
+                                break
     
             if typeElements:
                 create.encoder = EncoderPathUpdaterModel(create.encoder, typeElements)

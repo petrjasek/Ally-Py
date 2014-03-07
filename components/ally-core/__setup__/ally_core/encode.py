@@ -73,6 +73,13 @@ def assemblyModelExtraEncode() -> Assembly:
     '''
     return Assembly('Encode model extra')
 
+@ioc.entity
+def assemblyExtensionAttribute() -> Assembly:
+    '''
+    The assembly containing the encoders for extra model data encoding.
+    '''
+    return Assembly('Encode extension property')
+
 # --------------------------------------------------------------------
 
 @ioc.entity
@@ -106,7 +113,7 @@ def propertyOfModelEncode() -> Handler:
 @ioc.entity
 def extensionAttributeEncode() -> Handler:
     b = ExtensionAttributeEncode()
-    b.propertyEncodeAssembly = assemblyPropertyPrimitiveEncode()
+    b.propertyEncodeAssembly = assemblyExtensionAttribute()
     return b
 
 # --------------------------------------------------------------------
@@ -122,6 +129,10 @@ def updateAssemblyPropertyEncode():
 @ioc.before(assemblyPropertyModelEncode)
 def updateAssemblyPropertyModelEncode():
     assemblyPropertyModelEncode().add(modelPropertyEncode())
+    
+@ioc.before(assemblyExtensionAttribute)
+def updateAssemblyExtensionAttribute():
+    assemblyExtensionAttribute().add(assemblyPropertyPrimitiveEncode())
     
 @ioc.before(assemblyItemEncode)
 def updateAssemblyItemEncode():

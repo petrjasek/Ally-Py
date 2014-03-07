@@ -148,10 +148,11 @@ class ProxyTransalator(IProxyHandler):
                 elif invoker.method != GET: iexc = InputError(_('An entity relation identifier is not valid'))
             
             if iexc is not None:
-                if invoker.target: iexc.update(invoker.target)
+                assert isinstance(invoker.target, TypeModel)
+                if invoker.target: iexc.type = invoker.target.propertyId
                 log.info('SQL Alchemy handled exception occurred', exc_info=(type(exc), exc, exc.__traceback__))
                 iexc.with_traceback(exc.__traceback__)
                 exc = iexc
             else: log.warn('Unknown SQL Alchemy error', exc_info=(type(exc), exc, exc.__traceback__))
-                
+            
             raise exc

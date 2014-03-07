@@ -12,7 +12,7 @@ Provides the GMT support transformation.
 from ally.container.ioc import injected
 from ally.core.http.impl.processor.base import ErrorResponseHTTP
 from ally.core.http.spec.codes import TIME_ZONE_ERROR
-from ally.core.impl.processor.base import addError
+from ally.core.impl.processor.base import addFailure
 from ally.core.spec.resources import Converter
 from ally.design.processor.attribute import requires
 from ally.design.processor.handler import HandlerProcessor
@@ -81,7 +81,7 @@ class TimeZoneConverterHandler(HandlerProcessor):
             try: timeZoneVal = timezone(timeZoneVal)
             except UnknownTimeZoneError:
                 TIME_ZONE_ERROR.set(response)
-                addError(response, 'Unknown content time zone \'%(timeZone)s\'', timeZone=timeZoneVal)
+                addFailure(response, 'Unknown content time zone \'%(timeZone)s\'', timeZone=timeZoneVal)
                 return
         else: timeZoneVal = self.defaultTZ
 

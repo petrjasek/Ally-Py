@@ -12,7 +12,7 @@ Provides the multipart form-data conversion to url encoded content.
 from ally.container.ioc import injected
 from ally.core.http.impl.processor.base import ErrorResponseHTTP
 from ally.core.http.spec.codes import MUTLIPART_ERROR
-from ally.core.impl.processor.base import addError
+from ally.core.impl.processor.base import addFailure
 from ally.design.processor.attribute import requires, defines
 from ally.design.processor.context import Context
 from ally.design.processor.handler import HandlerProcessor
@@ -104,7 +104,7 @@ class ParseFormDataHandler(HandlerProcessor):
         while True:
             if content.disposition != self.contentDisposition:
                 MUTLIPART_ERROR.set(response)
-                return addError(response, 'Invalid multipart form data content disposition \'%s\'' % content.disposition)
+                return addFailure(response, 'Invalid multipart form data content disposition \'%s\'' % content.disposition)
 
             name = content.dispositionAttr.pop(self.attrContentDispositionFile, None)
             if name is not None:
@@ -114,7 +114,7 @@ class ParseFormDataHandler(HandlerProcessor):
             name = content.dispositionAttr.pop(self.attrContentDispositionName, None)
             if not name:
                 MUTLIPART_ERROR.set(response)
-                return addError(response, 'Missing the content disposition header attribute name')
+                return addFailure(response, 'Missing the content disposition header attribute name')
 
             parameters.append((name, str(content.source.read(), requestCnt.charSet)))
 

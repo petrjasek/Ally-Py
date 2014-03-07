@@ -39,6 +39,7 @@ from ally.http.impl.processor.method_override import METHOD_OVERRIDE
 from ally.http.impl.processor.status import StatusHandler
 from ally.http.spec import headers
 from ally.core.http.impl.processor.assembler.polymorph_persist import PolymorphPersistHandler
+from ally.core.http.impl.processor.failure_explain import FailureExplainHandler
 
 # --------------------------------------------------------------------
 # Creating the processors used in handling the request
@@ -149,6 +150,12 @@ def errorExplain() -> Handler:
     return b
 
 @ioc.entity
+def failureExplain() -> Handler:
+    b = FailureExplainHandler()
+    b.descriptions = descriptions()
+    return b
+
+@ioc.entity
 def polymorphPersist() -> Handler:
     p = PolymorphPersistHandler()
     return p
@@ -204,8 +211,8 @@ def updateAssemblyResources():
                             converterContent(), rendering(), multipart(),
                             parsing(), content(), parameter(), scheme(), invoking(),
                             errorInput(), encoderPath(), renderEncoder(), status(),
-                            errorDefinition(), errorExplain(), contentIndexEncode(), contentTypeResponseEncode(),
-                            contentLengthEncode(), allowEncode()
+                            errorDefinition(), errorExplain(), failureExplain(), contentIndexEncode(),
+                            contentTypeResponseEncode(), contentLengthEncode(), allowEncode()
                             )
     
     if allow_method_override():

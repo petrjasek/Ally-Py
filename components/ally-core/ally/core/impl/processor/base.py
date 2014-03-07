@@ -21,18 +21,24 @@ class ErrorResponse(Coded):
     The error response context.
     '''
     # ---------------------------------------------------------------- Defined
-    errors = defines(list, doc='''
+    failures = defines(list, doc='''
     @rtype: list[tuple(list[string], dictionary{string: object}, list[Context]]
-    Contains the error messages and definition contexts that have not been respected, on the first position the error
+    Contains the failure messages and definition contexts that have not been respected, on the first position the error
     messages on the second the data used for messages place holders and on the last the definition context that the
     error is targeting.
+    ''')
+    errors = defines(list, doc='''
+    @rtype: list[tuple(string, Context, object, string, dictionary{string: object})]
+    Contains the errors: on the first position the error code, on the second the decoding context,
+    on the third position the value, on the forth position the error message and on the last position
+    the data used for messages place holders.
     ''')
 
 # --------------------------------------------------------------------
 
-def addError(response, *items, **data):
+def addFailure(response, *items, **data):
     '''
-    Adds a new error messages.
+    Adds a new failure message.
     
     @param response: Context
         The response context to add the error to.
@@ -55,5 +61,26 @@ def addError(response, *items, **data):
                     contexts.append(it)
     assert isinstance(response, ErrorResponse), 'Invalid context %s' % response
     
+    if response.failures is None: response.failures = []
+    response.failures.append((messages, data, contexts))
+
+def addError(response, code, decoding, message, **data):
+    '''
+    Adds a new error message.
+    
+    @param response: Context
+        The response context to add the error to.
+    @param code: str
+        The error code.
+    @param decoding: Context
+        The decoding context the error refers to.
+    @param message: str
+        The error message.
+    @param data: key arguments
+        Data to be used for messages place holders.
+    '''
+    assert isinstance(code, str), 'Invalid error code %s' % code
+    assert isinstance(decoding, Context), 'Invalid decoding %s' % decoding
+    assert isinstance(message, str), 'Invalid error message %s' % message
     if response.errors is None: response.errors = []
-    response.errors.append((messages, data, contexts))
+    response.errors.append((code, decoding, message, data))

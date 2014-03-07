@@ -12,7 +12,7 @@ Provides the parameters handler.
 from ally.container.ioc import injected
 from ally.core.http.impl.processor.base import ErrorResponseHTTP
 from ally.core.http.spec.codes import PARAMETER_ILLEGAL, PARAMETER_INVALID
-from ally.core.impl.processor.base import addError
+from ally.core.impl.processor.base import addFailure
 from ally.core.impl.processor.decoder.base import importTarget
 from ally.core.spec.resources import Converter
 from ally.design.processor.assembly import Assembly
@@ -135,12 +135,12 @@ class ParameterHandler(Handler):
                 PARAMETER_INVALID.set(response)
                 
                 for name, definitions, values, messages in self.indexFailures(target.failures):
-                    addError(response, messages, 'Invalid values \'%(values)s\' for \'%(name)s\'', definitions,
+                    addFailure(response, messages, 'Invalid values \'%(values)s\' for \'%(name)s\'', definitions,
                              name=name, values=values)
                 
         if illegal:
             PARAMETER_ILLEGAL.set(response)
-            addError(response, 'Unknown parameters %(parameters)s', parameters=sorted(illegal))
+            addFailure(response, 'Unknown parameters %(parameters)s', parameters=sorted(illegal))
                 
     # --------------------------------------------------------------------
     

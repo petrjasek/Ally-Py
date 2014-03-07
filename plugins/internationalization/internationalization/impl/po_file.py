@@ -53,14 +53,14 @@ class POFileService(IInternationlizationFileService):
             path, isNeeded = self.cdmSync.publishNeeded(name, locale, timestamp)
             if isNeeded:
                 result = self.poFileManager.getGlobalPOCatalog(locale, scheme)
-                if not result: raise IdError('No global PO file available. Upload one before trying to get one!')
+                if not result: raise IdError(msg='No global PO file available. Upload one before trying to get one!')
         else:
             timestamp = self.poFileManager.getLatestTimestampForPO(name, locale)
             path, isNeeded = self.cdmSync.publishNeeded(name, locale, timestamp)
             if isNeeded:
                 result = self.poFileManager.getPluginPOCatalog(name, locale)
                 if not result:
-                    raise IdError('No PO file available for name: {0}, locale: {1}. Upload one before trying to get one!'.format(name, locale))
+                    raise IdError(msg='No PO file available for name: %{name}s, locale: %{locale}s. Upload one before trying to get one!', name=name, locale=locale)
         metadata = {'timestamp': timestamp}
         if isNeeded: 
             if result: self.cdmSync.publish(result, path, metadata)
@@ -77,13 +77,13 @@ class POFileService(IInternationlizationFileService):
             path, isNeeded = self.cdmSync.publishNeeded(name, None, timestamp)
             if isNeeded: 
                 result = self.poFileManager.getGlobalPOTCatalog()
-                if not result: raise IdError('No POT file available for application. Debug!')
+                if not result: raise IdError(msg='No POT file available for application. Debug!')
         else:
             timestamp = self.poFileManager.getLatestTimestampForPOT(name)
             path, isNeeded = self.cdmSync.publishNeeded(name, None, timestamp)
             if isNeeded:
                 result = self.poFileManager.getPluginPOTCatalog(name) 
-                if not result: raise IdError('No POT file available for plugin {name}. Upload one before trying to get one!'.format(name=name))
+                if not result: raise IdError(msg='No POT file available for plugin %{name}s. Upload one before trying to get one!', name=name)
         metadata = {'timestamp': timestamp}
         
         if isNeeded: 
@@ -115,7 +115,7 @@ class POFileService(IInternationlizationFileService):
         @see: IInternationlizationFileService.updatePOTFile
         '''
         assert isinstance(poFile, Content), 'Invalid PO content %s' % poFile
-        try: result = self.poFileManager.updatePluginPOT(name=name, poFile=poFile)
+        try: self.poFileManager.updatePluginPOT(name=name, poFile=poFile)
         except UnicodeDecodeError: raise InvalidPOFile(poFile)
         if poFile.next(): raise ToManyFiles()
         return name

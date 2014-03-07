@@ -13,7 +13,7 @@ from . import base
 from .base import ParseBaseHandler, Target
 from ally.container.ioc import injected
 from ally.core.impl.processor.decoder.base import addFailure
-from ally.design.processor.attribute import requires
+from ally.design.processor.attribute import requires, optional
 from ally.support.util_io import IInputStream
 from ally.support.util_spec import IDo
 from collections import Callable
@@ -24,6 +24,9 @@ class Decoding(base.Decoding):
     '''
     The decoding context.
     '''
+    # ---------------------------------------------------------------- Optional
+    doBegin = optional(IDo)
+    doEnd = optional(IDo)
     # ---------------------------------------------------------------- Required
     doDecode = requires(IDo)
     
@@ -57,4 +60,7 @@ class ParseTextHandler(ParseBaseHandler):
 
         try: obj = self.parser(source, charSet)
         except ValueError as e: addFailure(target, decoding, str(e))
-        else: decoding.doDecode(target, obj)
+        else:
+            if Decoding.doBegin in decoding and decoding.doBegin: decoding.doBegin(target)
+            decoding.doDecode(target, obj)
+            if Decoding.doEnd in decoding and decoding.doEnd: decoding.doEnd(target)

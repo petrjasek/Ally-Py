@@ -14,7 +14,7 @@ import logging
 
 from ally.api.error import InputError
 from ally.container.ioc import injected
-from ally.core.impl.processor.base import ErrorResponse, addError
+from ally.core.impl.processor.base import ErrorResponse, addFailure, addError
 from ally.core.spec.codes import CONTENT_BAD, CONTENT_MISSING, INPUT_ERROR
 from ally.design.processor.attribute import requires, optional
 from ally.design.processor.context import Context
@@ -54,7 +54,7 @@ class Definition(Context):
     # ---------------------------------------------------------------- Required
     name = requires(str)
     category = requires(str)
-      
+
 class Request(Context):
     '''
     The request context.
@@ -77,7 +77,17 @@ class Target(Context):
     '''
     # ---------------------------------------------------------------- Required
     failures = requires(list)
-    
+    errors = requires(list)
+
+class PolymorphDecoding(Context):
+    '''
+    The polymorph decoding context.
+    '''
+    # ---------------------------------------------------------------- Required
+    invoker = requires(Context)
+    values = requires(dict)
+    decodingContent = requires(Context)
+
 # --------------------------------------------------------------------
 
 @injected
@@ -138,14 +148,19 @@ class ParseBaseHandler(HandlerProcessor):
                         if name: messages.append('Invalid values \'%(values)s\' for \'%(name)s\'')
                         else: messages.append('Invalid values \'%(values)s\'')
                     
-                    addError(response, messages, definitions, name=name, values=values)
+                    addFailure(response, messages, definitions, name=name, values=values)
                     
                     if not name:
                         defins = []
                         for defin in request.invoker.definitions:
                             assert isinstance(defin, Definition), 'Invalid definition %s' % defin
                             if defin.category == self.category: defins.append(defin)
-                        if defins: addError(response, 'The available content', defins)
+                        if defins: addFailure(response, 'The available content', defins)
+            if target.errors:
+                CONTENT_BAD.set(response)
+                
+                for code, decoding, message, data in target.errors:
+                    addError(response, code, decoding, message, **data)
             
         if isinstance(requestCnt.source, IClosable): requestCnt.source.close()
 

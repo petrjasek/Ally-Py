@@ -10,7 +10,7 @@ Provides the definitions based on error code.
 '''
 
 from ally.container.ioc import injected
-from ally.core.impl.processor.base import addError, ErrorResponse
+from ally.core.impl.processor.base import addFailure, ErrorResponse
 from ally.core.spec.definition import IVerifier
 from ally.design.processor.attribute import requires
 from ally.design.processor.context import Context
@@ -99,5 +99,5 @@ class ErrorDefinitionHandler(HandlerProcessor):
                 if verifier.isValid(defin): verified.append(defin)
                 else: unverified.append(defin)
             
-            if verified: addError(response, messages, verified)
+            if verified: addFailure(response, messages, verified)
             definitions = unverified

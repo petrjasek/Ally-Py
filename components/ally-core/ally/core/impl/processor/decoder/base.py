@@ -25,13 +25,26 @@ class FailureTarget(Context):
     The target failure context.
     '''
     # ---------------------------------------------------------------- Required
+    #TODO: Mugur: instaed on list of string just have one string for message
     failures = defines(list, doc='''
     @rtype: list[tuple(Context, object, list[string], dictionary{string: object})]
-    Contains the decode failures as a list containing tuples having on the first position the decoding context that
+    Contains the decode failures as a list containing tuples having in the first position the decoding context that
     reported the failure, on the second position the value that have failed decoding, on the third position the messages
     associated with the failure and on the last position the data used for messages place holders.
     ''')
-      
+
+class ErrorTarget(Context):
+    '''
+    The target validation context.
+    '''
+    # ---------------------------------------------------------------- Required
+    errors = defines(list, doc='''
+    @rtype: list[tuple(string, Context, object, string, dictionary{string: object})]
+    Contains the decode errors as a list containing tuples having in the first position the error code, the decoding 
+    context that reported the failure in the second position, the value for which decoding failed in the third position,
+    the message associated with the failure in the forth position and the data used for messages place holders.
+    ''')
+
 # --------------------------------------------------------------------
 
 def addFailure(target, decoding, *messages, value=None, **data):
@@ -62,6 +75,27 @@ def addFailure(target, decoding, *messages, value=None, **data):
     
     if target.failures is None: target.failures = []
     target.failures.append((decoding, value, msgs, data))
+
+def addError(target, code, decoding, message, **data):
+    '''
+    Adds a new failure entry.
+    
+    @param target: Context
+        The target context to add the error to.
+    @param code: string
+        The error code
+    @param decoding: Context
+        The decoding context to add the error to.
+    @param message: string
+        The error message.
+    @param data: key arguments
+        Data to be used for messages place holders.
+    '''
+    assert isinstance(target, ErrorTarget), 'Invalid target context %s' % target
+    assert isinstance(decoding, Context), 'Invalid context %s' % decoding
+    
+    if target.errors is None: target.errors = []
+    target.errors.append((code, decoding, message, data))
 
 # --------------------------------------------------------------------
 
@@ -132,3 +166,5 @@ def importTarget(exportAssembly):
 
 failureTargetExport = ExportingTarget(FailureTarget)
 # The target failure export.
+errorTargetExport = ExportingTarget(ErrorTarget)
+# The target error export.

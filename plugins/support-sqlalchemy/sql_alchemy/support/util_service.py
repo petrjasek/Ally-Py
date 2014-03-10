@@ -138,9 +138,11 @@ def buildQuery(sql, query, Mapped, only=None, exclude=None, orderBy=None, autoJo
         
         if column is None: continue
         if autoJoin:
-            ctable = tableFor(column)
+            ctable = None
+            if isinstance(mapped, InstrumentedAttribute) and len(mapped.property.columns) == 1:
+                ctable = mapped.property.columns[0].table
             #TODO: Gabriel: Fix this quick hack
-            if ctable != table and ctable.name not in str(sql): sql = sql.join(ctable)
+            if ctable is not None and ctable != table and ctable.name not in str(sql): sql = sql.join(ctable)
 
         crt = getattr(query, criteria)
         if isinstance(crt, AsBoolean):

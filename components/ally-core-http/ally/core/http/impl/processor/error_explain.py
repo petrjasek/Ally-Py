@@ -11,17 +11,17 @@ Provides support for explaining the errors in the content of the request.
 
 from collections import Callable
 import logging
-
-from ally.api.type import typeFor
 from ally.container.ioc import injected
 from ally.core.spec.resources import Converter
 from ally.core.spec.transform import IRender
 from ally.design.processor.attribute import requires
 from ally.design.processor.context import Context
 from ally.design.processor.handler import HandlerProcessor
-
+from ally.api.operator.type import TypeProperty
+from ally.api.type import typeFor
 
 # --------------------------------------------------------------------
+
 log = logging.getLogger(__name__)
 
 # --------------------------------------------------------------------
@@ -67,11 +67,13 @@ class ErrorExplainHandler(HandlerProcessor):
         
         errors = {}
         
-        for code, decoding, message, data in response.errors:
-            if decoding.name not in errors: errors[decoding.name] = {}
-            errors[decoding.name][code] = dict(msg=message)
+        for code, target, message, data in response.errors:
+            print(type(target))
+            assert isinstance(target, Context) or isinstance(target, TypeProperty), 'Invalid target %s' % target
+            if target.name not in errors: errors[target.name] = {}
+            errors[target.name][code] = dict(msg=message)
             assert isinstance(data, dict), 'Invalid data %' % data
-            errors[decoding.name][code].update(self.convertData(data, request.converterContent))
+            errors[target.name][code].update(self.convertData(data, request.converterContent))
         
         renderer = response.renderFactory(responseCnt)
         assert isinstance(renderer, IRender), 'Invalid render %s' % renderer

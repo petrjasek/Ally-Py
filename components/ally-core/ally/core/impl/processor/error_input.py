@@ -11,7 +11,7 @@ Provides the input error handling handler.
 
 
 from ally.api.error import InputError
-from ally.core.impl.processor.base import ErrorResponse, addFailure
+from ally.core.impl.processor.base import ErrorResponse, addError
 from ally.design.processor.attribute import requires
 from ally.design.processor.handler import HandlerProcessor
 from ally.design.processor.context import Context
@@ -66,7 +66,7 @@ class ErrorInputHandler(HandlerProcessor):
         if response.errorInput is None: return  # No input error to handle.
         assert isinstance(response.errorInput, InputError), 'Invalid input error %s' % response.errorInput
         
-        if response.errorInput.message:
+        if response.errorInput.message and response.errorInput.type is None:
             if request.invoker:
                 assert isinstance(request.invoker, Invoker), 'Invalid invoker %s' % request.invoker
                 bindType = None
@@ -85,4 +85,7 @@ class ErrorInputHandler(HandlerProcessor):
                 
                 if bindType: response.errorInput.type = bindType
         
-        addFailure(response, str(response.errorInput))
+        error = response.errorInput
+        if not error.errCode: error.errCode = 'other'
+        
+        addError(response, error.errCode, error.type, error.message, **error.data)

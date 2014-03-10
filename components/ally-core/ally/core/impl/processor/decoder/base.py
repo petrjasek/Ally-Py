@@ -76,7 +76,7 @@ def addFailure(target, decoding, *messages, value=None, **data):
     if target.failures is None: target.failures = []
     target.failures.append((decoding, value, msgs, data))
 
-def addError(target, code, decoding, message, **data):
+def addError(target, code, property, message, **data):
     '''
     Adds a new failure entry.
     
@@ -84,18 +84,17 @@ def addError(target, code, decoding, message, **data):
         The target context to add the error to.
     @param code: string
         The error code
-    @param decoding: Context
-        The decoding context to add the error to.
+    @param property: object
+        The property the error refers to.
     @param message: string
         The error message.
     @param data: key arguments
         Data to be used for messages place holders.
     '''
     assert isinstance(target, ErrorTarget), 'Invalid target context %s' % target
-    assert isinstance(decoding, Context), 'Invalid context %s' % decoding
     
     if target.errors is None: target.errors = []
-    target.errors.append((code, decoding, message, data))
+    target.errors.append((code, property, message, data))
 
 # --------------------------------------------------------------------
 

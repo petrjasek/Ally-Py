@@ -64,23 +64,22 @@ def addFailure(response, *items, **data):
     if response.failures is None: response.failures = []
     response.failures.append((messages, data, contexts))
 
-def addError(response, code, decoding, message, **data):
+def addError(response, code, target, message, **data):
     '''
     Adds a new error message.
     
     @param response: Context
         The response context to add the error to.
-    @param code: str
+    @param code: string
         The error code.
-    @param decoding: Context
-        The decoding context the error refers to.
-    @param message: str
+    @param target: object
+        The target the error refers to.
+    @param message: string
         The error message.
     @param data: key arguments
         Data to be used for messages place holders.
     '''
     assert isinstance(code, str), 'Invalid error code %s' % code
-    assert isinstance(decoding, Context), 'Invalid decoding %s' % decoding
     assert isinstance(message, str), 'Invalid error message %s' % message
     if response.errors is None: response.errors = []
-    response.errors.append((code, decoding, message, data))
+    response.errors.append((code, target, message, data))

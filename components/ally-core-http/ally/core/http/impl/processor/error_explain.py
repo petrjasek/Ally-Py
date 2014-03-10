@@ -68,7 +68,6 @@ class ErrorExplainHandler(HandlerProcessor):
         errors = {}
         
         for code, target, message, data in response.errors:
-            print(type(target))
             assert isinstance(target, Context) or isinstance(target, TypeProperty), 'Invalid target %s' % target
             if target.name not in errors: errors[target.name] = {}
             errors[target.name][code] = dict(msg=message)

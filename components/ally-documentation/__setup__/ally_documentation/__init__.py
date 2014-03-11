@@ -18,5 +18,6 @@ AUTHOR = 'Gabriel Nistor'
 AUTHOR_EMAIL = 'gabriel.nistor@sourcefabric.org'
 KEYWORDS = ['Ally', 'documentation', 'REST']
 LONG_DESCRIPTION = '''Provides the documentation support for the [API] services adn models.'''
-INSTALL_REQUIRES = ['ally-core-http >= 1.0', 'jinja2 >= 2.6']
+INSTALL_REQUIRES = ['ally-core-http >= 1.0', 'jinja2 == 2.5']
 CLASSIFIERS = ['Development Status :: 4 - Beta']
+__extra__ = dict(package_data={'__setup__.ally_documentation': ['templates/*']})

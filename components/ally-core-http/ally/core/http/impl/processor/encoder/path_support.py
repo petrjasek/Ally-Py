@@ -35,6 +35,8 @@ class Node(Context):
     '''
     # ---------------------------------------------------------------- Required
     invokersGet = requires(dict)
+    invokersUpdate = requires(dict)
+    invokersDelete = requires(dict)
     invokersAccessible = requires(dict)
     
 class Invoker(Context):
@@ -114,18 +116,21 @@ class PathUpdaterSupportEncode(HandlerProcessor):
         else: return  # The type is not for a path updater, nothing to do, just move along
         
         elements = []
-        if node.invokersGet:
-            assert isinstance(node.invokersGet, dict), 'Invalid get invokers %s' % node.invokersGet
-            for prop in properties:
-                ninvoker = node.invokersGet.get(prop)
-                if not ninvoker: continue
-                assert isinstance(ninvoker, Invoker), 'Invalid invoker %s' % ninvoker
-                
-                for el in reversed(ninvoker.path):
-                    assert isinstance(el, Element), 'Invalid element %s' % el
-                    if el.property == prop:
-                        elements.append(el)
-                        break
+        assert isinstance(node.invokersGet, dict), 'Invalid get invokers %s' % node.invokersGet
+        for prop in properties:
+            ninvoker = None
+            if node.invokersGet: ninvoker = node.invokersGet.get(prop)
+            if ninvoker is None and node.invokersDelete: ninvoker = node.invokersDelete.get(prop)
+            if ninvoker is None and node.invokersUpdate: ninvoker = node.invokersUpdate.get(prop.parent)
+            
+            if not ninvoker: continue
+            assert isinstance(ninvoker, Invoker), 'Invalid invoker %s' % ninvoker
+            
+            for el in reversed(ninvoker.path):
+                assert isinstance(el, Element), 'Invalid element %s' % el
+                if el.property == prop:
+                    elements.append(el)
+                    break
 
         if isinstance(create.objType, TypeModel):
 

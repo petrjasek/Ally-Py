@@ -17,7 +17,7 @@ from ally.core.spec.transform import IRender
 from ally.design.processor.attribute import requires
 from ally.design.processor.context import Context
 from ally.design.processor.handler import HandlerProcessor
-from ally.api.operator.type import TypeProperty
+from ally.api.operator.type import TypeProperty, TypeModel
 from ally.api.type import typeFor
 
 # --------------------------------------------------------------------
@@ -68,11 +68,16 @@ class ErrorExplainHandler(HandlerProcessor):
         errors = {}
         
         for code, target, message, data in response.errors:
-            assert isinstance(target, Context) or isinstance(target, TypeProperty), 'Invalid target %s' % target
-            if target.name not in errors: errors[target.name] = {}
-            errors[target.name][code] = dict(msg=message)
+            if isinstance(target, TypeModel):
+                targetName = 'other'
+            elif isinstance(target, Context) or isinstance(target, TypeProperty):
+                targetName = target.name
+            else:
+                raise Exception('Invalid target %s' % target)
+            if targetName not in errors: errors[targetName] = {}
+            errors[targetName][code] = dict(msg=message)
             assert isinstance(data, dict), 'Invalid data %' % data
-            errors[target.name][code].update(self.convertData(data, request.converterContent))
+            errors[targetName][code].update(self.convertData(data, request.converterContent))
         
         renderer = response.renderFactory(responseCnt)
         assert isinstance(renderer, IRender), 'Invalid render %s' % renderer

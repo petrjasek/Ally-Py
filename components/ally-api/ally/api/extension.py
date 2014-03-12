@@ -40,7 +40,6 @@ class IterPart(Iterable):
         if offset is None or offset < 0: offset = 0
         elif offset > total: offset = total
         if limit is None: limit = total - offset
-        elif limit > total - offset: limit = total - offset
 
         self.wrapped = wrapped
         self.total = total

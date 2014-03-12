@@ -13,7 +13,7 @@ from ally.api.operator.type import TypeProperty, TypeModel
 from ally.design.processor.attribute import requires, defines
 from ally.design.processor.context import Context
 from ally.design.processor.handler import HandlerProcessor
-from ally.http.spec.server import HTTP_GET, HTTP_POST, HTTP_PUT
+from ally.http.spec.server import HTTP_GET, HTTP_POST, HTTP_PUT, HTTP_DELETE
 from collections import deque
 
 # --------------------------------------------------------------------
@@ -59,13 +59,17 @@ class Node(Context):
     The invokers contexts that can be used to get a model by a property model indexed by the property model that makes
     the invoker accessible based on the current node.
     ''')
-    invokersPost = defines(dict, doc='''
+    invokersInsert = defines(dict, doc='''
     @rtype: dictionary{TypeModel: Context}
     The invokers contexts that can be used to insert a model indexed by the model received as input by the invoker.
     ''')
-    invokersPut = defines(dict, doc='''
+    invokersUpdate = defines(dict, doc='''
     @rtype: dictionary{TypeModel: Context}
     The invokers contexts that can be used to update a model indexed by the model received as input by the invoker.
+    ''')
+    invokersDelete = defines(dict, doc='''
+    @rtype: dictionary{TypeProperty: Context}
+    The invokers contexts that can be used to delete a model indexed by the property model received as input by the invoker.
     ''')
     # ---------------------------------------------------------------- Required
     child = requires(Context)
@@ -93,18 +97,20 @@ class PathGetModelHandler(HandlerProcessor):
         
         # We get all the nodes
         stack, nstack = deque(), deque()
-        stack.append((register.root, {}, {}, {}))
+        stack.append((register.root, {}, {}, {}, {}))
         while stack:
-            current, invokersGet, invokersPost, invokersPut = stack.popleft()
+            current, invokersGet, invokersDelete, invokersInsert, invokersUpdate = stack.popleft()
             nstack.append(current)
-            current.invokersGet, current.invokersPost, current.invokersPut = dict(invokersGet), dict(invokersPost), dict(invokersPut)
+            current.invokersGet, current.invokersDelete = dict(invokersGet), dict(invokersDelete)
+            current.invokersInsert, current.invokersUpdate = dict(invokersInsert), dict(invokersUpdate)
+            
             while nstack:
                 node = nstack.popleft()
                 assert isinstance(node, Node), 'Invalid node %s' % node
                 
                 if node.childByName:
                     nstack.extend(node.childByName.values())
-                    stack.extend((nod, current.invokersGet, current.invokersPost, current.invokersPut)
+                    stack.extend((nod, current.invokersGet, current.invokersDelete, current.invokersInsert, current.invokersUpdate)
                                  for nod in node.childByName.values())
                     
                     for cnode in node.childByName.values():
@@ -113,11 +119,12 @@ class PathGetModelHandler(HandlerProcessor):
                             assert isinstance(invoker, Invoker), 'Invalid invoker %s' % invoker
                             if invoker.target:
                                 assert isinstance(invoker.target, TypeModel)
-                                current.invokersPost[invoker.target] = invoker
+                                current.invokersInsert[invoker.target] = invoker
                 elif node.child:
                     assert isinstance(node.child, Node), 'Invalid node %s' % node.child
                     if not node.child.invokers: continue  # Not invokers available for node
-                    for method, invokers, propKey in ((HTTP_GET, current.invokersGet, True), (HTTP_PUT, current.invokersPut, False)):
+                    for method, invokers, propKey in ((HTTP_GET, current.invokersGet, True), (HTTP_DELETE, current.invokersDelete, True),
+                                                      (HTTP_PUT, current.invokersUpdate, False)):
                         invoker = node.child.invokers.get(method)
                         if not invoker: continue
                         assert isinstance(invoker, Invoker), 'Invalid invoker %s' % invoker
@@ -133,7 +140,7 @@ class PathGetModelHandler(HandlerProcessor):
                                 if propKey: invokers[el.property] = invoker
                                 else: invokers[el.property.parent] = invoker
                             break
-                    stack.append((node.child, current.invokersGet, current.invokersPost, current.invokersPut))
+                    stack.append((node.child, current.invokersGet, current.invokersDelete, current.invokersInsert, current.invokersUpdate))
         
         for invoker in register.invokers:
             assert isinstance(invoker, Invoker), 'Invalid invoker %s' % invoker

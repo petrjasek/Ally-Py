@@ -50,8 +50,8 @@ class Node(Context):
     The node context.
     '''
     # ---------------------------------------------------------------- Required
-    invokersPost = requires(dict)
-    invokersPut = requires(dict)
+    invokersInsert = requires(dict)
+    invokersUpdate = requires(dict)
 
 class Polymorph(Context):
     '''
@@ -106,8 +106,8 @@ class PolymorphPersistHandler(HandlerProcessor):
             if not invoker.target: continue
             assert isinstance(invoker.target, TypeModel), 'Invalid target %s' % invoker.target
             
-            if invoker.methodHTTP == HTTP_POST: invokers = invoker.node.invokersPost
-            elif invoker.methodHTTP == HTTP_PUT: invokers = invoker.node.invokersPut
+            if invoker.methodHTTP == HTTP_POST: invokers = invoker.node.invokersInsert
+            elif invoker.methodHTTP == HTTP_PUT: invokers = invoker.node.invokersUpdate
             else: continue
             if not invokers: continue
             

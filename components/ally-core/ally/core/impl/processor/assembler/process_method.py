@@ -183,9 +183,13 @@ class ProcessMethodHandler(HandlerProcessor):
         if not invoker.output.isOf(bool):
             log.error('Cannot use because a boolean return is expected, at:%s', invoker.location)
             return False
+        properties = [inp.type for inp in invoker.inputs if isinstance(inp.type, TypeProperty)]
+        if len(properties) == 1:
+            invoker.isModel = True
+            invoker.target = properties[0].parent
         if Invoker.links in invoker:
             if invoker.links is None: invoker.links = set()
-            invoker.links.update(inp.type.parent for inp in invoker.inputs if isinstance(inp.type, TypeProperty))
+            invoker.links.update(prop.parent for prop in properties)
         return True
     
     # ----------------------------------------------------------------

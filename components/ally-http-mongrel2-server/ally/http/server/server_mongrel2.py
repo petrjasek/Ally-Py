@@ -184,7 +184,12 @@ class Mongrel2Server:
         body, rest = tnetstrings.parse(rest)
 
         if type(headers) is bytes: headers = json.loads(str(headers, 'utf8'))
-        else: headers = {str(name, 'utf8'): str(value, 'utf8') for name, value in headers.items()}
+        else:
+            log.warn('Received none bytes headers:\n%s', headers)
+            try: headers = {str(name, 'utf8'): str(value, 'utf8') for name, value in headers.items()}
+            except:
+                log.exception('Invalid headers:\n%s', headers)
+                headers = {}
         
         return Request(self, sender, connId, str(path, 'utf8'), headers, body)
     

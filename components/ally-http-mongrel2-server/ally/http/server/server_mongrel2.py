@@ -188,8 +188,11 @@ class Mongrel2Server:
             normalized = {}
             for name, value in headers.items():
                 if type(value) is bytes: value = str(value, 'utf8')
-                value = str(b','.join(bytes), 'utf8')
-                normalized[str(name, 'utf8')] = value
+                try:
+                    value = str(b','.join(value), 'utf8')
+                    normalized[str(name, 'utf8')] = value
+                except:
+                    log.exception('A problem occurred while decoding name: %s, value: %s', name, value)
             headers = normalized
         
         return Request(self, sender, connId, str(path, 'utf8'), headers, body)

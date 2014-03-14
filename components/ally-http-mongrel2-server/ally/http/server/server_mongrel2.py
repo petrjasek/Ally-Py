@@ -185,11 +185,12 @@ class Mongrel2Server:
 
         if type(headers) is bytes: headers = json.loads(str(headers, 'utf8'))
         else:
-            log.warn('Received none bytes headers:\n%s', headers)
-            try: headers = {str(name, 'utf8'): str(value, 'utf8') for name, value in headers.items()}
-            except:
-                log.exception('Invalid headers:\n%s', headers)
-                headers = {}
+            normalized = {}
+            for name, value in headers.items():
+                if type(value) is bytes: value = str(value, 'utf8')
+                value = str(b','.join(bytes), 'utf8')
+                normalized[str(name, 'utf8')] = value
+            headers = normalized
         
         return Request(self, sender, connId, str(path, 'utf8'), headers, body)
     

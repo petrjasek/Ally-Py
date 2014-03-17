@@ -3,6 +3,7 @@ Created on Sep 26, 2013
 
 @author: mihaigociu
 '''
+
 import logging
 
 from ally.container.ioc import injected
@@ -57,4 +58,3 @@ class ConfigurationListeners(RegisterListeners):
         
         solicit = self._processing.ctx.solicit(stream=content, uri=uri)
         self._processing.execute(FILL_ALL, solicit=solicit)
-        solicit

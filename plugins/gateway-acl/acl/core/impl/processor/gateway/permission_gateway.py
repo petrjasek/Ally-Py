@@ -101,7 +101,10 @@ class RegisterPermissionGatewayHandler(HandlerProcessor):
             pattern = '%s[\\/]?(?:\\.|$)' % '([^\\/]+)'.join(re.escape(pitem) for pitem in perm.access.Path.split('*'))
             if rootURI:
                 assert isinstance(rootURI, str), 'Invalid root URI %s' % rootURI
-                pattern = '%s\/%s' % (re.escape(rootURI), pattern)
+                if not perm.access.Path.strip('/'):
+                    pattern = '%s%s' % (re.escape(rootURI), pattern)
+                else:
+                    pattern = '%s\/%s' % (re.escape(rootURI), pattern)
             
             gateway = Gateway()
             gateway.Pattern = '^%s' % pattern

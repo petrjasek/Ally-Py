@@ -10,18 +10,21 @@ Contains the services for the gui core.
 '''
 
 from __setup__.ally.notifier import registersListeners
-from ally.container import ioc, support
+from ally.container import ioc, support, app
 from ally.design.processor.assembly import Assembly
 from ally.design.processor.handler import Handler
 from ally.xml.digester import Node, RuleRoot
 from ally.xml.parser import ParserHandler
-from ally.xml.rules import AccessRule, MethodRule, URLRule,ActionRule, DescriptionRule, GroupRule, RightRule
+from ally.xml.rules import AccessRule, MethodRule, URLRule, ActionRule, DescriptionRule, GroupRule, RightRule
 from ally.notifier.impl.processor.configuration_notifier import ConfigurationListeners
 from ally.xml.uri_repository_caching import UriRepositoryCaching
+import logging
 
 # --------------------------------------------------------------------
+log = logging.getLogger(__name__)
+
 # The synchronization processors
-synchronizeAction = synchronizeGroups = synchronizeRights = synchronizeGroupActions = synchronizeRightActions =\
+synchronizeAction = synchronizeGroups = synchronizeRights = synchronizeGroupActions = synchronizeRightActions = \
 prepareGroupAccesses = prepareRightAccesses = syncCategoryAccesses = syncGroupAccesses = syncRightAccesses = support.notCreated  # Just to avoid errors
 support.createEntitySetup('gui.core.config.impl.processor.synchronize.**.*')
 
@@ -42,13 +45,22 @@ def access_group():
 @ioc.config
 def gui_configuration():
     ''' The URI pattern (can have * for dynamic path elements) where the XML configurations can be found.'''
-    return ['file://../ui/*/config.xml', 'file://../ui/superdesk/*/config.xml']
+    return []
 
 # --------------------------------------------------------------------
 
 @ioc.entity
 def assemblyGUIConfiguration() -> Assembly:
     return Assembly('GUI Configurations')
+
+@ioc.entity
+def configurationStreams() -> list:
+    '''
+    The configurations streams, this entries are processed at application start.
+    The list entries need to be tuples having on the first position a stream URL and on the second
+    position the configuration stream. 
+    '''
+    return []
 
 @ioc.entity
 def nodeRootXML() -> Node: return RuleRoot()
@@ -96,13 +108,24 @@ def updateRootNodeXMLForGroups():
 
 @ioc.before(assemblyGUIConfiguration)
 def updateAssemblyConfiguration():
-    assemblyGUIConfiguration().add(parserXML(), uriRepositoryCaching(), synchronizeAction(), synchronizeGroups(), synchronizeRights(), 
-                                synchronizeGroupActions(), synchronizeRightActions(), 
+    assemblyGUIConfiguration().add(parserXML(), uriRepositoryCaching(), synchronizeAction(), synchronizeGroups(), synchronizeRights(),
+                                synchronizeGroupActions(), synchronizeRightActions(),
                                 prepareGroupAccesses(), prepareRightAccesses(), syncGroupAccesses(), syncRightAccesses())
 
 @ioc.before(registersListeners)
 def updateRegistersListenersForConfiguration():
-    registersListeners().append(configurationListeners())
+    if gui_configuration(): registersListeners().append(configurationListeners())
+    else: log.info('There are no GUI rights configuration files to be scanned.')
+
+@app.deploy
+def processConfigurationStreams():
+    ''' Process the configurations streams.'''
+    if not configurationStreams():
+        log.info('There are no GUI rights configuration streams to be processed.')
+        return
+    
+    for uri, content in configurationStreams(): configurationListeners().doOnContentCreated(uri, content)
+    
 
 # --------------------------------------------------------------------
 

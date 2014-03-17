@@ -48,4 +48,4 @@ class RootURIHandler(HandlerProcessor):
         Populate the roor URI.
         '''
         assert isinstance(solicit, Solicit), 'Invalid solicit %s' % solicit
-        solicit.rootURI = self.rootURI.strip('/') if self.rootURI else []
+        solicit.rootURI = self.rootURI

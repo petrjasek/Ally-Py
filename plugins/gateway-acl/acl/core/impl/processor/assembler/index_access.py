@@ -110,20 +110,20 @@ class IndexAccessHandler(HandlerProcessor):
                 shadows.append(invoker)
                 continue
             
-            self.mergeAccess(invoker)
+            self.mergeAccess(invoker, invoker.methodHTTP)
             
-        for invoker in shadows: self.mergeAccess(invoker)
+        for invoker in shadows: self.mergeAccess(invoker, invoker.methodHTTP)
 
     # ----------------------------------------------------------------
     
-    def mergeAccess(self, invoker):
+    def mergeAccess(self, invoker, methodHTTP):
         '''
         Creates and persist the access for the provided invoker.
         '''
         assert isinstance(invoker, Invoker), 'Invalid invoker %s' % invoker
         
         access = AccessCreate()
-        access.Method = invoker.methodHTTP
+        access.Method = methodHTTP
         access.Output = signature(Non if invoker.output is None else invoker.output)
         
         # Process the path and types.
@@ -157,12 +157,12 @@ class IndexAccessHandler(HandlerProcessor):
         # Associate the shadows.
         if invoker.shadowing:
             spath = '/'.join('*' if el.property else el.name for el in invoker.shadowing.path)
-            access.Shadowing = generateId(spath, invoker.shadowing.methodHTTP)
+            access.Shadowing = generateId(spath, methodHTTP)
             spath = '/'.join('*' if el.property else el.name for el in invoker.shadowed.path)
-            access.Shadowed = generateId(spath, invoker.shadowed.methodHTTP)
+            access.Shadowed = generateId(spath, methodHTTP)
             
         # Associate the input model properties.
-        if invoker.methodHTTP in self.input_methods and invoker.modelInput:
+        if methodHTTP in self.input_methods and invoker.modelInput:
             assert isinstance(invoker.modelInput, Input), 'Invalid input %s' % invoker.modelInput
             assert isinstance(invoker.modelInput.type, TypeModel), 'Invalid model %s' % invoker.modelInput.type
             

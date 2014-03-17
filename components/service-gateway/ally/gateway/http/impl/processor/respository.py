@@ -107,11 +107,14 @@ class GatewayRepositoryHandler(HandlerProcessor):
     # The number of seconds to perform clean up for cached gateways.
     requesterGetJSON = RequesterGetJSON
     # The requester for getting the JSON gateway objects.
+    nameCollection = 'GatewayList'
+    # The collection name to find the gateways in.
     
     def __init__(self):
         assert isinstance(self.uri, str), 'Invalid URI %s' % self.uri
         assert isinstance(self.cleanupInterval, int), 'Invalid cleanup interval %s' % self.cleanupInterval
         assert isinstance(self.requesterGetJSON, RequesterGetJSON), 'Invalid requester JSON %s' % self.requesterGetJSON
+        assert isinstance(self.nameCollection, str), 'Invalid collection name %s' % self.nameCollection
         super().__init__()
         self.initialize()
 
@@ -132,8 +135,7 @@ class GatewayRepositoryHandler(HandlerProcessor):
                 BAD_GATEWAY.set(response)
                 response.text = error.text
                 return
-            assert 'GatewayList' in jobj, 'Invalid objects %s, not GatewayList' % jobj
-            self._identifiers = [self.populate(Identifier(Gateway()), obj) for obj in jobj['GatewayList']]
+            self._identifiers = [self.populate(Identifier(Gateway()), obj) for obj in self.iterGateway(jobj)]
             
         repository = Repository(request.clientIP, self._identifiers, Match)
         if request.repository: request.repository = RepositoryJoined(request.repository, repository)
@@ -250,6 +252,13 @@ class GatewayRepositoryHandler(HandlerProcessor):
         assert not gateway.putHeaders or isinstance(gateway.putHeaders, dict), 'Invalid put headers %s' % gateway.putHeaders
         
         return identifier
+    
+    # ----------------------------------------------------------------
+    
+    def iterGateway(self, jobj):
+        ''' Iterate the gateways.'''
+        assert self.nameCollection in jobj, 'Invalid objects %s, not %s' % (jobj, self.nameCollection)
+        return jobj[self.nameCollection]
         
 # --------------------------------------------------------------------
 
@@ -308,7 +317,7 @@ class Repository(IRepository):
                     if client.match(self._clientIP): break
                 else: return
                 
-            groupsURI = self._macth(identifier, method, headers, uri, error)
+            groupsURI = self._match(identifier, method, headers, uri, error)
             if groupsURI is not None: return self._Match(gateway=identifier.gateway, groupsURI=groupsURI)
         
     def allowsFor(self, headers=None, uri=None):
@@ -318,7 +327,7 @@ class Repository(IRepository):
         allowed = set()
         for identifier in self._identifiers:
             assert isinstance(identifier, Identifier), 'Invalid identifier %s' % identifier
-            groupsURI = self._macth(identifier, None, headers, uri, None)
+            groupsURI = self._match(identifier, None, headers, uri, None)
             if groupsURI is not None: allowed.update(identifier.methods)
         # We need to remove auxiliar methods
         allowed.discard(HTTP_OPTIONS)
@@ -326,7 +335,7 @@ class Repository(IRepository):
 
     # ----------------------------------------------------------------
     
-    def _macth(self, identifier, method, headers, uri, error):
+    def _match(self, identifier, method, headers, uri, error):
         '''
         Checks the match for the provided identifier and parameters.
         
@@ -342,7 +351,7 @@ class Repository(IRepository):
                 if method.upper() not in identifier.methods: return
         
         if headers is not None:
-            assert isinstance(headers, dict), 'Invalid headers %s' % uri
+            assert isinstance(headers, dict), 'Invalid headers %s' % headers
             isOk = False
             if identifier.headers:
                 for nameValue in headers.items():

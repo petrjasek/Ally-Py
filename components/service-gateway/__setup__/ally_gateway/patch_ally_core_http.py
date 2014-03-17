@@ -63,7 +63,7 @@ else:
     def updateAssemblyForwardForResources():
         if isInternal():
             assemblyForward().add(resourcesRouterGateway())
-            if server_provide_errors(): assemblyForward().add(errorsRouter(), after=resourcesRouterGateway())
+            if server_provide_errors(): assemblyForward().add(errorsRouter(), before=resourcesRouterGateway())
     
     @ioc.after(updateAssemblyServerForResources)
     def updateAssemblyServerForGatewayInternal():

@@ -24,7 +24,7 @@ CODE_TO_STATUS = {
                   CONTENT_EXPECTED.code: 400,  # HTTP code 400 Bad Request
                   DECODING_FAILED.code: 400,  # HTTP code 400 Bad Request
                   INPUT_ERROR.code: 400,  # HTTP code 400 Bad Request
-                  DELETE_ERROR.code: 400,  # HTTP code 404 Not Found
+                  DELETE_ERROR.code: 404,  # HTTP code 404 Not Found
                   DELETE_SUCCESS.code: 204,  # HTTP code 204 No Content
                   UPDATE_ERROR.code: 400,  # HTTP code 404 Not Found
                   UPDATE_SUCCESS.code: 200,  # HTTP code 200 OK

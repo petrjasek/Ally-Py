@@ -73,7 +73,6 @@ class AllyDevelop(develop):
         argv.append(root)
         argv.append('--dev')
         sys.argv = argv
-        print('*' * 20, 'Running distribution packaging using:', argv[1:])
         ally_distribution.__distribution__()
         
         if self.install:

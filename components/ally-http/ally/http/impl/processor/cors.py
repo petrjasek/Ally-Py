@@ -74,10 +74,10 @@ class CrossOriginResourceSharingHandler(HandlerProcessor):
         '''
         assert isinstance(request, Request), 'Invalid request %s' % request
         assert isinstance(response, Response), 'Invalid response %s' % response
-        if response.isSuccess is False: return  # Skip in case the response is in error
 
         if self.allowOrigin: ALLOW_ORIGIN.encode(response, *self.allowOrigin)
-
+        if response.isSuccess is False: return  # Skip in case the response is in error
+        
         if request.method == HTTP_OPTIONS:
             current = ALLOW_METHODS.decode(response)
             if current: allows = set(current)

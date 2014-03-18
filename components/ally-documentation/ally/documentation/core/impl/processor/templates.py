@@ -20,9 +20,14 @@ from ally.design.processor.attribute import defines
 from ally.design.processor.context import Context
 from ally.design.processor.handler import HandlerProcessor
 from ally.support.util_io import pipe, IClosable
-
+import logging
 
 # --------------------------------------------------------------------
+
+log = logging.getLogger(__name__)
+
+# --------------------------------------------------------------------
+
 class Document(Context):
     '''
     The document context.
@@ -119,7 +124,9 @@ class TemplateHandler(HandlerProcessor):
                 else:
                     stream = self._packageProvider.get_resource_stream(self._manager, fullPath)
                     results[fullPath[offset:].lstrip('/')] = stream
-        walk(path)
+        
+        try: walk(path)
+        except: log.exception('Could not locate package templates')
         
         for path in self.pathsTemplates:
             for dirPath, _dirNames, fileNames in os.walk(path):

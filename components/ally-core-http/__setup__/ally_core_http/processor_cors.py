@@ -19,6 +19,8 @@ from ally.http.spec.headers import PARAMETERS_AS_HEADERS
 from ally.http.spec.server import HTTP_OPTIONS
 
 from ..ally_core.processor import methodAllow
+from ..ally_core_http.processor_error import updateAssemblyErrorDelivery, \
+    assemblyErrorDelivery, errorPopulator
 from .processor import headersCorsAllow, updateAssemblyResources, assemblyResources, parametersAsHeaders, read_from_params
 
 
@@ -64,3 +66,7 @@ def updateCrossOriginOthersOptionsForParams():
 def updateAssemblyResourcesForOptions():
     assemblyResources().add(crossOriginResourceSharing(), deliverOkForOptionsHandler(),
                             after=methodAllow())
+
+@ioc.after(updateAssemblyErrorDelivery)
+def updateAssemblyErrorDeliveryForOptions():
+    assemblyErrorDelivery().add(crossOriginResourceSharing(), after=errorPopulator())

@@ -66,7 +66,6 @@ class ErrorExplainHandler(HandlerProcessor):
         if response.isSuccess is not False or not response.errors: return  # Not in error.
         
         errors = {}
-        
         for code, target, message, data in response.errors:
             if isinstance(target, TypeModel):
                 targetName = 'other'

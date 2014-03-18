@@ -44,6 +44,7 @@ from ally.core.impl.processor.decoder.validation.auto_id import ValidateAutoId
 from ally.core.impl.processor.decoder.validation.mandatory import ValidateMandatory
 from ally.core.impl.processor.decoder.validation.read_only import ValidateReadOnly
 from ally.core.impl.processor.decoder.validation.length import ValidateLen
+from ally.core.impl.processor.decoder.validation.model_provider import ValidationModelProvider
 
 
 # --------------------------------------------------------------------
@@ -219,6 +220,9 @@ def primitiveDecode() -> Handler: return PrimitiveDecode()
 def validationPropertyProvider() -> Handler: return ValidationPropertyProvider()
 
 @ioc.entity
+def validationModelProvider() -> Handler: return ValidationModelProvider()
+
+@ioc.entity
 def validateReadOnly() -> Handler: return ValidateReadOnly()
 
 @ioc.entity
@@ -283,16 +287,16 @@ def updateAssemblyDecodePropertyOfModel():
     
 @ioc.before(assemblyDecodeModel)
 def updateAssemblyDecodeModel():
-    assemblyDecodeModel().add(validationPropertyProvider(), validateReadOnly(), validateAutoId(), validateMandatory(),
+    assemblyDecodeModel().add(validationPropertyProvider(), validateReadOnly(), validateAutoId(),
                               validateLen(),
                               propertyOfModelDecode(), listDecode(), dictDecode(), primitiveDecode(),
                               definitionXMLCreate(), definitionContentXML(), definitionIndex(), definitionObjectCreate(),
                               definitionContentObject(), definitionIndex())
-    
+
 @ioc.before(assemblyDecodeContent)
 def updateAssemblyDecodeContent():
-    assemblyDecodeContent().add(modelDecode(), markSolved())
-    
+    assemblyDecodeContent().add(validationModelProvider(), modelDecode(), validateMandatory(), markSolved())
+
 @ioc.before(assemblyDecodeContentExport)
 def updateAssemblyDecodeContentExport():
     assemblyDecodeContentExport().add(assemblyDecodeExport(), primitiveDecodeExport, dictItemDecodeExport)

@@ -14,7 +14,9 @@ from ally.api.validate import Mandatory
 from ally.design.processor.attribute import requires, defines
 from ally.design.processor.context import Context
 from ally.design.processor.handler import HandlerProcessor
-
+from ally.core.impl.processor.decoder.base import addError
+from ally.internationalization import _
+from ally.api.operator.type import TypeProperty
 
 # --------------------------------------------------------------------
 class Invoker(Context):
@@ -56,10 +58,32 @@ class ValidateMandatory(HandlerProcessor):
         found, validations = False, []
         for validation in decoding.validations:
             if isinstance(validation, Mandatory):
+                decoding.doEnd = self.createMandatory(decoding, validation, decoding.doEnd)
                 found = True
             else: validations.append(validation)
         if not found: return
         
         if invoker.method == INSERT: decoding.isMandatory = True
-        
         decoding.validations = validations
+    
+    # ----------------------------------------------------------------
+    
+    def createMandatory(self, decoding, validation, wrapped):
+        '''
+        Create the do end for mandatory validation.
+        '''
+        assert isinstance(decoding, Decoding), 'Invalid decoding %s' % decoding
+        assert isinstance(validation.property, TypeProperty), 'Invalid property %s' % validation.property
+        
+        def doMandatory(target):
+            '''
+            Do end the mandatory validation.
+            '''
+            assert isinstance(target, Context), 'Invalid target %s' % target
+            mvalue = decoding.doGet(target)
+            if getattr(mvalue, validation.property.name) is None:
+                addError(target, 'mandatory', validation.property, _('Mandatory value is missing'))
+            if wrapped:
+                wrapped(target)
+        
+        return doMandatory

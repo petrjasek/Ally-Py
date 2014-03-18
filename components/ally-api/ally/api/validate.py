@@ -9,11 +9,13 @@ Created on Oct 29, 2013
 Provides the validation marking mechanism, this module contains classes that allow for model marking.
 '''
 
+import abc
 from ally.api.operator.type import TypeProperty, TypeModel, \
     TypePropertyContainer
 from ally.api.type import typeFor
-import abc
 from ally.support.api.util_service import isCompatible
+from sqlalchemy.orm.attributes import InstrumentedAttribute
+from sqlalchemy.orm.mapper import Mapper
 
 
 # --------------------------------------------------------------------
@@ -33,7 +35,7 @@ class IValidation(metaclass=abc.ABCMeta):
         @return: boolean
             True if the validation is for the provided target, False otherwise.
         '''
-    
+
 class ValidationProperty(IValidation):
     '''
     The validation basic property target container class.
@@ -60,20 +62,113 @@ class ValidationProperty(IValidation):
         
     def __str__(self):
         return '%s:%s' % (self.property, self.__class__.__name__)
+
+class IValidator(metaclass=abc.ABCMeta):
+    '''
+    The custom validator specification.
+    '''
+    
+    @abc.abstractmethod
+    def validate(self, value):
+        '''
+        Validate the given value.
         
+        @param value: object
+            The value to validate.
+        @return: boolean
+            True if the value is valid, False otherwise.
+        '''
+
 # --------------------------------------------------------------------
 
-class Mandatory(ValidationProperty):
+class ValidatorRegex(IValidator):
+    '''
+    Implements a regular expression validator
+    '''
+    
+    def __init__(self, prop, regularEx):
+        '''
+        Initialize the regular expression validator.
+        '''
+        super().__init__()
+        
+        ptype = typeFor(prop)
+        assert isinstance(ptype, TypeProperty), 'Invalid property %s' % prop
+        self.property = ptype
+    
+    def validate(self, value):
+        '''
+        @see: IValidator.validate
+        '''
+        assert isinstance(value, str), 'Invalid value %s' % value
+        # TODO: implement validate method
+
+# --------------------------------------------------------------------
+
+class Unique(IValidation):
+    '''
+    Implements unique validator
+    '''
+    
+    def __init__(self, *props):
+        '''
+        Initialize the unique validator.
+        '''
+        assert len(props) > 0, 'Unique validation requires at least one property'
+        
+        mapper = None
+        self.properties = []
+        for prop in props:
+            assert isinstance(prop, InstrumentedAttribute), 'Invalid property %s' % prop
+            assert isinstance(prop.parent, Mapper), 'Invalid mapper %s' % prop.parent
+            if mapper is None: mapper = prop.parent
+            assert mapper == prop.parent, 'All properties must be from the same mapper'
+            assert isinstance(mapper.class_._ally_type, TypeModel), 'Invalid model %s' % mapper.class_._ally_type
+            self.properties.append(prop)
+        
+        self.mapper = mapper
+        self.model = self.mapper.class_._ally_type
+    
+    def isFor(self, target):
+        '''
+        @see: IValidation.isFor
+        '''
+        if not isinstance(target, TypeModel): return False
+        assert isinstance(target, TypeModel), 'Invalid model %s' % target
+        if self.model.name != target.name: return False
+        return issubclass(target.clazz, self.model.clazz)
+        
+    def __str__(self):
+        return '%s:%s' % (','.join(str(prop) for prop in self.properties), self.__class__.__name__)
+
+class Mandatory(IValidation):
     '''
     Mandatory property type validation.
     '''
     
     def __init__(self, prop):
         '''
-        @see: Validation
+        Initialize the mandatory validator.
         '''
-        super().__init__(prop)
+        ptype = typeFor(prop)
+        assert isinstance(ptype, TypeProperty), 'Invalid property %s' % prop
+        assert isinstance(ptype.parent, TypeModel), 'Invalid property model %s' % ptype.parent
         
+        self.property = ptype
+        self.model = self.property.parent
+    
+    def isFor(self, target):
+        '''
+        @see: IValidation.isFor
+        '''
+        if not isinstance(target, TypeModel): return False
+        assert isinstance(target, TypeModel), 'Invalid model %s' % target
+        if self.model.name != target.name: return False
+        return issubclass(target.clazz, self.model.clazz)
+    
+    def __str__(self):
+        return '%s:%s' % (self.property, self.__class__.__name__)
+
 class ReadOnly(ValidationProperty):
     '''
     Read only property type validation.

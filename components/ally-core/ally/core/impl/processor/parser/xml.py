@@ -169,19 +169,14 @@ class Parse(ContentHandler):
         self.last = previous
         contains, content = self.contains.pop(), '\n'.join(self.content.pop())
         
-        abort = False
-        if not abort:
-            if contains or not current.doDecode:
-                if content.strip():
-                    addFailure(self.target, current, 'Unexpected value \'%(content)s\' for element \'%(path)s\' at '
-                               'line %(line)s and column %(column)s',
-                               **self.located(content=content, path=asPath(self.path, name)))
-            elif content.strip(): current.doDecode(self.target, content)
-            else: addFailure(self.target, current,
-                             'Expected a value for element \'%(path)s\' at line %(line)s and column %(column)s',
-                             **self.located(path=asPath(self.path, name)))
-            
-            if Decoding.doEnd in current and current.doEnd: current.doEnd(self.target)
+        if contains or not current.doDecode:
+            if content.strip():
+                addFailure(self.target, current, 'Unexpected value \'%(content)s\' for element \'%(path)s\' at '
+                           'line %(line)s and column %(column)s',
+                           **self.located(content=content, path=asPath(self.path, name)))
+        elif content.strip(): current.doDecode(self.target, content)
+        
+        if Decoding.doEnd in current and current.doEnd: current.doEnd(self.target)
 
     # ----------------------------------------------------------------
     

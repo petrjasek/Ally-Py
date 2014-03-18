@@ -16,6 +16,21 @@ from ally.design.processor.handler import HandlerProcessor
 
 # --------------------------------------------------------------------
 
+class Invoker(Context):
+    '''
+    The invoker context.
+    '''
+    # ---------------------------------------------------------------- Required
+    decodingContent = requires(Context)
+    
+class Request(Context):
+    '''
+    The request context.
+    '''
+    # ---------------------------------------------------------------- Required
+    invoker = requires(Context)
+    method = requires(str)
+    
 class Response(Context):
     '''
     The response context.
@@ -48,26 +63,35 @@ class StatusHandler(HandlerProcessor):
         if __debug__:
             for code, status in self.codeToStatus.items():
                 assert isinstance(code, str), 'Invalid code %s' % code
-                assert isinstance(status, int), 'Invalid status %s' % status
+                assert isinstance(status, int) or callable(status), 'Invalid status %s' % status
             for code, text in self.codeToText.items():
                 assert isinstance(code, str), 'Invalid code %s' % code
-                assert isinstance(text, str), 'Invalid text %s' % text
-        super().__init__()
+                assert isinstance(text, str) or callable(text), 'Invalid text %s' % text
+        super().__init__(Invoker=Invoker)
 
-    def process(self, chain, response:Response, **keyargs):
+    def process(self, chain, request:Request, response:Response, **keyargs):
         '''
         @see: HandlerProcessor.process
         
         Process the status.
         '''
+        assert isinstance(request, Request), 'Invalid request %s' % request
         assert isinstance(response, Response), 'Invalid response %s' % response
         assert isinstance(response.code, str), 'Invalid response code %s' % response.code
-
+        
+        if request.invoker:
+            assert isinstance(request.invoker, Invoker)
+            hasContent = request.invoker.decodingContent is not None
+        else: hasContent = False
+        
         status = self.codeToStatus.get(response.code)
+        if status is not None and callable(status): status = status(request.method, hasContent)
         if response.status is None:
             if status is None: ValueError('Cannot produce a status for code \'%s\'' % response.code)
             response.status = status
         elif status is not None: response.status = status
             
         text = self.codeToText.get(response.code)
-        if text: response.text = text
+        if text is not None and callable(text): text = text(request.method, hasContent)
+        if text is not None:
+            response.text = text

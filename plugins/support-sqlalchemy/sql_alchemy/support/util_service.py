@@ -23,7 +23,6 @@ from ally.api.extension import IterSlice
 from ally.api.operator.type import TypeProperty, TypeCriteria, TypeModel
 from ally.api.type import typeFor
 from ally.support.api.util_service import namesFor
-from ally.support.util import modifyFirst
 
 from .mapper import MappedSupport, tableFor
 from .session import openSession
@@ -91,7 +90,10 @@ def buildQuery(sql, query, Mapped, only=None, exclude=None, orderBy=None, autoJo
     for name in namesFor(Mapped):
         cp = getattr(Mapped, name)
         # If no API type is detected it means that the API property is mapped
-        if typeFor(cp) is None: columns[modifyFirst(name, False)] = cp
+        for k in range(0, len(name)):
+            if not name[k].isupper(): break
+        name = name[:k + 1].lower() + name[k + 1:]
+        if typeFor(cp) is None: columns[name] = cp
     columns = {name:columns.get(name) for name in namesFor(query)}
 
     if only:
@@ -141,7 +143,7 @@ def buildQuery(sql, query, Mapped, only=None, exclude=None, orderBy=None, autoJo
             ctable = None
             if isinstance(mapped, InstrumentedAttribute) and len(mapped.property.columns) == 1:
                 ctable = mapped.property.columns[0].table
-            #TODO: Gabriel: Fix this quick hack
+            # TODO: Gabriel: Fix this quick hack
             if ctable is not None and ctable != table and ctable.name not in str(sql): sql = sql.join(ctable)
 
         crt = getattr(query, criteria)

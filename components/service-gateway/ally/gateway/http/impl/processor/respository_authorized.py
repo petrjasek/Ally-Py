@@ -15,8 +15,8 @@ from .respository import GatewayRepositoryHandler, Repository, Identifier, \
 from ally.container.ioc import injected
 from ally.design.processor.attribute import requires, defines
 from ally.design.processor.context import Context
-from ally.gateway.http.spec.gateway import IRepository, RepositoryJoined
-from ally.http.spec.codes import BAD_REQUEST, BAD_GATEWAY, INVALID_AUTHORIZATION
+from ally.gateway.http.spec.gateway import RepositoryJoined
+from ally.http.spec.codes import BAD_GATEWAY
 from ally.http.spec.headers import HeaderRaw, HeadersRequire
 from datetime import datetime, timedelta
 from urllib.parse import quote
@@ -78,16 +78,10 @@ class GatewayAuthorizedRepositoryHandler(GatewayRepositoryHandler):
         if repository is None:
             jobj, error = self.requesterGetJSON.request(self.uri % quote(authentication), details=True)
             if jobj is None:
-                if error.status == BAD_REQUEST.status:
-                    INVALID_AUTHORIZATION.set(response)
-                    if request.repository:
-                        assert isinstance(request.repository, IRepository), 'Invalid repository %s' % request.repository
-                        request.match = request.repository.find(request.method, request.headers, request.uri,
-                                                                INVALID_AUTHORIZATION.status)
-                else:
-                    BAD_GATEWAY.set(response)
-                    response.text = error.text
+                BAD_GATEWAY.set(response)
+                response.text = error.text
                 return
+                
             repository = Repository(request.clientIP, [self.populate(Identifier(Gateway()), obj)
                                                        for obj in self.iterGateway(jobj)], Match)
             self._repositories[authentication] = repository

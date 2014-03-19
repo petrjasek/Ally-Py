@@ -10,16 +10,17 @@ Finds all get invokers that can be directly accessed without the need of extra i
 directly related to a node.
 '''
 
+from collections import OrderedDict
+
+from ally.api.operator.extract import inheritedTypesFrom
 from ally.api.operator.type import TypeModel, TypeProperty
 from ally.design.processor.attribute import requires, defines, optional
 from ally.design.processor.context import Context
 from ally.design.processor.handler import HandlerProcessor
 from ally.http.spec.server import HTTP_GET
-from ally.api.operator.extract import inheritedTypesFrom
-from collections import OrderedDict
+
 
 # --------------------------------------------------------------------
-
 class Register(Context):
     '''
     The register context.
@@ -85,8 +86,11 @@ class PathGetAccesibleHandler(HandlerProcessor):
     '''
     Implementation for a processor that provides the accessible invokers for a node.
     '''
+    method = HTTP_GET
+    # THe method to index the accessible paths for.
     
     def __init__(self):
+        assert isinstance(self.method, str), 'Invalid method %s' % self.method
         super().__init__(Invoker=Invoker, Element=Element, Node=Node)
 
     def process(self, chain, register:Register, **keyargs):
@@ -101,7 +105,7 @@ class PathGetAccesibleHandler(HandlerProcessor):
         mandatories = {}
         for invoker in register.invokers:
             assert isinstance(invoker, Invoker), 'Invalid invoker %s' % invoker
-            if invoker.methodHTTP != HTTP_GET: continue
+            if invoker.methodHTTP != self.method: continue
             if Invoker.filterName in invoker and invoker.filterName: continue
             
             if not invoker.isModel or not invoker.target: continue
@@ -116,7 +120,7 @@ class PathGetAccesibleHandler(HandlerProcessor):
         
         for invoker in register.invokers:
             assert isinstance(invoker, Invoker), 'Invalid invoker %s' % invoker
-            if invoker.methodHTTP != HTTP_GET: continue
+            if invoker.methodHTTP != self.method: continue
             if Invoker.filterName in invoker and invoker.filterName: continue
             if not invoker.isModel or not invoker.target or not invoker.node.nodesByProperty: continue
             if invoker.target not in register.polymorphed: continue
@@ -130,8 +134,8 @@ class PathGetAccesibleHandler(HandlerProcessor):
                 if not pnodes: continue
                 for pnode in pnodes:
                     assert isinstance(pnode, Node)
-                    if HTTP_GET in pnode.invokers and pnode.invokersAccessible:
-                        pinvoker = pnode.invokers[HTTP_GET]
+                    if self.method in pnode.invokers and pnode.invokersAccessible:
+                        pinvoker = pnode.invokers[self.method]
                         if pinvoker.target == polymorph.target:
                             for accessible in pnode.invokersAccessible.values():
                                 for ainvoker in accessible.values():
@@ -176,7 +180,7 @@ class PathGetAccesibleHandler(HandlerProcessor):
                 
         for invoker in invokers:
             assert isinstance(invoker, Invoker)
-            if invoker.methodHTTP != HTTP_GET: continue
+            if invoker.methodHTTP != self.method: continue
             if Invoker.filterName in invoker and invoker.filterName: continue
             if not invoker.isCollection and invoker.target in types: continue
             if Invoker.shadowing in invoker and invoker.shadowing: continue

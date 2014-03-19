@@ -260,9 +260,13 @@ class RenderJSONHandler(RenderBaseHandler):
 
     encodingError = 'backslashreplace'
     # The encoding error resolving.
+    nameCollection = None
+    # The collection name to be used for indexing the collection object.
 
     def __init__(self):
         assert isinstance(self.encodingError, str), 'Invalid string %s' % self.encodingError
+        assert self.nameCollection is None or isinstance(self.nameCollection, str), \
+        'Invalid string %s' % self.nameCollection
         super().__init__(request=Request)
         
     def process(self, chain, request:Context, **keyargs):
@@ -275,7 +279,7 @@ class RenderJSONHandler(RenderBaseHandler):
         '''
         @see: RenderBaseHandler.renderFactory
         '''
-        return RenderJSON(self.encodingError, content)
+        return RenderJSON(self.encodingError, content, self.nameCollection)
 
 # --------------------------------------------------------------------
 
@@ -320,20 +324,24 @@ class RenderJSON(IRender):
     '''
     Renderer for JSON.
     '''
-    __slots__ = ('_content', '_outb', '_out', '_stack', '_first', '_adjust', '_block', '_indexes')
+    __slots__ = ('nameCollection', '_content', '_outb', '_out', '_stack', '_first', '_adjust', '_block', '_indexes')
     
-    def __init__(self, encodingError, content):
+    def __init__(self, encodingError, content, nameCollection=None):
         '''
         Construct the JSON object renderer.
         
+        @param nameCollection: string
+            THe collection name to use, if None the declared collection name is used.
         @param encodingError: string
             The encoding error resolving.
         @param content: Content
             The content to render in.
         '''
+        assert nameCollection is None or isinstance(nameCollection, str), 'Invalid string %s' % nameCollection
         assert isinstance(content, Content), 'Invalid content %s' % content
         assert isinstance(content.charSet, str), 'Invalid content char set %s' % content.charSet
         
+        self.nameCollection = nameCollection
         self._content = content
         self._outb = BytesIO()
         self._out = getwriter(content.charSet)(self._outb, encodingError)
@@ -379,7 +387,7 @@ class RenderJSON(IRender):
         '''
         @see: IRender.beginCollection
         '''
-        self.begin('collection', OF_COLLECTION, **specifications)
+        self.begin(name if self.nameCollection is None else self.nameCollection, OF_COLLECTION, **specifications)
         return self
 
     def end(self):
@@ -450,7 +458,7 @@ class RenderJSON(IRender):
         if hasNameProp:
             if index: index(SIND_NAME, offset=1)  # offset +1 for the comma
             self._out.write('"%s"' % name)
-            if index: index(EIND_NAME, offset= -1)  # offset -1 for the comma
+            if index: index(EIND_NAME, offset=-1)  # offset -1 for the comma
             self._out.write(':')
         elif index: index(SIND_NAME, EIND_NAME)
         
@@ -476,7 +484,7 @@ class RenderJSON(IRender):
                     offset = 1 if isinstance(valueAttr, str) else 0
                     index(PSIND_ATTR_CAPTURE % iname, offset=offset)  # offset +1 for the comma
                     self._out.write(encode(valueAttr))
-                    index(PEIND_ATTR_CAPTURE % iname, offset= -offset)  # offset -1 for the comma
+                    index(PEIND_ATTR_CAPTURE % iname, offset=-offset)  # offset -1 for the comma
                 else: self._out.write(encode(valueAttr))
         if index: index(EIND_ATTRS)
         
@@ -487,7 +495,7 @@ class RenderJSON(IRender):
                 
             if index: index(SIND_NAME, offset=1)  # offset +1 for the comma
             self._out.write('"%s"' % name)
-            if index: index(EIND_NAME, offset= -1)  # offset -1 for the comma
+            if index: index(EIND_NAME, offset=-1)  # offset -1 for the comma
             self._out.write(':[')
         
         if isAdjust: index(IND_DECL)

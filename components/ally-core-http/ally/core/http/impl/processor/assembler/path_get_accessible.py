@@ -40,7 +40,6 @@ class Invoker(Context):
     # ---------------------------------------------------------------- Required
     node = requires(Context)
     target = requires(TypeModel)
-    isModel = requires(bool)
     isCollection = requires(bool)
     methodHTTP = requires(str)
     path = requires(list)
@@ -108,7 +107,7 @@ class PathGetAccesibleHandler(HandlerProcessor):
             if invoker.methodHTTP != self.method: continue
             if Invoker.filterName in invoker and invoker.filterName: continue
             
-            if not invoker.isModel or not invoker.target: continue
+            if not invoker.target: continue
             
             available = self.invokerAvailable(invoker)
             
@@ -122,7 +121,7 @@ class PathGetAccesibleHandler(HandlerProcessor):
             assert isinstance(invoker, Invoker), 'Invalid invoker %s' % invoker
             if invoker.methodHTTP != self.method: continue
             if Invoker.filterName in invoker and invoker.filterName: continue
-            if not invoker.isModel or not invoker.target or not invoker.node.nodesByProperty: continue
+            if not invoker.target or not invoker.node.nodesByProperty: continue
             if invoker.target not in register.polymorphed: continue
             
             for polymorph in register.polymorphed[invoker.target]:

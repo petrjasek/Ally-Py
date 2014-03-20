@@ -9,7 +9,7 @@ Created on Oct 29, 2013
 Provides the mandatory validation.
 '''
 
-from ally.api.config import INSERT
+from ally.api.config import INSERT, UPDATE, DELETE
 from ally.api.validate import Mandatory
 from ally.design.processor.attribute import requires, defines
 from ally.design.processor.context import Context
@@ -53,12 +53,12 @@ class ValidateMandatory(HandlerProcessor):
         '''
         assert isinstance(decoding, Decoding), 'Invalid decoding %s' % decoding
         assert isinstance(invoker, Invoker), 'Invalid invoker %s' % invoker
-        if not decoding.validations: return
+        if not decoding.validations or invoker.method == DELETE: return
         
         found, validations = False, []
         for validation in decoding.validations:
             if isinstance(validation, Mandatory):
-                decoding.doEnd = self.createMandatory(decoding, validation, decoding.doEnd)
+                decoding.doEnd = self.createMandatory(decoding, validation, decoding.doEnd, invoker.method)
                 found = True
             else: validations.append(validation)
         if not found: return
@@ -68,7 +68,7 @@ class ValidateMandatory(HandlerProcessor):
     
     # ----------------------------------------------------------------
     
-    def createMandatory(self, decoding, validation, wrapped):
+    def createMandatory(self, decoding, validation, wrapped, method):
         '''
         Create the do end for mandatory validation.
         '''
@@ -80,9 +80,13 @@ class ValidateMandatory(HandlerProcessor):
             Do end the mandatory validation.
             '''
             assert isinstance(target, Context), 'Invalid target %s' % target
+            
             mvalue = decoding.doGet(target)
-            if getattr(mvalue, validation.property.name) is None:
-                addError(target, 'mandatory', validation.property, _('Mandatory value is missing'))
+            value = getattr(mvalue, validation.property.name)
+            
+            if value is None or (isinstance(value, str) and not value):
+                if method == INSERT or method == UPDATE and validation.property in mvalue:
+                    addError(target, 'mandatory', validation.property, _('Mandatory value is missing'))
             if wrapped:
                 wrapped(target)
         

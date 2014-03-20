@@ -117,14 +117,14 @@ class Unique(IValidation):
         assert len(props) > 0, 'Unique validation requires at least one property'
         
         mapper = None
-        self.properties = []
+        self.attributes = []
         for prop in props:
             assert isinstance(prop, InstrumentedAttribute), 'Invalid property %s' % prop
             assert isinstance(prop.parent, Mapper), 'Invalid mapper %s' % prop.parent
             if mapper is None: mapper = prop.parent
-            assert mapper == prop.parent, 'All properties must be from the same mapper'
+            assert mapper == prop.parent, 'All attributes must be from the same mapper'
             assert isinstance(mapper.class_._ally_type, TypeModel), 'Invalid model %s' % mapper.class_._ally_type
-            self.properties.append(prop)
+            self.attributes.append(prop)
         
         self.mapper = mapper
         self.model = self.mapper.class_._ally_type
@@ -135,7 +135,6 @@ class Unique(IValidation):
         '''
         if not isinstance(target, TypeModel): return False
         assert isinstance(target, TypeModel), 'Invalid model %s' % target
-        if self.model.name != target.name: return False
         return issubclass(target.clazz, self.model.clazz)
         
     def __str__(self):
@@ -163,7 +162,6 @@ class Mandatory(IValidation):
         '''
         if not isinstance(target, TypeModel): return False
         assert isinstance(target, TypeModel), 'Invalid model %s' % target
-        if self.model.name != target.name: return False
         return issubclass(target.clazz, self.model.clazz)
     
     def __str__(self):

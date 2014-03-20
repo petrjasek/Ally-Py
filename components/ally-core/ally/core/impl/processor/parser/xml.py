@@ -175,6 +175,7 @@ class Parse(ContentHandler):
                            'line %(line)s and column %(column)s',
                            **self.located(content=content, path=asPath(self.path, name)))
         elif content.strip(): current.doDecode(self.target, content)
+        else: current.doDecode(self.target, content.strip())
         
         if Decoding.doEnd in current and current.doEnd: current.doEnd(self.target)
 

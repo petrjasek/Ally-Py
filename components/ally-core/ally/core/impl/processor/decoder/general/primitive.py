@@ -9,7 +9,7 @@ Created on Jun 17, 2013
 Provides the primitive types decoding.
 '''
 
-from ..base import ExportingTarget, FailureTarget, addFailure
+from ..base import ExportingTarget, ErrorTarget, addError
 from ally.api.type import Type, Iter, Dict
 from ally.core.spec.resources import Converter
 from ally.design.processor.attribute import requires, defines
@@ -36,7 +36,7 @@ class Decoding(Context):
     type = requires(Type)
     doSet = requires(IDo)
     
-class Target(FailureTarget):
+class Target(ErrorTarget):
     '''
     The target context.
     '''
@@ -83,8 +83,8 @@ class PrimitiveDecode(HandlerProcessor):
             assert isinstance(target, Target), 'Invalid target %s' % target
             assert isinstance(target.converter, Converter), 'Invalid converter %s' % target.converter
             assert isinstance(decoding, Decoding)
-    
+            
             try: value = target.converter.asValue(value, decoding.type)
-            except ValueError: addFailure(target, decoding, value=value)
+            except ValueError: addError(target, 'invalid_value', decoding, 'Invalid value')
             else: decoding.doSet(target, value)
         return doDecode

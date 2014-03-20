@@ -12,7 +12,7 @@ Provides the text parser processor handler.
 from . import base
 from .base import ParseBaseHandler, Target
 from ally.container.ioc import injected
-from ally.core.impl.processor.decoder.base import addFailure
+from ally.core.impl.processor.decoder.base import addError
 from ally.design.processor.attribute import requires, optional
 from ally.support.util_io import IInputStream
 from ally.support.util_spec import IDo
@@ -57,9 +57,9 @@ class ParseTextHandler(ParseBaseHandler):
         assert isinstance(decoding, Decoding), 'Invalid decoding %s' % decoding
         assert isinstance(target, Target), 'Invalid target %s' % target
         assert callable(decoding.doDecode), 'Invalid decoding %s' % decoding.doDecode
-
+        
         try: obj = self.parser(source, charSet)
-        except ValueError as e: addFailure(target, decoding, str(e))
+        except ValueError: addError(target, 'invalid_value', decoding, 'Invalid value')
         else:
             if Decoding.doBegin in decoding and decoding.doBegin: decoding.doBegin(target)
             decoding.doDecode(target, obj)

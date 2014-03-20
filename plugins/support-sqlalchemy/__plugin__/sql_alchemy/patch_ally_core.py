@@ -27,7 +27,7 @@ try:
     from __setup__ import ally_core  # @UnusedImport
 except ImportError: log.info('No ally core component available, thus no need to apply the transaction/validation patch')
 else:
-    from __setup__.ally_core.processor import invoking
+    from __setup__.ally_core.processor import parsing
     from __setup__.ally_core_http.processor import assemblyResources, updateAssemblyResources
     from __setup__.ally_core.resources import invokerService, processMethod
     from __setup__.ally_core.resources import assemblyAssembler, updateAssemblyAssembler, decoding
@@ -51,7 +51,7 @@ else:
 
     @ioc.after(updateAssemblyResources)
     def updateAssemblyResourcesForAlchemy():
-        assemblyResources().add(transactionCore(), before=invoking())
+        assemblyResources().add(transactionCore(), before=parsing())
     
     @app.deploy(app.DEVEL)
     def updateLoggingForSQLErrors():

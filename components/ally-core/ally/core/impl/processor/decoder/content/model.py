@@ -23,7 +23,6 @@ from ally.design.processor.handler import HandlerBranching
 from ally.support.util_context import listing
 from ally.support.util_spec import IDo
 import logging
-from ally.internationalization import _
     
 # --------------------------------------------------------------------
 

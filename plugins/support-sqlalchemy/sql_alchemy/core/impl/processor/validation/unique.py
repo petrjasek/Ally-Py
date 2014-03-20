@@ -17,7 +17,7 @@ from ally.support.util_spec import IDo
 from ally.internationalization import _
 from ally.core.impl.processor.decoder.base import addError
 from sql_alchemy.support.mapper import InstrumentedAttribute
-from ally.api.operator.type import TypeModel, TypeProperty
+from ally.api.operator.type import TypeProperty
 from sqlalchemy.orm.session import Session
 from ally.container.impl.proxy import Proxy
 from sql_alchemy.core.impl.processor.binder.session import BindSessionHandler

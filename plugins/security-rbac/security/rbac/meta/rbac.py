@@ -31,4 +31,5 @@ class WithRbac:
     '''
     __table_args__ = dict(mysql_engine='InnoDB')
 
-    rbacId = declared_attr(lambda cls: Column('fk_rbac_id', ForeignKey(Rbac.id), nullable=True))
+    rbacId = declared_attr(lambda cls: Column('fk_rbac_id', ForeignKey(Rbac.id, ondelete='CASCADE'),
+                                              nullable=True))

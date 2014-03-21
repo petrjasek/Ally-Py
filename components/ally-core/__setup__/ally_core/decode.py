@@ -45,7 +45,7 @@ from ally.core.impl.processor.decoder.validation.mandatory import ValidateMandat
 from ally.core.impl.processor.decoder.validation.read_only import ValidateReadOnly
 from ally.core.impl.processor.decoder.validation.length import ValidateLen
 from ally.core.impl.processor.decoder.validation.model_provider import ValidationModelProvider
-
+from ally.core.impl.processor.decoder.validation.property_custom import ValidatePropertyCustom
 
 # --------------------------------------------------------------------
 @ioc.config
@@ -234,6 +234,9 @@ def validateMandatory() -> Handler: return ValidateMandatory()
 @ioc.entity
 def validateLen() -> Handler: return ValidateLen()
 
+@ioc.entity
+def validatePropertyCustom() -> Handler: return ValidatePropertyCustom()
+
 # --------------------------------------------------------------------
 
 @ioc.entity
@@ -284,11 +287,11 @@ def updateAssemblyDecodeDictItem():
 @ioc.before(assemblyDecodePropertyOfModel)
 def updateAssemblyDecodePropertyOfModel():
     assemblyDecodePropertyOfModel().add(primitiveDecode(), definitionXMLCreate(), definitionContentXML())
-    
+
 @ioc.before(assemblyDecodeModel)
 def updateAssemblyDecodeModel():
     assemblyDecodeModel().add(validationPropertyProvider(), validateReadOnly(), validateAutoId(),
-                              validateLen(),
+                              validateLen(), validatePropertyCustom(),
                               propertyOfModelDecode(), listDecode(), dictDecode(), primitiveDecode(),
                               definitionXMLCreate(), definitionContentXML(), definitionIndex(), definitionObjectCreate(),
                               definitionContentObject(), definitionIndex())

@@ -86,7 +86,7 @@ class ValidatorRegex(IValidator, ValidationProperty):
     Implements a regular expression validator
     '''
     
-    def __init__(self, prop, regex, flags=None):
+    def __init__(self, prop, regex, flags=0):
         '''
         Initialize the regular expression validator.
         '''
@@ -248,10 +248,26 @@ class EMail(ValidatorRegex):
     
     def validate(self, value):
         '''
-        @see IValidator.code
+        @see IValidator.validate
         '''
         if super().validate(value) is not None:
             return ('email_format', _('Invalid EMail format'))
+
+class PhoneNumber(ValidatorRegex):
+    '''
+    Phone number format validation
+    '''
+    regex = "^(?:(?:0?[1-9][0-9]{8})|(?:(?:\+|00)[1-9][0-9]{9,11}))$"
+    
+    def __init__(self, prop):
+        super().__init__(prop, self.regex)
+    
+    def validate(self, value):
+        '''
+        @see IValidator.validate
+        '''
+        if super().validate(value) is not None:
+            return ('phone_number', _('Invalid phone number format'))
 
 # --------------------------------------------------------------------
 

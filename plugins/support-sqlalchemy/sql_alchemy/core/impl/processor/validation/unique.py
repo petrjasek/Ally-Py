@@ -22,7 +22,7 @@ from sqlalchemy.orm.session import Session
 from ally.container.impl.proxy import Proxy
 from sql_alchemy.core.impl.processor.binder.session import BindSessionHandler
 from sql_alchemy.support.session import beginWith, openSession, endCurrent, commit
-from ally.api.config import UPDATE, DELETE
+from ally.api.config import UPDATE, DELETE, INSERT
 from sqlalchemy.orm.exc import NoResultFound
 import logging
 
@@ -136,7 +136,7 @@ class ValidateUnique(HandlerProcessor):
                 for attr in validation.attributes:
                     assert isinstance(attr, InstrumentedAttribute), 'Invalid property %s' % attr
                     val = getattr(mvalue, attr.key)
-                    if val is None:
+                    if val is None and method == INSERT:
                         val = attr.property.columns[0].default.arg
                     sql = sql.filter(attr == val)
                 

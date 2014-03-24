@@ -86,14 +86,16 @@ class ValidatorRegex(IValidator, ValidationProperty):
     Implements a regular expression validator
     '''
     
-    def __init__(self, prop, regex, flags=0):
+    def __init__(self, prop, regex, error, flags=0):
         '''
         Initialize the regular expression validator.
         '''
         super().__init__(prop)
         
         assert isinstance(regex, str), 'Invalid regular expression %s' % regex
+        assert error is not None, 'Invalid error %s' % error
         self.regex = regex
+        self.error = error
         self.flags = flags
         self.cregex = re.compile(self.regex, flags)
     
@@ -102,7 +104,7 @@ class ValidatorRegex(IValidator, ValidationProperty):
         @see: IValidator.validate
         '''
         if self.cregex.match(value) is None:
-            return ('regex_validation', 'Value did not match required regular expression')
+            return self.error
 
 # --------------------------------------------------------------------
 
@@ -242,32 +244,32 @@ class EMail(ValidatorRegex):
     '''
     regex = "^[a-z0-9!#$%&'*+/=?^_`{|}~-]+(?:\.[a-z0-9!#$%&'*+/=?^_`{|}~-]+)*@" \
             "(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z0-9](?:[a-z0-9-]{0,4}[a-z0-9]){1}$"
+    error = ('email', _('Invalid EMail'))
     
     def __init__(self, prop):
-        super().__init__(prop, self.regex, re.I)
-    
-    def validate(self, value):
-        '''
-        @see IValidator.validate
-        '''
-        if super().validate(value) is not None:
-            return ('email_format', _('Invalid EMail format'))
+        super().__init__(prop, self.regex, self.error, re.I)
 
 class PhoneNumber(ValidatorRegex):
     '''
     Phone number format validation
     '''
     regex = "^(?:(?:0?[1-9][0-9]{8})|(?:(?:\+|00)[1-9][0-9]{9,11}))$"
+    error = ('phone number', _('Invalid phone number format'),
+             {'example':_('+123123456789 or 0123456789 or 123456789')})
     
     def __init__(self, prop):
-        super().__init__(prop, self.regex)
+        super().__init__(prop, self.regex, self.error)
+
+class UserName(ValidatorRegex):
+    '''
+    User name format validation
+    '''
+    regex = "^[a-z0-9._'-]+$"
+    error = ('user name', _('Invalid user name format'),
+             {'example':_('The user name must contain only letters, digits and characters ".", "_", "\'", "-"')})
     
-    def validate(self, value):
-        '''
-        @see IValidator.validate
-        '''
-        if super().validate(value) is not None:
-            return ('phone_number', _('Invalid phone number format'))
+    def __init__(self, prop):
+        super().__init__(prop, self.regex, self.error, re.I)
 
 # --------------------------------------------------------------------
 

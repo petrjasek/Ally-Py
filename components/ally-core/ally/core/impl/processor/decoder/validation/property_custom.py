@@ -63,9 +63,12 @@ class ValidatePropertyCustom(HandlerProcessor):
         
         def doSet(target, value):
             error = validation.validate(value)
-            if error is not None:
-                assert isinstance(error, tuple) and len(error) == 2, 'Invalid error result %s' % error
-                addError(target, error[0], prop, error[1])
+            if error is not None and error:
+                assert isinstance(error, tuple) and len(error) >= 2 and len(error) <= 3, 'Invalid error result %s' % error
+                if len(error) == 2:
+                    addError(target, error[0], prop, error[1])
+                else:
+                    addError(target, error[0], prop, error[1], **error[2])
             wrapped(target, value)
         
         return doSet

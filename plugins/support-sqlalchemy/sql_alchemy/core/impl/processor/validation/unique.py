@@ -118,7 +118,7 @@ class ValidateUnique(HandlerProcessor):
             propId = validation.model.propertyId
             assert isinstance(propId, TypeProperty), 'Invalid identifier property %s' % propId
             attrId = getattr(validation.mapper.class_, propId.name)
-            if missing:
+            if missing and method == UPDATE:
                 sql = session.query(validation.mapper).filter(attrId == getattr(mvalue, attrId.key))
                 try:
                     rvalue = sql.one()
@@ -135,7 +135,10 @@ class ValidateUnique(HandlerProcessor):
                     sql = sql.filter(attrId != getattr(mvalue, attrId.key))
                 for attr in validation.attributes:
                     assert isinstance(attr, InstrumentedAttribute), 'Invalid property %s' % attr
-                    sql = sql.filter(attr == getattr(mvalue, attr.key))
+                    val = getattr(mvalue, attr.key)
+                    if val is None:
+                        val = attr.property.columns[0].default.arg
+                    sql = sql.filter(attr == val)
                 
                 if sql.count() > 0:
                     for attr in validation.attributes:

@@ -10,13 +10,13 @@ Provides the validation marking mechanism, this module contains classes that all
 '''
 
 import abc
-from ally.api.operator.type import TypeProperty, TypeModel, \
-    TypePropertyContainer
+from ally.api.operator.type import TypeProperty, TypeModel, TypePropertyContainer
 from ally.api.type import typeFor
 from ally.support.api.util_service import isCompatible
 from sqlalchemy.orm.attributes import InstrumentedAttribute
 from sqlalchemy.orm.mapper import Mapper
-
+from ally.internationalization import _
+import re
 
 # --------------------------------------------------------------------
 
@@ -63,11 +63,11 @@ class ValidationProperty(IValidation):
     def __str__(self):
         return '%s:%s' % (self.property, self.__class__.__name__)
 
-class IValidator(metaclass=abc.ABCMeta):
+class IValidator(IValidation, metaclass=abc.ABCMeta):
     '''
     The custom validator specification.
     '''
-    
+
     @abc.abstractmethod
     def validate(self, value):
         '''
@@ -75,33 +75,36 @@ class IValidator(metaclass=abc.ABCMeta):
         
         @param value: object
             The value to validate.
-        @return: boolean
-            True if the value is valid, False otherwise.
+        @return: None|tuple
+            None if the value is valid, tuple of error code and message otherwise. 
         '''
 
 # --------------------------------------------------------------------
 
-class ValidatorRegex(IValidator):
+class ValidatorRegex(IValidator, ValidationProperty):
     '''
     Implements a regular expression validator
     '''
     
-    def __init__(self, prop, regularEx):
+    def __init__(self, prop, regex, error, flags=0):
         '''
         Initialize the regular expression validator.
         '''
-        super().__init__()
+        super().__init__(prop)
         
-        ptype = typeFor(prop)
-        assert isinstance(ptype, TypeProperty), 'Invalid property %s' % prop
-        self.property = ptype
+        assert isinstance(regex, str), 'Invalid regular expression %s' % regex
+        assert error is not None, 'Invalid error %s' % error
+        self.regex = regex
+        self.error = error
+        self.flags = flags
+        self.cregex = re.compile(self.regex, flags)
     
     def validate(self, value):
         '''
         @see: IValidator.validate
         '''
-        assert isinstance(value, str), 'Invalid value %s' % value
-        # TODO: implement validate method
+        if self.cregex.match(value) is None:
+            return self.error
 
 # --------------------------------------------------------------------
 
@@ -234,6 +237,39 @@ class Relation(ValidationProperty):
         '''
         assert isinstance(prop, TypePropertyContainer), 'Invalid property type %s' % prop
         super().__init__(prop)
+
+class EMail(ValidatorRegex):
+    '''
+    Email format validation
+    '''
+    regex = "^[a-z0-9!#$%&'*+/=?^_`{|}~-]+(?:\.[a-z0-9!#$%&'*+/=?^_`{|}~-]+)*@" \
+            "(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z0-9](?:[a-z0-9-]{0,4}[a-z0-9]){1}$"
+    error = ('email', _('Invalid EMail'))
+    
+    def __init__(self, prop):
+        super().__init__(prop, self.regex, self.error, re.I)
+
+class PhoneNumber(ValidatorRegex):
+    '''
+    Phone number format validation
+    '''
+    regex = "^(?:(?:0?[1-9][0-9]{8})|(?:(?:\+|00)[1-9][0-9]{9,11}))$"
+    error = ('phone number', _('Invalid phone number format'),
+             {'example':_('+123123456789 or 0123456789 or 123456789')})
+    
+    def __init__(self, prop):
+        super().__init__(prop, self.regex, self.error)
+
+class UserName(ValidatorRegex):
+    '''
+    User name format validation
+    '''
+    regex = "^[a-z0-9._'-]+$"
+    error = ('user name', _('Invalid user name format'),
+             {'example':_('The user name must contain only letters, digits and characters ".", "_", "\'", "-"')})
+    
+    def __init__(self, prop):
+        super().__init__(prop, self.regex, self.error, re.I)
 
 # --------------------------------------------------------------------
 

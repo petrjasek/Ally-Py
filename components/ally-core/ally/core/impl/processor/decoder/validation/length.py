@@ -71,16 +71,16 @@ class ValidateLen(HandlerProcessor):
         if lengthMax is not None:
             if Decoding.maximumLength in decoding:
                 decoding.maximumLength = lengthMax
-            decoding.doSet = self.createMaxSet(decoding.doSet, decoding.property, lengthMax, decoding)
+            decoding.doSet = self.createMaxSet(decoding.doSet, decoding.property, lengthMax)
             
         if lengthMin is not None:
             if Decoding.minimumLength in decoding:
                 decoding.minimumLength = lengthMin
-            decoding.doSet = self.createMinSet(decoding.doSet, decoding.property, lengthMin, decoding)
+            decoding.doSet = self.createMinSet(decoding.doSet, decoding.property, lengthMin)
 
     # ----------------------------------------------------------------
     
-    def createMaxSet(self, wrapped, prop, length, decoding):
+    def createMaxSet(self, wrapped, prop, length):
         '''
         Create the do maximum set to use with validation.
         '''
@@ -88,12 +88,11 @@ class ValidateLen(HandlerProcessor):
         assert isinstance(prop, TypeProperty), 'Invalid property %s' % prop
         def doSet(target, value):
             if len(value) > length:
-                addError(target, 'max_len', decoding, _('Maximum text size exceed'), value=length)
-            else:
-                wrapped(target, value)
+                addError(target, 'max_len', prop, _('Maximum text size exceed'), value=length)
+            wrapped(target, value)
         return doSet
     
-    def createMinSet(self, wrapped, prop, length, decoding):
+    def createMinSet(self, wrapped, prop, length):
         '''
         Create the do minimum set to use with validation.
         '''
@@ -101,7 +100,6 @@ class ValidateLen(HandlerProcessor):
         assert isinstance(prop, TypeProperty), 'Invalid property %s' % prop
         def doSet(target, value):
             if len(value) < length:
-                addError(target, 'min_len', decoding, _('Minimum text size exceeded'), value=length)
-            else:
-                wrapped(target, value)
+                addError(target, 'min_len', prop, _('Minimum text size exceeded'), value=length)
+            wrapped(target, value)
         return doSet

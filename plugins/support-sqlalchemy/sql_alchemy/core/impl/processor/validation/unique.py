@@ -136,7 +136,7 @@ class ValidateUnique(HandlerProcessor):
                 for attr in validation.attributes:
                     assert isinstance(attr, InstrumentedAttribute), 'Invalid property %s' % attr
                     val = getattr(mvalue, attr.key)
-                    if val is None and method == INSERT:
+                    if val is None and method == INSERT and attr.property.columns[0].default is not None:
                         val = attr.property.columns[0].default.arg
                     sql = sql.filter(attr == val)
                 

@@ -10,11 +10,12 @@ Provides the invoking handler.
 '''
 
 from ally.api.config import GET, INSERT, UPDATE, DELETE
-from ally.api.error import InputError
+from ally.api.error import InputError, IdError
 from ally.api.type import Input
 from ally.core.error import DevelError
 from ally.core.spec.codes import INPUT_ERROR, INSERT_ERROR, INSERT_SUCCESS, \
-    UPDATE_SUCCESS, UPDATE_ERROR, DELETE_SUCCESS, DELETE_ERROR, Coded
+    UPDATE_SUCCESS, UPDATE_ERROR, DELETE_SUCCESS, DELETE_ERROR, Coded,\
+    INPUT_ID_ERROR
 from ally.design.processor.attribute import requires, defines
 from ally.design.processor.context import Context
 from ally.design.processor.handler import HandlerProcessor
@@ -127,6 +128,11 @@ class InvokingHandler(HandlerProcessor):
                              args, keyargs, invoker.location) or True
 
             callBack(invoker, value, response)
+        except IdError as e:
+            assert isinstance(e, IdError)
+            INPUT_ID_ERROR.set(response)
+            response.errorInput = e
+            assert log.debug('User input id exception: %s', e, exc_info=True) or True
         except InputError as e:
             assert isinstance(e, InputError)
             INPUT_ERROR.set(response)

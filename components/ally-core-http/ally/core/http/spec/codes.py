@@ -11,7 +11,7 @@ Contains the codes to be used for the HTTP server responses.
 
 from ally.core.spec.codes import ENCODING_UNKNOWN, CONTENT_BAD, CONTENT_MISSING, \
     CONTENT_EXPECTED, DECODING_FAILED, INPUT_ERROR, DELETE_ERROR, DELETE_SUCCESS, \
-    UPDATE_ERROR, UPDATE_SUCCESS, INSERT_ERROR, INSERT_SUCCESS
+    UPDATE_ERROR, UPDATE_SUCCESS, INSERT_ERROR, INSERT_SUCCESS, INPUT_ID_ERROR
 from ally.http.spec.codes import CodeHTTP
 
 # --------------------------------------------------------------------
@@ -23,6 +23,7 @@ CODE_TO_STATUS = {
                   CONTENT_MISSING.code: 400,  # HTTP code 400 Bad Request
                   CONTENT_EXPECTED.code: 400,  # HTTP code 400 Bad Request
                   DECODING_FAILED.code: 400,  # HTTP code 400 Bad Request
+                  INPUT_ID_ERROR.code: 400,  # HTTP code 400 Bad Request
                   INPUT_ERROR.code: 400,  # HTTP code 400 Bad Request
                   DELETE_ERROR.code: 404,  # HTTP code 404 Not Found
                   DELETE_SUCCESS.code: 204,  # HTTP code 204 No Content

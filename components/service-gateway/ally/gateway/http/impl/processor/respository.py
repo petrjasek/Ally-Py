@@ -107,14 +107,11 @@ class GatewayRepositoryHandler(HandlerProcessor):
     # The number of seconds to perform clean up for cached gateways.
     requesterGetJSON = RequesterGetJSON
     # The requester for getting the JSON gateway objects.
-    nameCollection = 'GatewayList'
-    # The collection name to find the gateways in.
     
     def __init__(self):
         assert isinstance(self.uri, str), 'Invalid URI %s' % self.uri
         assert isinstance(self.cleanupInterval, int), 'Invalid cleanup interval %s' % self.cleanupInterval
         assert isinstance(self.requesterGetJSON, RequesterGetJSON), 'Invalid requester JSON %s' % self.requesterGetJSON
-        assert isinstance(self.nameCollection, str), 'Invalid collection name %s' % self.nameCollection
         super().__init__()
         self.initialize()
 
@@ -135,7 +132,7 @@ class GatewayRepositoryHandler(HandlerProcessor):
                 BAD_GATEWAY.set(response)
                 response.text = error.text
                 return
-            self._identifiers = [self.populate(Identifier(Gateway()), obj) for obj in self.iterGateway(jobj)]
+            self._identifiers = [self.populate(Identifier(Gateway()), obj) for obj in jobj['collection']]
             
         repository = Repository(request.clientIP, self._identifiers, Match)
         if request.repository: request.repository = RepositoryJoined(request.repository, repository)
@@ -252,13 +249,6 @@ class GatewayRepositoryHandler(HandlerProcessor):
         assert not gateway.putHeaders or isinstance(gateway.putHeaders, dict), 'Invalid put headers %s' % gateway.putHeaders
         
         return identifier
-    
-    # ----------------------------------------------------------------
-    
-    def iterGateway(self, jobj):
-        ''' Iterate the gateways.'''
-        assert self.nameCollection in jobj, 'Invalid objects %s, not %s' % (jobj, self.nameCollection)
-        return jobj[self.nameCollection]
         
 # --------------------------------------------------------------------
 

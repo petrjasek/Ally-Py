@@ -26,7 +26,8 @@ class AccessMapped(Base, WithPath, WithMethod, WithSignature, Access):
     Provides the ACL access mapping.
     '''
     __tablename__ = 'acl_access'
-    __table_args__ = (UniqueConstraint('fk_path_id', 'fk_method_id', name='uix_acl_access'), dict(mysql_engine='InnoDB'))
+    __table_args__ = (UniqueConstraint('fk_path_id', 'fk_method_id', name='uix_acl_access'),
+                      dict(mysql_engine='InnoDB'))
     
     Id = Column('id', INTEGER(unsigned=True), autoincrement=False, primary_key=True)
     Priority = association_proxy('path', 'priority')

@@ -35,8 +35,6 @@ class RoleServiceAlchemy(EntityServiceAlchemy, RbacServiceAlchemy, IRoleRbacServ
     def __init__(self):
         EntityServiceAlchemy.__init__(self, RoleMapped, QRole)
         RbacServiceAlchemy.__init__(self, RoleMapped)
-        
-        self._rootId = None
 
     def insert(self, entity):
         '''
@@ -262,17 +260,16 @@ class RoleServiceAlchemy(EntityServiceAlchemy, RbacServiceAlchemy, IRoleRbacServ
         '''
         Return the root node id, that has the lower left value
         '''
-        if self._rootId is None:
-            sql = self.session().query(RoleNode.id)
-            sql = sql.order_by(RoleNode.left)
+        sql = self.session().query(RoleNode.id)
+        sql = sql.order_by(RoleNode.left)
 
-            self._rootId = sql.first()
-            if self._rootId is None:
-                rootNode = RoleNode()
-                rootNode.left = 1
-                rootNode.right = 2
-                self.session().add(rootNode)
-                self.session().flush((rootNode,))
-                self._rootId = rootNode.id
+        rootId = sql.first()
+        if rootId is None:
+            rootNode = RoleNode()
+            rootNode.left = 1
+            rootNode.right = 2
+            self.session().add(rootNode)
+            self.session().flush((rootNode,))
+            rootId = rootNode.id
 
-        return self._rootId
+        return rootId

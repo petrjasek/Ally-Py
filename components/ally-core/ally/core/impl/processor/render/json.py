@@ -260,7 +260,7 @@ class RenderJSONHandler(RenderBaseHandler):
 
     encodingError = 'backslashreplace'
     # The encoding error resolving.
-    nameCollection = None
+    nameCollection = 'collection'
     # The collection name to be used for indexing the collection object.
 
     def __init__(self):

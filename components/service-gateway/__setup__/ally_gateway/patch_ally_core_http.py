@@ -14,7 +14,6 @@ from .processor import GATEWAY_INTERNAL, assemblyRESTRequest, assemblyForward
 from .server import server_provide_gateway, gatewayRouter
 from ally.container import ioc
 from ally.container.error import SetupError
-from ally.http.impl.processor.router_by_path import RoutingByPathHandler
 import logging
 
 # --------------------------------------------------------------------
@@ -34,17 +33,7 @@ except ImportError:
     
 else: 
     from ..ally_core_http.server import resourcesRouter, server_provide_resources, updateAssemblyServerForResources, \
-    errorsRouter, server_provide_errors, root_uri_resources
-    from ..ally_core_http.processor import assemblyResources
-    
-    @ioc.entity
-    def resourcesRouterGateway():
-        b = RoutingByPathHandler()
-        b.assembly = assemblyResources()
-        b.rootURI = root_uri_resources()
-        return b
-    
-    # ----------------------------------------------------------------
+    errorsRouter, server_provide_errors
     
     def isInternal():
         '''
@@ -62,8 +51,8 @@ else:
     @ioc.before(assemblyForward)
     def updateAssemblyForwardForResources():
         if isInternal():
-            assemblyForward().add(resourcesRouterGateway())
-            if server_provide_errors(): assemblyForward().add(errorsRouter(), before=resourcesRouterGateway())
+            assemblyForward().add(resourcesRouter())
+            if server_provide_errors(): assemblyForward().add(errorsRouter(), before=resourcesRouter())
     
     @ioc.after(updateAssemblyServerForResources)
     def updateAssemblyServerForGatewayInternal():

@@ -26,7 +26,7 @@ except ImportError:
           'or components eggs', file=sys.stderr)
     traceback.print_exc()
     sys.exit(1)
-    
+
 # --------------------------------------------------------------------
 
 parser = argparse.ArgumentParser(description='ally-py application options.')  # The parser to be prepared.

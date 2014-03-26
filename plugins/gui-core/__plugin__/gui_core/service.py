@@ -117,14 +117,14 @@ def updateRegistersListenersForConfiguration():
     if gui_configuration(): registersListeners().append(configurationListeners())
     else: log.info('There are no GUI rights configuration files to be scanned.')
 
-@app.deploy
+@app.populate(app.CHANGED)
 def processConfigurationStreams():
     ''' Process the configurations streams.'''
     if not configurationStreams():
         log.info('There are no GUI rights configuration streams to be processed.')
         return
-    
-    for uri, content in configurationStreams(): configurationListeners().doOnContentCreated(uri, content)
+    for uri, content in configurationStreams():
+        configurationListeners().doOnContentCreated(uri, content())
     
 
 # --------------------------------------------------------------------

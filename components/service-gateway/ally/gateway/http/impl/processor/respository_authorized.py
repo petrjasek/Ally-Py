@@ -83,7 +83,7 @@ class GatewayAuthorizedRepositoryHandler(GatewayRepositoryHandler):
                 return
                 
             repository = Repository(request.clientIP, [self.populate(Identifier(Gateway()), obj)
-                                                       for obj in self.iterGateway(jobj)], Match)
+                                                       for obj in jobj['collection']], Match)
             self._repositories[authentication] = repository
         self._lastAccess[authentication] = datetime.now()
         

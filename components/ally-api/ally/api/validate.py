@@ -244,7 +244,7 @@ class EMail(ValidatorRegex):
     '''
     regex = "^[a-z0-9!#$%&'*+/=?^_`{|}~-]+(?:\.[a-z0-9!#$%&'*+/=?^_`{|}~-]+)*@" \
             "(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z0-9](?:[a-z0-9-]{0,4}[a-z0-9]){1}$"
-    error = ('email', _('Invalid EMail'))
+    error = ('format', _('Invalid EMail'))
     
     def __init__(self, prop):
         super().__init__(prop, self.regex, self.error, re.I)
@@ -254,7 +254,7 @@ class PhoneNumber(ValidatorRegex):
     Phone number format validation
     '''
     regex = "^(?:(?:0?[1-9][0-9]{8})|(?:(?:\+|00)[1-9][0-9]{9,11}))$"
-    error = ('phone number', _('Invalid phone number format'),
+    error = ('format', _('Invalid phone number format'),
              {'example':_('+123123456789 or 0123456789 or 123456789')})
     
     def __init__(self, prop):

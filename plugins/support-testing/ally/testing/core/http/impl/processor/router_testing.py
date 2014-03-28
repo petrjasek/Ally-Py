@@ -63,6 +63,7 @@ class RouterTestingHandler(router_by_path.RoutingByPathHandler):
         assert isinstance(request, Request), 'Invalid request %s' % request
         assert isinstance(response, CodedHTTP), 'Invalid response %s' % response
 
+        self.switcher.switchToMain()  # Making sure that we are on main.
         if request.method == HTTP_PUT and request.uri.strip('/') == self.rootURI:
             self.create()
             UPDATE_SUCCESS.set(response)

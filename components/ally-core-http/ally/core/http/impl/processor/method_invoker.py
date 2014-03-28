@@ -12,7 +12,7 @@ Provides the requested method validation handler.
 from ally.api.type import Type
 from ally.container.ioc import injected
 from ally.core.http.impl.processor.base import ErrorResponseHTTP
-from ally.core.impl.processor.base import addFailure
+from ally.core.impl.processor.base import addFailure, addError
 from ally.core.spec.resources import Converter
 from ally.design.processor.attribute import requires, defines
 from ally.design.processor.context import Context
@@ -84,6 +84,7 @@ class TargetPath(Context):
     ''')
     # ---------------------------------------------------------------- Required
     failures = requires(list)
+    errors = requires(list)
     
 # --------------------------------------------------------------------
 
@@ -138,10 +139,15 @@ class MethodInvokerHandler(Handler):
             assert isinstance(decoding.doDecode, IDo), 'Invalid do decode %s' % decoding.doDecode
             decoding.doDecode(target, request.nodesValues[node])
             
-        if target.failures:
+        if target.failures or target.errors:
             PATH_ERROR.set(response)
-            for type, values, messages in self.indexFailures(target.failures):
-                addFailure(response, 'Expected type \'%(type)s\' instead of: %(values)s', messages, type=type, values=values)
+            if target.failures:
+                for type, values, messages in self.indexFailures(target.failures):
+                    addFailure(response, 'Expected type \'%(type)s\' instead of: %(values)s',
+                               messages, type=type, values=values)
+            elif target.errors:
+                for code, decoding, message, data in target.errors:
+                    addError(response, code, decoding, message, **data)
         
     # --------------------------------------------------------------------
     

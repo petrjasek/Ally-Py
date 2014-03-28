@@ -70,10 +70,11 @@ else:
     
     @ioc.after(updateAssemblyGateway)
     def updateAssemblyGatewayForTest():
-        assemblyGateway().add(gatewayTestRepository(), after=gatewayRepository())
-        assemblyGateway().add(gatewayTestAuthorizedRepository(), after=gatewayAuthorizedRepository())
-        
+        if testing_allowed():
+            assemblyGateway().add(gatewayTestRepository(), after=gatewayRepository())
+            assemblyGateway().add(gatewayTestAuthorizedRepository(), after=gatewayAuthorizedRepository())
+            
     @ioc.after(updateAssemblyServerForTesting)
     def updateAssemblyServerForTestingInternal():
-        if isInternal(): assemblyServer().remove(routerTesting())
+        if isInternal() and testing_allowed(): assemblyServer().remove(routerTesting())
         

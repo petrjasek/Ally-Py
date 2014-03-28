@@ -11,7 +11,7 @@ Provides the relation validation.
 
 import logging
 
-from ally.api.error import InputError, IdError
+from ally.api.error import InputError
 from ally.api.operator.type import TypeProperty, TypePropertyContainer, \
     TypeModel
 from ally.api.validate import Relation
@@ -26,7 +26,9 @@ from ally.design.processor.execution import Processing
 from ally.design.processor.handler import HandlerBranching
 from ally.http.spec.server import HTTP_GET
 from ally.support.util_spec import IDo
-
+from ally.core.impl.processor.decoder.base import addError
+from ally.internationalization import _
+from ally.api.config import UPDATE
 
 # --------------------------------------------------------------------
 log = logging.getLogger(__name__)
@@ -38,6 +40,7 @@ class Invoker(Context):
     The invoker context.
     '''
     # ---------------------------------------------------------------- Required
+    method = requires(int)
     node = requires(Context)
     doInvoke = requires(IDo)
     location = requires(str)
@@ -124,19 +127,27 @@ class ValidateRelation(HandlerBranching):
         assert isinstance(invoker, Invoker), 'Invalid invoker %s' % invoker
         assert isinstance(decoding, Decoding), 'Invalid decoding %s' % decoding
         if not invoker.node: return
-        if not decoding.validations: return
         
-        model, validations = None, []
-        for validation in decoding.validations:
-            if isinstance(validation, Relation):
-                assert isinstance(validation, Relation)
-                assert isinstance(validation.property, TypePropertyContainer), 'Invalid property %s' % property
-                if model is None: model = validation.property.container
-                elif model != validation.property.container:
-                    log.warn('Incompatible relation model %s and model %s', model, validation.property.container)
-            else: validations.append(validation)
-        
-        decoding.validations = validations
+        model, forSelfId = None, False
+        if decoding.validations: 
+            model, validations = None, []
+            for validation in decoding.validations:
+                if isinstance(validation, Relation):
+                    assert isinstance(validation, Relation)
+                    assert isinstance(validation.property, TypePropertyContainer), 'Invalid property %s' % property
+                    if model is None: model = validation.property.container
+                    elif model != validation.property.container:
+                        log.warn('Incompatible relation model %s and model %s', model, validation.property.container)
+                else: validations.append(validation)
+            
+            decoding.validations = validations
+            
+        if model is None and decoding.property and invoker.method == UPDATE:
+            assert isinstance(decoding.property, TypeProperty)
+            if decoding.property.parent.propertyId == decoding.property:
+                # Validating the existance of his own id.
+                model = decoding.property.parent
+                forSelfId = True
 
         if model is not None:
             assert isinstance(model, TypeModel), 'Invalid model %s' % model
@@ -146,14 +157,16 @@ class ValidateRelation(HandlerBranching):
             relation = None
             if invoker.node.invokersGet: relation = invoker.node.invokersGet.get(model.propertyId)
             if relation is None:
-                log.warn('Cannot a get invoker for %s, at:%s', model.propertyId, invoker.location)
+                if not forSelfId:
+                    log.warn('Cannot a get invoker for %s, at:%s', model.propertyId, invoker.location)
             else:
                 if Decoding.relation in decoding: decoding.relation = relation
-                decoding.doSet = self.createSet(decoding.doSet, decoding.property, processing, relation)
+                decoding.doSet = self.createSet(decoding.doSet, decoding.property,
+                                                processing, relation, forSelfId)
 
     # ----------------------------------------------------------------
     
-    def createSet(self, wrapped, prop, processing, relation):
+    def createSet(self, wrapped, prop, processing, relation, forSelfId):
         '''
         Create the do set to use with validation.
         '''
@@ -184,6 +197,7 @@ class ValidateRelation(HandlerBranching):
             assert isinstance(arg.response, Response), 'Invalid response %s' % arg.response
             
             if arg.response.errorInput or arg.response.obj is None:
-                raise IdError(prop)
+                if forSelfId: addError(target, 'other', prop, _('Unknown value'))
+                else: addError(target, 'missing', prop, _('Relation constraint failed'))
             wrapped(target, value)
         return doSet

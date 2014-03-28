@@ -9,13 +9,16 @@ Created on Nov 23, 2011
 Runs the Mongrel2 web server.
 '''
 
-from ..ally_http.server import assemblyServer, server_host, server_port, \
-    server_type, server_version, server_scheme
-from ally.container import ioc
 from threading import Thread
 
-# --------------------------------------------------------------------
+from ally.container import ioc
+from ally.design.priority import PRIORITY_LAST
 
+from ..ally_http.server import assemblyServer, server_host, server_port, \
+    server_type, server_version, server_scheme
+
+
+# --------------------------------------------------------------------
 @ioc.config     
 def workspace_path():
     '''
@@ -86,6 +89,11 @@ def serverMongrel2():
 # --------------------------------------------------------------------
 
 @ioc.start
+def loadAssemblyServer():
+    if server_type() == 'mongrel2': serverMongrel2()
+    # Making sure that the server creation is made at the proper time.
+    
+@ioc.start(priority=PRIORITY_LAST)
 def runServer():
     if server_type() == 'mongrel2':
         from ally.http.server import server_mongrel2

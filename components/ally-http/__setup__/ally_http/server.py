@@ -16,6 +16,7 @@ from ally.design.processor.handler import Handler, RoutingHandler
 from ally.http.server import server_basic
 from threading import Thread
 from ally.http.spec.server import HTTP
+from ally.design.priority import PRIORITY_LAST
 
 # --------------------------------------------------------------------
 
@@ -110,6 +111,11 @@ def updateAssemblyServer():
 # --------------------------------------------------------------------
 
 @ioc.start
+def loadAssemblyServer():
+    if server_type() == 'basic': serverBasic()
+    # Making sure that the server creation is made at the proper time.
+
+@ioc.start(priority=PRIORITY_LAST)
 def runServer():
     if server_type() == 'basic':
         Thread(name='HTTP server thread', target=server_basic.run, args=(serverBasic(),)).start()

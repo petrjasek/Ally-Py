@@ -14,6 +14,7 @@ from ..ally_http.server import assemblyServer, server_type, server_protocol, \
 from ally.container import ioc
 from ally.http.server import server_asyncore
 from threading import Thread
+from ally.design.priority import PRIORITY_LAST
 
 # --------------------------------------------------------------------
 
@@ -50,6 +51,11 @@ def serverAsyncore():
 # --------------------------------------------------------------------
 
 @ioc.start
+def loadAssemblyServer():
+    if server_type() == SERVER_ASYNCORE: serverAsyncore()
+    # Making sure that the server creation is made at the proper time.
+    
+@ioc.start(priority=PRIORITY_LAST)
 def runServer():
     if server_type() == SERVER_ASYNCORE:
         Thread(name='HTTP server thread', target=server_asyncore.run, args=(serverAsyncore(),)).start()

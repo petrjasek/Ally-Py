@@ -18,7 +18,6 @@ import timeit
 if __name__ == '__main__':
     # First we need to set the working directory relative to the application deployer just in case the application is
     # started from somewhere else
-    print('\n'.join(sys.path))
     os.chdir(os.path.dirname(os.path.abspath(__file__)))
 
     try: import ally_start

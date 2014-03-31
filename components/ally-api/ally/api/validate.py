@@ -103,7 +103,7 @@ class ValidatorRegex(IValidator, ValidationProperty):
         '''
         @see: IValidator.validate
         '''
-        if self.cregex.match(value) is None:
+        if value and self.cregex.match(value) is None:
             return self.error
 
 # --------------------------------------------------------------------

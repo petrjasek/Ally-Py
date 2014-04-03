@@ -96,7 +96,10 @@ class MappedValidationHandler(HandlerProcessor):
             mvalidations = validationsFor(mapper.class_)
             if mvalidations:
                 for validation, target in mvalidations:
-                    assert isinstance(validation, IValidation), 'Invalid created validation %s' % validation
+                    if not isinstance(validation, IValidation):
+                        assert callable(validation), 'Invalid created validation %s' % validation
+                        validation = validation()
+                    assert isinstance(validation, IValidation), 'Invalid validation %s' % validation
                     if not isMain and isinstance(validation, Mandatory): continue
                     validations.append((validation, target))
             
@@ -106,7 +109,7 @@ class MappedValidationHandler(HandlerProcessor):
                 if dvalidations:
                     for creator, target in dvalidations:
                         validation = creator(prop)
-                        assert isinstance(validation, IValidation), 'Invalid created validation %s' % validation
+                        assert isinstance(validation, IValidation), 'Invalid validation %s' % validation
                         if target == descriptor: target = dclazz
                         validations.append((validation, target))
                     continue

@@ -37,6 +37,7 @@ class Invoker(Context):
     '''
     # ---------------------------------------------------------------- Required
     service = requires(TypeService)
+    method = requires(int)
     
 class Decoding(Context):
     '''
@@ -91,7 +92,7 @@ class ValidationModelProvider(HandlerProcessor):
                 continue
             
             assert isinstance(validation, IValidation)
-            if validation.isFor(decoding.type): validations.append(validation)
+            if validation.isFor(decoding.type, invoker.method): validations.append(validation)
         if not validations: return
         
         decoding.validations = validations

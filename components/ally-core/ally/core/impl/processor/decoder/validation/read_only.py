@@ -12,7 +12,7 @@ Provides the read only validation.
 
 from ally.api.config import INSERT
 from ally.api.validate import ReadOnly
-from ally.design.processor.attribute import requires
+from ally.design.processor.attribute import requires, defines
 from ally.design.processor.context import Context
 from ally.design.processor.execution import Chain
 from ally.design.processor.handler import HandlerProcessor
@@ -51,15 +51,8 @@ class ValidateReadOnly(HandlerProcessor):
         assert isinstance(invoker, Invoker), 'Invalid invoker %s' % invoker
         if not decoding.validations: return
         
-        found, validations = False, []
         for validation in decoding.validations:
             if isinstance(validation, ReadOnly):
-                found = True
-            else: validations.append(validation)
-        if not found: return
-        
-        if invoker.method == INSERT:
-            validations = []  # This validation overrides all other.
-            chain.cancel()  # For insert there is no need for property, is read only.
-        
-        decoding.validations = validations
+                decoding.validations = [] # This validation overrides all other.
+                chain.cancel()  # For insert there is no need for property, is read only.
+                break

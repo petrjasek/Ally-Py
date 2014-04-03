@@ -16,9 +16,12 @@ from ally.support.api.util_service import isCompatible
 from sqlalchemy.orm.attributes import InstrumentedAttribute
 from sqlalchemy.orm.mapper import Mapper
 from ally.internationalization import _
+from ally.api.config import INSERT, UPDATE
 import re
 
 # --------------------------------------------------------------------
+
+DEFAULT_METHODS = (INSERT, UPDATE)
 
 class IValidation(metaclass=abc.ABCMeta):
     '''
@@ -26,12 +29,14 @@ class IValidation(metaclass=abc.ABCMeta):
     '''
     
     @abc.abstractmethod
-    def isFor(self, target):
+    def isFor(self, target, method):
         '''
         Checks if the validation is for the provided target.
         
         @param target: object
             The target to check.
+        @param method: int
+            The method for which to check if the validation applies (e.g. INSERT, UPDATE)
         @return: boolean
             True if the validation is for the provided target, False otherwise.
         '''
@@ -41,7 +46,7 @@ class ValidationProperty(IValidation):
     The validation basic property target container class.
     '''
     
-    def __init__(self, prop):
+    def __init__(self, prop, methods=DEFAULT_METHODS):
         '''
         Create the validation.
         
@@ -51,15 +56,21 @@ class ValidationProperty(IValidation):
         ptype = typeFor(prop)
         assert isinstance(ptype, TypeProperty), 'Invalid property %s' % prop
         assert isinstance(ptype.parent, TypeModel), 'Invalid property model %s' % ptype.parent
+        assert isinstance(methods, tuple), 'Invalid methods list %s' % methods
+        if __debug__:
+            for method in methods:
+                assert isinstance(method, int), 'Invalid method %s' % method
         
         self.property = ptype
-        
-    def isFor(self, target):
+        self.methods = methods
+    
+    def isFor(self, target, method):
         '''
         @see: IValidation.isFor
         '''
-        return isCompatible(self.property, target)
-        
+        assert isinstance(method, int), 'Invalid method %s' % method
+        return method in self.methods and isCompatible(self.property, target)
+    
     def __str__(self):
         return '%s:%s' % (self.property, self.__class__.__name__)
 
@@ -86,11 +97,16 @@ class ValidatorRegex(IValidator, ValidationProperty):
     Implements a regular expression validator
     '''
     
-    def __init__(self, prop, regex, error, flags=0):
+    def __init__(self, prop, regex, error, flags=0, methods=DEFAULT_METHODS):
         '''
         Initialize the regular expression validator.
         '''
-        super().__init__(prop)
+        assert isinstance(methods, tuple), 'Invalid methods list %s' % methods
+        if __debug__:
+            for method in methods:
+                assert isinstance(method, int), 'Invalid method %s' % method
+        
+        super().__init__(prop, methods)
         
         assert isinstance(regex, str), 'Invalid regular expression %s' % regex
         assert error is not None, 'Invalid error %s' % error
@@ -113,11 +129,15 @@ class Unique(IValidation):
     Implements unique validator
     '''
     
-    def __init__(self, *props):
+    def __init__(self, *props, methods=DEFAULT_METHODS):
         '''
         Initialize the unique validator.
         '''
         assert len(props) > 0, 'Unique validation requires at least one property'
+        assert isinstance(methods, tuple), 'Invalid methods list %s' % methods
+        if __debug__:
+            for method in methods:
+                assert isinstance(method, int), 'Invalid method %s' % method
         
         mapper = None
         self.attributes = []
@@ -131,15 +151,17 @@ class Unique(IValidation):
         
         self.mapper = mapper
         self.model = self.mapper.class_._ally_type
+        self.methods = methods
     
-    def isFor(self, target):
+    def isFor(self, target, method):
         '''
         @see: IValidation.isFor
         '''
-        if not isinstance(target, TypeModel): return False
+        assert isinstance(method, int), 'Invalid method %s' % method
+        if method not in self.methods or not isinstance(target, TypeModel): return False
         assert isinstance(target, TypeModel), 'Invalid model %s' % target
         return issubclass(target.clazz, self.model.clazz)
-        
+    
     def __str__(self):
         return '%s:%s' % (','.join(str(prop) for prop in self.properties), self.__class__.__name__)
 
@@ -148,22 +170,27 @@ class Mandatory(IValidation):
     Mandatory property type validation.
     '''
     
-    def __init__(self, prop):
+    def __init__(self, prop, methods=DEFAULT_METHODS):
         '''
         Initialize the mandatory validator.
         '''
         ptype = typeFor(prop)
         assert isinstance(ptype, TypeProperty), 'Invalid property %s' % prop
         assert isinstance(ptype.parent, TypeModel), 'Invalid property model %s' % ptype.parent
+        assert isinstance(methods, tuple), 'Invalid methods list %s' % methods
+        if __debug__:
+            for method in methods:
+                assert isinstance(method, int), 'Invalid method %s' % method
         
         self.property = ptype
         self.model = self.property.parent
+        self.methods = methods
     
-    def isFor(self, target):
+    def isFor(self, target, method):
         '''
         @see: IValidation.isFor
         '''
-        if not isinstance(target, TypeModel): return False
+        if method not in self.methods or not isinstance(target, TypeModel): return False
         assert isinstance(target, TypeModel), 'Invalid model %s' % target
         return issubclass(target.clazz, self.model.clazz)
     
@@ -175,29 +202,29 @@ class ReadOnly(ValidationProperty):
     Read only property type validation.
     '''
     
-    def __init__(self, prop):
+    def __init__(self, prop, methods=DEFAULT_METHODS):
         '''
         @see: Validation
         '''
-        super().__init__(prop)
+        super().__init__(prop, methods)
 
 class AutoId(ValidationProperty):
     '''
     Auto generated id property type validation.
     '''
     
-    def __init__(self, prop):
+    def __init__(self, prop, methods=DEFAULT_METHODS):
         '''
         @see: Validation
         '''
-        super().__init__(prop)
+        super().__init__(prop, methods)
 
 class MinLen(ValidationProperty):
     '''
     String property minimum length type validation.
     '''
     
-    def __init__(self, prop, length):
+    def __init__(self, prop, length, methods=DEFAULT_METHODS):
         '''
         @see: Validation
         
@@ -205,7 +232,7 @@ class MinLen(ValidationProperty):
             The minimum length.
         '''
         assert isinstance(length, int), 'Invalid length %s' % length
-        super().__init__(prop)
+        super().__init__(prop, methods)
         
         self.length = length
         
@@ -214,7 +241,7 @@ class MaxLen(ValidationProperty):
     String property maximum length type validation.
     '''
     
-    def __init__(self, prop, length):
+    def __init__(self, prop, length, methods=DEFAULT_METHODS):
         '''
         @see: Validation
         
@@ -222,7 +249,7 @@ class MaxLen(ValidationProperty):
             The maximum length.
         '''
         assert isinstance(length, int), 'Invalid length %s' % length
-        super().__init__(prop)
+        super().__init__(prop, methods)
         
         self.length = length
 
@@ -231,12 +258,12 @@ class Relation(ValidationProperty):
     Relation property type with other models validation.
     '''
     
-    def __init__(self, prop):
+    def __init__(self, prop, methods=DEFAULT_METHODS):
         '''
         @see: Validation
         '''
         assert isinstance(prop, TypePropertyContainer), 'Invalid property type %s' % prop
-        super().__init__(prop)
+        super().__init__(prop, methods)
 
 class EMail(ValidatorRegex):
     '''
@@ -246,8 +273,8 @@ class EMail(ValidatorRegex):
             "(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z0-9](?:[a-z0-9-]{0,4}[a-z0-9]){1}$"
     error = ('format', _('Invalid EMail'))
     
-    def __init__(self, prop):
-        super().__init__(prop, self.regex, self.error, re.I)
+    def __init__(self, prop, methods=DEFAULT_METHODS):
+        super().__init__(prop, self.regex, self.error, re.I, methods=methods)
 
 class PhoneNumber(ValidatorRegex):
     '''
@@ -257,8 +284,8 @@ class PhoneNumber(ValidatorRegex):
     error = ('format', _('Invalid phone number format'),
              {'example':_('+123123456789 or 0123456789 or 123456789')})
     
-    def __init__(self, prop):
-        super().__init__(prop, self.regex, self.error)
+    def __init__(self, prop, methods=DEFAULT_METHODS):
+        super().__init__(prop, self.regex, self.error, methods=methods)
 
 class UserName(ValidatorRegex):
     '''
@@ -268,8 +295,8 @@ class UserName(ValidatorRegex):
     error = ('user name', _('Invalid user name format'),
              {'example':_('The user name must contain only letters, digits and characters ".", "_", "\'", "-"')})
     
-    def __init__(self, prop):
-        super().__init__(prop, self.regex, self.error, re.I)
+    def __init__(self, prop, methods=DEFAULT_METHODS):
+        super().__init__(prop, self.regex, self.error, re.I, methods=methods)
 
 # --------------------------------------------------------------------
 
